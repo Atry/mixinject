@@ -183,7 +183,7 @@ in
         ```
         mergeConstructors :: (Evaluation -> [ Mixin ]) -> Evaluation -> [ Mixin ]
         ```
-            */
+      */
       mergeConstructors = constructors: {
         __toString = "<merged mixin constructor: ${builtins.toString constructors}>";
         __functor = { __functor, __toString }: self:
@@ -202,7 +202,7 @@ in
           selfName? :: String
         } -> Mixin
         ```
-            */
+      */
       compileDirectory =
         { directory
         , importers ? defaultImporters
@@ -279,7 +279,7 @@ in
         ```
         evaluate :: [ Mixin ] -> Evaluation
         ```
-                                */
+      */
       evaluate = ownMixins:
         let
           self = rec {
