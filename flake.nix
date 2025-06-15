@@ -2,6 +2,11 @@
   nixConfig = {
     # Required to import YAML files
     allow-import-from-derivation = true;
+    extra-substituters = [
+      "https://cache.nixos.org"
+      "https://devenv.cachix.org"
+      "https://nix-community.cachix.org"
+    ];
   };
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts/main";
