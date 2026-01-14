@@ -416,6 +416,7 @@ def aggregator(
     Example:
 
     The following example defines an aggregator that deduplicates strings from multiple patches into a frozenset.
+        # In branch0.py:
 
         from mixinject import aggregator
         @aggregator
@@ -424,7 +425,7 @@ def aggregator(
 
     Now, when multiple patches provide tags, they will be aggregated into a frozenset without duplicates.
 
-        # In branch0.py:
+        # In branch1.py:
         @patch
         def deduplicated_tags():
             return "tag1"
