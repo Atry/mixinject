@@ -1,10 +1,15 @@
+import sys
+import tempfile
+from pathlib import Path
 from typing import Callable, Iterator
 
 from mixinject import (
     CachedProxy,
     Endo,
+    LazySubmoduleMapping,
     Proxy,
     aggregator,
+    parse_module,
     patch,
     patches,
     resolve_root,
@@ -12,30 +17,47 @@ from mixinject import (
     simple_component,
 )
 
+FIXTURES_DIR = str(Path(__file__).parent / "fixtures")
+
 
 class TestSimpleResource:
     """Test basic resource definition and resolution."""
 
     def test_simple_resource_no_dependencies(self) -> None:
         class Namespace:
-            greeting = resource(lambda: "Hello")
+            @resource
+            def greeting() -> str:
+                return "Hello"
 
         root = resolve_root(Namespace)
         assert root.greeting == "Hello"
 
     def test_resource_with_dependency(self) -> None:
         class Namespace:
-            name = resource(lambda: "World")
-            greeting = resource(lambda name: f"Hello, {name}!")
+            @resource
+            def name() -> str:
+                return "World"
+
+            @resource
+            def greeting(name: str) -> str:
+                return f"Hello, {name}!"
 
         root = resolve_root(Namespace)
         assert root.greeting == "Hello, World!"
 
     def test_multiple_dependencies(self) -> None:
         class Namespace:
-            first = resource(lambda: "First")
-            second = resource(lambda: "Second")
-            combined = resource(lambda first, second: f"{first} and {second}")
+            @resource
+            def first() -> str:
+                return "First"
+
+            @resource
+            def second() -> str:
+                return "Second"
+
+            @resource
+            def combined(first: str, second: str) -> str:
+                return f"{first} and {second}"
 
         root = resolve_root(Namespace)
         assert root.combined == "First and Second"
@@ -46,23 +68,33 @@ class TestPatch:
 
     def test_single_patch(self) -> None:
         class Base:
-            value = resource(lambda: 10)
+            @resource
+            def value() -> int:
+                return 10
 
         class Patcher:
-            value = patch(lambda: (lambda x: x * 2))
+            @patch
+            def value() -> Callable[[int], int]:
+                return lambda x: x * 2
 
         root = resolve_root(Base, Patcher)
         assert root.value == 20
 
     def test_multiple_patches(self) -> None:
         class Base:
-            value = resource(lambda: 10)
+            @resource
+            def value() -> int:
+                return 10
 
         class Patch1:
-            value = patch(lambda: (lambda x: x + 5))
+            @patch
+            def value() -> Callable[[int], int]:
+                return lambda x: x + 5
 
         class Patch2:
-            value = patch(lambda: (lambda x: x + 3))
+            @patch
+            def value() -> Callable[[int], int]:
+                return lambda x: x + 3
 
         root = resolve_root(Base, Patch1, Patch2)
         assert root.value == 18
@@ -73,10 +105,14 @@ class TestPatches:
 
     def test_patches_decorator(self) -> None:
         class Base:
-            value = resource(lambda: 10)
+            @resource
+            def value() -> int:
+                return 10
 
         class Patcher:
-            value = patches(lambda: ((lambda x: x + 5), (lambda x: x + 3)))
+            @patches
+            def value() -> tuple[Callable[[int], int], ...]:
+                return ((lambda x: x + 5), (lambda x: x + 3))
 
         root = resolve_root(Base, Patcher)
         assert root.value == 18
@@ -87,10 +123,14 @@ class TestLexicalScope:
 
     def test_same_name_lookup_via_nested_scope(self) -> None:
         class Outer:
-            counter = resource(lambda: 0)
+            @resource
+            def counter() -> int:
+                return 0
 
             class Inner:
-                counter = resource(lambda counter: counter + 1)
+                @resource
+                def counter(counter: int) -> int:
+                    return counter + 1
 
         root = resolve_root(Outer)
         assert root.counter == 0
@@ -118,13 +158,19 @@ class TestAggregator:
 
     def test_custom_aggregation(self) -> None:
         class Base:
-            tags = aggregator(lambda: frozenset)
+            @aggregator
+            def tags() -> type[frozenset]:
+                return frozenset
 
         class Provider1:
-            tags = patch(lambda: "tag1")
+            @patch
+            def tags() -> str:
+                return "tag1"
 
         class Provider2:
-            tags = patch(lambda: "tag2")
+            @patch
+            def tags() -> str:
+                return "tag2"
 
         root = resolve_root(Base, Provider1, Provider2)
         assert root.tags == frozenset({"tag1", "tag2"})
@@ -135,10 +181,14 @@ class TestUnionMount:
 
     def test_union_mount_multiple_namespaces(self) -> None:
         class Namespace1:
-            foo = resource(lambda: "foo_value")
+            @resource
+            def foo() -> str:
+                return "foo_value"
 
         class Namespace2:
-            bar = resource(lambda: "bar_value")
+            @resource
+            def bar() -> str:
+                return "bar_value"
 
         root = resolve_root(Namespace1, Namespace2)
         assert root.foo == "foo_value"
@@ -146,13 +196,46 @@ class TestUnionMount:
 
     def test_union_mount_with_dependencies_across_namespaces(self) -> None:
         class Namespace1:
-            base_value = resource(lambda: "base")
+            @resource
+            def base_value() -> str:
+                return "base"
 
         class Namespace2:
-            combined = resource(lambda base_value: f"{base_value}_combined")
+            @resource
+            def combined(base_value: str) -> str:
+                return f"{base_value}_combined"
 
         root = resolve_root(Namespace1, Namespace2)
         assert root.combined == "base_combined"
+
+    def test_deduplicated_tags_from_docstring(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            from union_mount import branch0, branch1, branch2
+
+            root = resolve_root(branch0, branch1, branch2)
+            assert root.deduplicated_tags == frozenset({"tag1", "tag2_dependency_value"})
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("union_mount", None)
+            sys.modules.pop("union_mount.branch0", None)
+            sys.modules.pop("union_mount.branch1", None)
+            sys.modules.pop("union_mount.branch2", None)
+
+    def test_union_mount_point_from_docstring(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            from union_mount import branch0, branch1, branch2
+
+            root = resolve_root(branch0, branch1, branch2)
+            assert root.union_mount_point.foo == "foo"
+            assert root.union_mount_point.bar == "foo_bar"
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("union_mount", None)
+            sys.modules.pop("union_mount.branch0", None)
+            sys.modules.pop("union_mount.branch1", None)
+            sys.modules.pop("union_mount.branch2", None)
 
 
 class TestProxyAsSymlink:
@@ -163,7 +246,129 @@ class TestProxyAsSymlink:
         inner_proxy = CachedProxy(components=frozenset((comp,)))
 
         class Namespace:
-            linked = resource(lambda: inner_proxy)
+            @resource
+            def linked() -> Proxy:
+                return inner_proxy
 
         root = resolve_root(Namespace)
         assert root.linked.inner_value == "inner"
+
+
+class TestModuleParsing:
+    """Test module and package parsing with pkgutil/importlib."""
+
+    def test_parse_module_returns_lazy_mapping_for_package(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import regular_pkg
+
+            scope_def = parse_module(regular_pkg)
+            assert isinstance(scope_def, LazySubmoduleMapping)
+            assert "child" in scope_def.submodule_names
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("regular_pkg", None)
+            sys.modules.pop("regular_pkg.child", None)
+
+    def test_lazy_submodule_import(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import regular_pkg
+
+            scope_def = parse_module(regular_pkg)
+            assert "regular_pkg.child" not in sys.modules
+            _ = scope_def["child"]
+            assert "regular_pkg.child" in sys.modules
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("regular_pkg", None)
+            sys.modules.pop("regular_pkg.child", None)
+
+    def test_resolve_root_with_package(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import regular_pkg
+
+            root = resolve_root(regular_pkg)
+            assert root.pkg_value == "from_pkg"
+            assert root.child.child_value == "from_child"
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("regular_pkg", None)
+            sys.modules.pop("regular_pkg.child", None)
+
+    def test_parse_regular_module_returns_dict(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import regular_mod
+
+            scope_def = parse_module(regular_mod)
+            assert isinstance(scope_def, dict)
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("regular_mod", None)
+
+    def test_namespace_package_discovery(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import ns_pkg
+
+            assert hasattr(ns_pkg, "__path__")
+            scope_def = parse_module(ns_pkg)
+            assert isinstance(scope_def, LazySubmoduleMapping)
+            assert "mod_a" in scope_def.submodule_names
+            assert "mod_b" in scope_def.submodule_names
+
+            root = resolve_root(ns_pkg)
+            assert root.mod_a.value_a == "a"
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("ns_pkg", None)
+            sys.modules.pop("ns_pkg.mod_a", None)
+            sys.modules.pop("ns_pkg.mod_b", None)
+
+    def test_namespace_package_submodule_with_internal_dependency(self) -> None:
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import ns_pkg
+
+            root = resolve_root(ns_pkg)
+            assert root.mod_b.base == "base"
+            assert root.mod_b.derived == "base_derived"
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("ns_pkg", None)
+            sys.modules.pop("ns_pkg.mod_a", None)
+            sys.modules.pop("ns_pkg.mod_b", None)
+
+    def test_namespace_package_union_mount_multiple_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ns_pkg_dir = Path(tmpdir) / "ns_pkg"
+            ns_pkg_dir.mkdir()
+            (ns_pkg_dir / "mod_c.py").write_text(
+                "from mixinject import resource\n"
+                "value_c = resource(lambda: 'c')\n"
+            )
+
+            sys.path.insert(0, FIXTURES_DIR)
+            sys.path.insert(0, tmpdir)
+            try:
+                import ns_pkg
+
+                assert len(ns_pkg.__path__) == 2
+                scope_def = parse_module(ns_pkg)
+                assert isinstance(scope_def, LazySubmoduleMapping)
+                assert "mod_a" in scope_def.submodule_names
+                assert "mod_b" in scope_def.submodule_names
+                assert "mod_c" in scope_def.submodule_names
+
+                root = resolve_root(ns_pkg)
+                assert root.mod_a.value_a == "a"
+                assert root.mod_c.value_c == "c"
+            finally:
+                sys.path.remove(FIXTURES_DIR)
+                sys.path.remove(tmpdir)
+                sys.modules.pop("ns_pkg", None)
+                sys.modules.pop("ns_pkg.mod_a", None)
+                sys.modules.pop("ns_pkg.mod_b", None)
+                sys.modules.pop("ns_pkg.mod_c", None)

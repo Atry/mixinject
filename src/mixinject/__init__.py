@@ -1,3 +1,5 @@
+import importlib
+import pkgutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import reduce
@@ -334,6 +336,52 @@ ResourceDefinition: TypeAlias = BuilderDefinition | PatchDefinition
 ScopeDefinition: TypeAlias = Mapping[str, "ResourceDefinition | ScopeDefinition"]
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
+class LazySubmoduleMapping(Mapping[str, "ResourceDefinition | ScopeDefinition"]):
+    """A lazy mapping that discovers submodules via pkgutil and imports them on access."""
+
+    parent_module: ModuleType
+    submodule_names: frozenset[str]
+    direct_attrs: Mapping[str, "ResourceDefinition | ScopeDefinition"]
+
+    def __getitem__(self, key: str) -> "ResourceDefinition | ScopeDefinition":
+        if key in self.direct_attrs:
+            return self.direct_attrs[key]
+        if key in self.submodule_names:
+            full_name = f"{self.parent_module.__name__}.{key}"
+            submod = importlib.import_module(full_name)
+            return parse_module(submod)
+        raise KeyError(key)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(frozenset(self.direct_attrs.keys()) | self.submodule_names)
+
+    def __len__(self) -> int:
+        return len(frozenset(self.direct_attrs.keys()) | self.submodule_names)
+
+    def __contains__(self, key: object) -> bool:
+        return key in self.direct_attrs or key in self.submodule_names
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class LazyNormalizedScopeDefinition(Mapping[str, ResourceDefinition]):
+    """A lazy mapping that normalizes scope definitions on access."""
+
+    scope_definition: ScopeDefinition
+
+    def __getitem__(self, key: str) -> ResourceDefinition:
+        return normalize(self.scope_definition[key])
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.scope_definition)
+
+    def __len__(self) -> int:
+        return len(self.scope_definition)
+
+    def __contains__(self, key: object) -> bool:
+        return key in self.scope_definition
+
+
 def parse_namespace(namespace: object) -> ScopeDefinition:
     """
     Parses an object into a ScopeDefinition.
@@ -367,7 +415,8 @@ def parse_module(module: ModuleType) -> ScopeDefinition:
     Nested modules are returned as lazy ScopeDefinitions (via parse_module recursion wrapped in a lambda),
     which will be converted to ScopeProxyDefinition during normalization.
 
-    TODO: 需要用 pkgutil 和 importlib 处理嵌套 package 和 module
+    For packages (modules with __path__), uses pkgutil.iter_modules to discover submodules
+    and importlib.import_module to lazily import them when accessed.
     """
 
     def parse_attr(attr: object) -> ResourceDefinition | ScopeDefinition:
@@ -377,12 +426,25 @@ def parse_module(module: ModuleType) -> ScopeDefinition:
             return parse_module(attr)
         return resource(cast(Callable[..., Node], attr))
 
-    return {
+    direct_attrs: Mapping[str, ResourceDefinition | ScopeDefinition] = {
         name: parse_attr(attr)
         for name in dir(module)
         for attr in (getattr(module, name),)
         if callable(attr) or isinstance(attr, ModuleType) or isinstance(attr, (BuilderDefinition, PatchDefinition))
     }
+
+    if hasattr(module, "__path__"):
+        submodule_names = frozenset(
+            mod_info.name
+            for mod_info in pkgutil.iter_modules(module.__path__)
+        )
+        return LazySubmoduleMapping(
+            parent_module=module,
+            submodule_names=submodule_names,
+            direct_attrs=direct_attrs,
+        )
+
+    return direct_attrs
 
 
 NormalizedScopeDefinition = Mapping[str, ResourceDefinition]
@@ -399,9 +461,9 @@ def normalize(definition: ResourceDefinition | ScopeDefinition) -> ResourceDefin
 
 def normalize_scope(scope_definition: ScopeDefinition) -> NormalizedScopeDefinition:
     """
-    Normalizes a ScopeDefinition by converting any nested ScopeDefinitions into ResourceDefinitions of Proxy.
+    Normalizes a ScopeDefinition lazily by converting any nested ScopeDefinitions into ResourceDefinitions of Proxy.
     """
-    return {key: normalize(value) for key, value in scope_definition.items()}
+    return LazyNormalizedScopeDefinition(scope_definition=scope_definition)
 
 
 Endo = Callable[[TResult], TResult]
@@ -563,6 +625,8 @@ def resolve(lexical_scope: LexicalScope, /, *objects: object) -> Proxy:
 def resolve_root(*objects: object) -> Proxy:
     """
     Resolves the root Proxy from the given objects.
+
+    TODO: 把 resolve 和 resolve_root 移到 Proxy 类内部，变成 classmethod，并使用 `cls(...)` 来创建 Self 类型的返回值。
     """
     return resolve(().__iter__, *objects)
 
