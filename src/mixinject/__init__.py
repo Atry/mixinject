@@ -18,7 +18,6 @@ from typing import (
     MutableMapping,
     NewType,
     Protocol,
-    Self,
     TypeAlias,
     TypeVar,
     cast,
@@ -47,29 +46,6 @@ class Proxy(ABC):
                 yield factory_or_patch(self)
 
         return _evaluate_resource(resource_generator=generate_resource)
-
-    @classmethod
-    def resolve(cls, lexical_scope: "LexicalScope", /, *objects: object) -> Self:
-        """
-        Resolves a Proxy from the given objects using the provided lexical scope.
-        """
-        def parse_object(obj: object) -> "ScopeDefinition":
-            if isinstance(obj, ModuleType):
-                return parse_module(obj)
-            return parse_namespace(obj)
-
-        components = frozenset(
-            compile(lexical_scope, normalize_scope(parse_object(obj)))
-            for obj in objects
-        )
-        return cls(components=components)
-
-    @classmethod
-    def resolve_root(cls, *objects: object) -> Self:
-        """
-        Resolves the root Proxy from the given objects using an empty lexical scope.
-        """
-        return cls.resolve(().__iter__, *objects)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -632,22 +608,43 @@ def compile(
     return component
 
 
-def resolve(lexical_scope: LexicalScope, /, *objects: object) -> Proxy:
+def resolve(
+    lexical_scope: LexicalScope,
+    /,
+    *objects: object,
+    cls: type[Proxy] = CachedProxy,
+) -> Proxy:
     """
     Resolves a Proxy from the given objects using the provided lexical scope.
 
-    This is a backward-compatible wrapper around Proxy.resolve().
+    Args:
+        lexical_scope: The lexical scope chain for dependency resolution.
+        *objects: Objects (classes or modules) to resolve resources from.
+        cls: The Proxy class to instantiate. Defaults to CachedProxy.
+             Can be customized to use different caching strategies (e.g., WeakCachedScope).
     """
-    return CachedProxy.resolve(lexical_scope, *objects)
+    def parse_object(obj: object) -> ScopeDefinition:
+        if isinstance(obj, ModuleType):
+            return parse_module(obj)
+        return parse_namespace(obj)
+
+    components = frozenset(
+        compile(lexical_scope, normalize_scope(parse_object(obj)))
+        for obj in objects
+    )
+    return cls(components=components)
 
 
-def resolve_root(*objects: object) -> Proxy:
+def resolve_root(*objects: object, cls: type[Proxy] = CachedProxy) -> Proxy:
     """
     Resolves the root Proxy from the given objects using an empty lexical scope.
 
-    This is a backward-compatible wrapper around Proxy.resolve_root().
+    Args:
+        *objects: Objects (classes or modules) to resolve resources from.
+        cls: The Proxy class to instantiate. Defaults to CachedProxy.
+             Can be customized to use different caching strategies (e.g., WeakCachedScope).
     """
-    return CachedProxy.resolve_root(*objects)
+    return resolve(().__iter__, *objects, cls=cls)
 
 
 def simple_component(**kwargs: object) -> Component:
