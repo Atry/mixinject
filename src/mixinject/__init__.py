@@ -127,6 +127,7 @@ class FunctionBuilder(Builder[TPatch_contra, TResult_co]):
 
 
 TResult = TypeVar("TResult")
+TProxy = TypeVar("TProxy", bound=Proxy)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -397,11 +398,14 @@ def parse_namespace(namespace: object) -> ScopeDefinition:
             return parse_namespace(attr)
         return resource(cast(Callable[..., Node], attr))
 
-    namespace_dict = vars(namespace) if isinstance(namespace, type) else vars(type(namespace))
+    namespace_dict = (
+        vars(namespace) if isinstance(namespace, type) else vars(type(namespace))
+    )
     return {
         name: parse_attr(attr)
         for name, attr in namespace_dict.items()
-        if callable(attr) or isinstance(attr, (BuilderDefinition, PatchDefinition, type))
+        if callable(attr)
+        or isinstance(attr, (BuilderDefinition, PatchDefinition, type))
     }
 
 
@@ -429,13 +433,14 @@ def parse_module(module: ModuleType) -> ScopeDefinition:
         name: parse_attr(attr)
         for name in dir(module)
         for attr in (getattr(module, name),)
-        if callable(attr) or isinstance(attr, ModuleType) or isinstance(attr, (BuilderDefinition, PatchDefinition))
+        if callable(attr)
+        or isinstance(attr, ModuleType)
+        or isinstance(attr, (BuilderDefinition, PatchDefinition))
     }
 
     if hasattr(module, "__path__"):
         submodule_names = frozenset(
-            mod_info.name
-            for mod_info in pkgutil.iter_modules(module.__path__)
+            mod_info.name for mod_info in pkgutil.iter_modules(module.__path__)
         )
         return LazySubmoduleMapping(
             parent_module=module,
@@ -608,12 +613,19 @@ def compile(
     return component
 
 
+def parse(obj: object) -> ScopeDefinition:
+    if isinstance(obj, ModuleType):
+        return parse_module(obj)
+    else:
+        return parse_namespace(obj)
+
+
 def resolve(
     lexical_scope: LexicalScope,
     /,
     *objects: object,
-    cls: type[Proxy] = CachedProxy,
-) -> Proxy:
+    cls: type[TProxy] = CachedProxy,
+) -> TProxy:
     """
     Resolves a Proxy from the given objects using the provided lexical scope.
 
@@ -622,20 +634,25 @@ def resolve(
         *objects: Objects (classes or modules) to resolve resources from.
         cls: The Proxy class to instantiate. Defaults to CachedProxy.
              Can be customized to use different caching strategies (e.g., WeakCachedScope).
+
+    Returns:
+        An instance of the cls type with resolved components.
+
+    Examples:
+        # Use default caching
+        root = resolve(().__iter__, MyNamespace)
+
+        # Use weak reference caching
+        root = resolve(().__iter__, MyNamespace, cls=WeakCachedScope)
     """
-    def parse_object(obj: object) -> ScopeDefinition:
-        if isinstance(obj, ModuleType):
-            return parse_module(obj)
-        return parse_namespace(obj)
 
     components = frozenset(
-        compile(lexical_scope, normalize_scope(parse_object(obj)))
-        for obj in objects
+        compile(lexical_scope, normalize_scope(parse(obj))) for obj in objects
     )
     return cls(components=components)
 
 
-def resolve_root(*objects: object, cls: type[Proxy] = CachedProxy) -> Proxy:
+def resolve_root(*objects: object, cls: type[TProxy] = CachedProxy) -> TProxy:
     """
     Resolves the root Proxy from the given objects using an empty lexical scope.
 
@@ -643,6 +660,19 @@ def resolve_root(*objects: object, cls: type[Proxy] = CachedProxy) -> Proxy:
         *objects: Objects (classes or modules) to resolve resources from.
         cls: The Proxy class to instantiate. Defaults to CachedProxy.
              Can be customized to use different caching strategies (e.g., WeakCachedScope).
+
+    Returns:
+        An instance of the cls type with resolved components.
+
+    Examples:
+        # Use default caching
+        root = resolve_root(MyNamespace)
+
+        # Use weak reference caching
+        root = resolve_root(MyNamespace, cls=WeakCachedScope)
+
+        # Use custom proxy subclass
+        root = resolve_root(MyNamespace, cls=CustomProxy)
     """
     return resolve(().__iter__, *objects, cls=cls)
 
