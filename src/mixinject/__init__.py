@@ -125,7 +125,7 @@ class FunctionBuilder(Builder[TPatch_contra, TResult_co]):
         return self.aggregation_function(patches)
 
 
-TResult = TypeVar("TResult", bound=Node)
+TResult = TypeVar("TResult")
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
