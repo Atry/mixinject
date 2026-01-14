@@ -1,3 +1,41 @@
+"""
+mixinject: A dependency injection framework with pytest-fixture-like semantics.
+
+## Core Design Principle: Explicit Decorator Marking
+
+All injectable definitions MUST be explicitly marked with one of these decorators:
+- @resource: Creates a base resource that can be modified by patches
+- @patch: Provides a single modification to an existing resource
+- @patches: Provides multiple modifications to an existing resource
+- @aggregator: Defines custom aggregation strategy for patches
+
+Bare callables (functions without decorators) are NOT automatically injected.
+This explicit-only design makes dependency injection predictable and self-documenting.
+
+## Example
+
+```python
+from mixinject import resource, patch, resolve_root
+
+# ✓ CORRECT: Explicitly decorated
+@resource
+def greeting() -> str:
+    return "Hello"
+
+@patch
+def greeting() -> Callable[[str], str]:
+    return lambda s: s + "!"
+
+# ✗ INCORRECT: Bare callable (will be ignored)
+def ignored_function() -> str:
+    return "This won't be injected"
+
+root = resolve_root(...)
+root.greeting  # "Hello!"
+root.ignored_function  # AttributeError: 'CachedProxy' object has no attribute 'ignored_function'
+```
+"""
+
 import importlib
 import pkgutil
 from abc import ABC, abstractmethod
@@ -390,57 +428,47 @@ def parse_namespace(namespace: object) -> ScopeDefinition:
     """
     Parses an object into a ScopeDefinition.
 
-    Each callable attribute of the object is converted into a ResourceDefinition via the `resource` decorator.
-    Attributes that are already ResourceDefinitions are returned as-is.
-    Nested classes are treated as sub-scopes.
-    """
+    Only attributes explicitly decorated with @resource, @patch, @patches, or @aggregator are included.
+    Nested classes are recursively parsed as sub-scopes.
 
-    def parse_attr(attr: object) -> ResourceDefinition | ScopeDefinition:
-        if isinstance(attr, (BuilderDefinition, PatchDefinition)):
-            return attr
-        if isinstance(attr, type):
-            return parse_namespace(attr)
-        return resource(cast(Callable[..., Node], attr))
+    IMPORTANT: Bare callables (without decorators) are NOT automatically included.
+    Users must explicitly mark all injectable definitions with appropriate decorators.
+    """
 
     namespace_dict = (
         vars(namespace) if isinstance(namespace, type) else vars(type(namespace))
     )
-    return {
-        name: parse_attr(attr)
-        for name, attr in namespace_dict.items()
-        if callable(attr)
-        or isinstance(attr, (BuilderDefinition, PatchDefinition, type))
-    }
+    result: dict[str, ResourceDefinition | ScopeDefinition] = {}
+    for name, attr in namespace_dict.items():
+        if isinstance(attr, (BuilderDefinition, PatchDefinition)):
+            result[name] = attr
+        elif isinstance(attr, type):
+            result[name] = parse_namespace(attr)
+    return result
 
 
 def parse_module(module: ModuleType) -> ScopeDefinition:
     """
     Parses a module into a ScopeDefinition.
 
-    This function behaves similarly to `parse_namespace`, but is specifically designed to handle nested modules and packages, which are converted into ``Definition``s of ``Proxy``.
+    Only module-level attributes explicitly decorated with @resource, @patch, @patches, or @aggregator are included.
+    Nested modules and packages are recursively parsed with lazy loading.
 
-    Nested modules are returned as lazy ScopeDefinitions (via parse_module recursion wrapped in a lambda),
-    which will be converted to ScopeProxyDefinition during normalization.
+    IMPORTANT: Bare callables (without decorators) are NOT automatically included.
+    Users must explicitly mark all injectable definitions with appropriate decorators.
 
     For packages (modules with __path__), uses pkgutil.iter_modules to discover submodules
     and importlib.import_module to lazily import them when accessed.
     """
 
-    def parse_attr(attr: object) -> ResourceDefinition | ScopeDefinition:
+    direct_attrs_dict: dict[str, ResourceDefinition | ScopeDefinition] = {}
+    for name in dir(module):
+        attr = getattr(module, name)
         if isinstance(attr, (BuilderDefinition, PatchDefinition)):
-            return attr
-        if isinstance(attr, ModuleType):
-            return parse_module(attr)
-        return resource(cast(Callable[..., Node], attr))
-
-    direct_attrs: Mapping[str, ResourceDefinition | ScopeDefinition] = {
-        name: parse_attr(attr)
-        for name in dir(module)
-        for attr in (getattr(module, name),)
-        if callable(attr)
-        or isinstance(attr, ModuleType)
-        or isinstance(attr, (BuilderDefinition, PatchDefinition))
-    }
+            direct_attrs_dict[name] = attr
+        elif isinstance(attr, ModuleType):
+            direct_attrs_dict[name] = parse_module(attr)
+    direct_attrs: Mapping[str, ResourceDefinition | ScopeDefinition] = direct_attrs_dict
 
     if hasattr(module, "__path__"):
         submodule_names = frozenset(
