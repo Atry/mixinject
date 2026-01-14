@@ -106,10 +106,42 @@ assert root.connection_string == "db.example.com:3306"
 - **依赖注入**：将外部依赖注入到模块中而无需硬编码
 - **多版本支持**：同一个模块可以与不同的注入值组合使用
 
-## TODO: Proxy as Callable
+## Proxy as Callable（已实现）
 
-**设计目标**（尚未实现）：每一个scope对象（Proxy）同时也应该是Callable，以支持直接参数注入。
+每一个Proxy对象同时也是Callable，支持直接参数注入。
 
-当前实现中，Proxy没有`__call__`方法。这是一个计划的功能扩展，将允许Proxy对象在函数调用中被当作可调用对象使用。
+### 实现
+
+Proxy实现了`__call__(**kwargs)`方法，返回一个新的同类型Proxy对象，该对象包含原有的所有components加上通过kwargs提供的新值（作为`simple_component`）。
+
+```python
+# 创建一个空Proxy并注入值
+proxy = CachedProxy(components=frozenset([]))
+new_proxy = proxy(setting="value", count=42)
+
+# 访问注入的值
+assert new_proxy.setting == "value"
+assert new_proxy.count == 42
+```
+
+### 主要用途
+
+Proxy as Callable的主要用途是为**endo-only resources**提供base values。通过在outer scope中使用`Proxy.__call__`来注入参数值，然后模块中的资源可以通过同名参数lookup来访问这些值：
+
+```python
+# 在outer scope中提供base value
+outer_proxy = CachedProxy(components=frozenset([])) \
+    (db_config={"host": "localhost", "port": "5432"})
+
+def outer_scope() -> Iterator[Proxy]:
+    yield outer_proxy
+
+# 模块中的资源可以通过同名参数获取这个值
+class Database:
+    @resource
+    def db_config(db_config: dict) -> dict:
+        """Same-name parameter: looks up from outer scope"""
+        return db_config
+```
 
 callable除了可以用来定义resource之外，也可以用来定义和转换scope。

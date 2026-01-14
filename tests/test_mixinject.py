@@ -12,6 +12,7 @@ from mixinject import (
     parse_module,
     patch,
     patches,
+    resolve,
     resolve_root,
     resource,
     simple_component,
@@ -372,3 +373,104 @@ class TestModuleParsing:
                 sys.modules.pop("ns_pkg.mod_a", None)
                 sys.modules.pop("ns_pkg.mod_b", None)
                 sys.modules.pop("ns_pkg.mod_c", None)
+
+
+class TestProxyCallable:
+    """Test Proxy as Callable - dynamic component injection."""
+
+    def test_proxy_call_single_kwarg(self) -> None:
+        """Test calling Proxy to inject a single new value."""
+        comp = simple_component(foo="foo_value")
+        proxy = CachedProxy(components=frozenset((comp,)))
+
+        # Call proxy with new kwargs to add additional components
+        new_proxy = proxy(bar="bar_value")
+
+        assert new_proxy.foo == "foo_value"  # from original component
+        assert new_proxy.bar == "bar_value"  # from new call
+
+    def test_proxy_call_multiple_kwargs(self) -> None:
+        """Test calling Proxy with multiple new kwargs."""
+        comp = simple_component(x=1, y=2)
+        proxy = CachedProxy(components=frozenset((comp,)))
+
+        # Call to add new components (z and w)
+        new_proxy = proxy(z=3, w=4)
+
+        assert new_proxy.x == 1  # from original
+        assert new_proxy.y == 2  # from original
+        assert new_proxy.z == 3  # new
+        assert new_proxy.w == 4  # new
+
+    def test_proxy_call_injected_values_accessible(self) -> None:
+        """Test that values injected via Proxy call are accessible as resources."""
+        # Create empty proxy and inject values via call
+        proxy = CachedProxy(components=frozenset([])) \
+            (config={"db": "postgres"}) \
+            (timeout=30)
+
+        # Injected values should be accessible
+        assert proxy.config == {"db": "postgres"}
+        assert proxy.timeout == 30
+
+    def test_proxy_call_provides_endo_only_base_value(self) -> None:
+        """Test Proxy callable providing base value for endo-only resource pattern.
+
+        Pattern:
+        - Outer scope provides base value via Proxy.__call__
+        - Module has nested scope that depends on parameter with same name
+        - Same-name lookup (param == resource name) finds value from outer scope
+        """
+        class Config:
+            @resource
+            def db_config(db_config: dict) -> dict:
+                """Endo-only resource with same-name parameter
+
+                Since param name == resource name, it looks up 'db_config'
+                in outer lexical scope, getting the value from Proxy.__call__
+                """
+                return db_config
+
+            @resource
+            def connection_string(db_config: dict) -> str:
+                """Depends on db_config which comes from outer scope"""
+                return f"{db_config['host']}:{db_config['port']}"
+
+        # Provide the base value via Proxy.__call__
+        outer_proxy = CachedProxy(components=frozenset([])) \
+            (db_config={"host": "localhost", "port": "5432"})
+
+        def outer_scope() -> Iterator[Proxy]:
+            yield outer_proxy
+
+        root = resolve(outer_scope, Config)
+        assert root.db_config == {"host": "localhost", "port": "5432"}
+        assert root.connection_string == "localhost:5432"
+
+    def test_proxy_call_returns_same_type(self) -> None:
+        """Test that calling a Proxy subclass returns the same type."""
+        comp = simple_component(x=1)
+
+        # CachedProxy should return CachedProxy
+        cached = CachedProxy(components=frozenset((comp,)))
+        new_cached = cached(y=2)
+
+        assert isinstance(new_cached, CachedProxy)
+        assert new_cached.x == 1
+        assert new_cached.y == 2
+
+    def test_proxy_call_creates_fresh_instance(self) -> None:
+        """Test that calling a Proxy creates a new instance without modifying the original."""
+        comp = simple_component(a=1)
+        proxy1 = CachedProxy(components=frozenset((comp,)))
+
+        # Call to create a new proxy
+        proxy2 = proxy1(b=2)
+
+        # Original should be unchanged
+        assert proxy1.a == 1
+        # New proxy should have both
+        assert proxy2.a == 1
+        assert proxy2.b == 2
+        # They should be different instances
+        assert proxy1 is not proxy2

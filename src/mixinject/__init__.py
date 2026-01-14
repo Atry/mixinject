@@ -56,6 +56,7 @@ from typing import (
     MutableMapping,
     NewType,
     Protocol,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
@@ -84,6 +85,9 @@ class Proxy(ABC):
                 yield factory_or_patch(self)
 
         return _evaluate_resource(resource_generator=generate_resource)
+
+    def __call__(self, **kwargs: object) -> Self:
+        return type(self)(components=self.components | {simple_component(**kwargs)})
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
