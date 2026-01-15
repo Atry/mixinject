@@ -15,6 +15,7 @@ from mixinject import (
     SinglePatchDefinition,
     aggregator,
     BoundMixin,
+    parameter,
     patch,
     patches,
     resource,
@@ -643,3 +644,94 @@ class TestProxyDir:
         assert "accessible2" in dir(root)
         assert getattr(root, "accessible1") == "a1"
         assert getattr(root, "accessible2") == "a2"
+
+
+class TestParameter:
+    """Test parameter decorator as syntactic sugar for empty patches."""
+
+    def test_parameter_with_keyword_argument_mixin(self) -> None:
+        """Test that @parameter registers a resource name and accepts injected values."""
+
+        class Config:
+            @parameter
+            def database_url(): ...
+
+            @resource
+            def connection_string(database_url: str) -> str:
+                return f"Connected to: {database_url}"
+
+        root = resolve(Config)(database_url="postgresql://localhost/mydb")
+        assert root.connection_string == "Connected to: postgresql://localhost/mydb"
+
+    def test_parameter_with_dependencies(self) -> None:
+        """Test that @parameter can have its own dependencies."""
+
+        class Config:
+            @resource
+            def host() -> str:
+                return "localhost"
+
+            @parameter
+            def database_url(host: str):
+                """This parameter depends on host but returns nothing useful."""
+                return f"postgresql://{host}/db"  # Return value is ignored
+
+            @resource
+            def connection_string(database_url: str) -> str:
+                return f"Connected to: {database_url}"
+
+        root = resolve(Config)(database_url="postgresql://prod-server/mydb")
+        assert root.connection_string == "Connected to: postgresql://prod-server/mydb"
+
+    def test_parameter_without_base_value_raises_error(self) -> None:
+        """Test that accessing a @parameter without providing a base value raises NotImplementedError."""
+
+        class Config:
+            @parameter
+            def database_url(): ...
+
+            @resource
+            def connection_string(database_url: str) -> str:
+                return f"Connected to: {database_url}"
+
+        root = resolve(Config)
+        try:
+            _ = root.connection_string
+            assert False, "Expected NotImplementedError"
+        except NotImplementedError:
+            pass
+
+    def test_parameter_equivalent_to_empty_patches(self) -> None:
+        """Test that @parameter is equivalent to @patches returning empty collection."""
+
+        class WithParameter:
+            @parameter
+            def value(): ...
+
+        class WithEmptyPatches:
+            @patches
+            def value():
+                return ()
+
+        root_param = resolve(WithParameter)(value=42)
+        root_patches = resolve(WithEmptyPatches)(value=42)
+
+        assert root_param.value == 42
+        assert root_patches.value == 42
+
+    def test_parameter_multiple_injections(self) -> None:
+        """Test that multiple @parameter resources can be injected together."""
+
+        class Config:
+            @parameter
+            def host(): ...
+
+            @parameter
+            def port(): ...
+
+            @resource
+            def url(host: str, port: int) -> str:
+                return f"http://{host}:{port}"
+
+        root = resolve(Config)(host="example.com", port=8080)
+        assert root.url == "http://example.com:8080"

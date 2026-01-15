@@ -1,39 +1,304 @@
 """
 mixinject: A dependency injection framework with pytest-fixture-like semantics.
 
-## Core Design Principle: Explicit Decorator Marking
+Design Philosophy
+=================
 
-All injectable definitions MUST be explicitly marked with one of these decorators:
-- @resource: Creates a base resource that can be modified by patches
-- @patch: Provides a single modification to an existing resource
-- @patches: Provides multiple modifications to an existing resource
-- @aggregator: Defines custom aggregation strategy for patches
+mixinject implements a dependency injection framework that combines pytest fixture-like semantics
+with hierarchical resource structures and mixin composition patterns, inspired by
+https://github.com/atry/mixin and https://github.com/mxmlnkn/ratarmount/pull/163.
 
-Bare callables (functions without decorators) are NOT automatically injected.
+Key Terminology
+---------------
+
+**Resource**
+    A named injectable value defined via decorators like :func:`resource`, :func:`patch`,
+    :func:`patches`, or :func:`aggregator`.
+
+**Proxy**
+    An object that contains resources, accessed via attribute access (``.`` operator).
+    Proxies can be nested to form hierarchical structures, analogous to a filesystem directory
+    hierarchy. See :class:`Proxy`.
+
+**Lexical Scope**
+    The lookup chain for resolving resources, scanning from inner to outer layers.
+    See :data:`LexicalScope`.
+
+**Endo Function**
+    A function of type ``Callable[[T], T]`` that transforms a value of type ``T`` into another
+    value of the same type. See :data:`Endo`.
+
+Core Design Principle: Explicit Decorator Marking
+==================================================
+
+All injectable definitions **MUST** be explicitly marked with one of these decorators:
+
+- :func:`resource`: Creates a base resource that can be modified by patches
+- :func:`patch`: Provides a single modification to an existing resource
+- :func:`patches`: Provides multiple modifications to an existing resource
+- :func:`aggregator`: Defines custom aggregation strategy for patches
+- :func:`parameter`: Declares a parameter placeholder (syntactic sugar for empty :func:`patches`)
+
+Bare callables (functions without decorators) are **NOT** automatically injected.
 This explicit-only design makes dependency injection predictable and self-documenting.
 
-## Example
+Example::
 
-```python
-from mixinject import resource, patch, resolve
+    from mixinject import resource, patch, resolve
 
-# ✓ CORRECT: Explicitly decorated
-@resource
-def greeting() -> str:
-    return "Hello"
+    # ✓ CORRECT: Explicitly decorated
+    @resource
+    def greeting() -> str:
+        return "Hello"
 
-@patch
-def greeting() -> Callable[[str], str]:
-    return lambda s: s + "!"
+    @patch
+    def greeting() -> Callable[[str], str]:
+        return lambda s: s + "!"
 
-# ✗ INCORRECT: Bare callable (will be ignored)
-def ignored_function() -> str:
-    return "This won't be injected"
+    # ✗ INCORRECT: Bare callable (will be ignored)
+    def ignored_function() -> str:
+        return "This won't be injected"
 
-root = resolve(...)
-root.greeting  # "Hello!"
-root.ignored_function  # AttributeError: 'CachedProxy' object has no attribute 'ignored_function'
-```
+    root = resolve(...)
+    root.greeting  # "Hello!"
+    root.ignored_function  # AttributeError: 'CachedProxy' object has no attribute 'ignored_function'
+
+Union Filesystem Analogy
+========================
+
+If we make an analogy to union filesystems:
+
+- :class:`Proxy` objects are like directory objects
+- Resources are like files
+- Modules, packages, callables, and :class:`ScopeDefinition` are filesystem definitions before mounting
+- The compiled result (from :func:`resolve`) is a concrete :class:`Proxy` that implements resource access
+
+Dependency Resolution
+=====================
+
+Name-Based Resolution
+---------------------
+
+Dependency injection is **always based on parameter names**, not types. The parameter resolution
+algorithm (similar to https://github.com/atry/mixin) automatically searches for dependencies
+in the lexical scope chain (from inner to outer).
+
+Simple Dependency Example::
+
+    @resource
+    def my_resource(some_dependency: str) -> float:
+        return float(some_dependency)
+
+The parameter ``some_dependency`` is resolved by searching the lexical scope chain for a resource
+named ``some_dependency``.
+
+Complex Path Access via Proxy
+------------------------------
+
+To access resources via complex paths, you must use an explicit :class:`Proxy` parameter::
+
+    @resource
+    def my_callable(uncle: Proxy) -> float:
+        return uncle.path.to.resource
+
+This searches the lexical scope chain for the first :class:`Proxy` that defines a resource
+named ``uncle``, then accesses ``path.to.resource`` under that :class:`Proxy`.
+
+Proxy-Returning Resources as Symbolic Links
+--------------------------------------------
+
+If a callable returns a :class:`Proxy`, that resource acts like a symbolic link
+(similar to https://github.com/mxmlnkn/ratarmount/pull/163)::
+
+    @resource
+    def my_scope(uncle: Proxy) -> Proxy:
+        return uncle.path.to.another_scope
+
+This finds the first :class:`Proxy` in the lexical scope that defines ``uncle``, then accesses
+nested resources through that :class:`Proxy`.
+
+Same-Name Dependency (pytest-fixture Semantics)
+------------------------------------------------
+
+When a parameter name matches the resource name, it skips the current :class:`Proxy` and
+looks for the same-named resource in outer scopes. This implements pytest fixture's
+same-name dependency semantics::
+
+    @resource
+    def my_callable(my_callable: float) -> float:
+        return my_callable + 1.0
+
+This skips the current :class:`Proxy` and searches the lexical scope chain for the parent
+:class:`Proxy`'s definition of ``my_callable``, allowing you to access and modify outer
+definitions.
+
+Merging and Composition
+========================
+
+Module and Package Merging
+---------------------------
+
+When merging modules and packages, mixinject uses an algorithm similar to
+https://github.com/atry/mixin and https://github.com/mxmlnkn/ratarmount/pull/163.
+
+Same-Named Callable Merging Rules
+----------------------------------
+
+When merging N same-named callables:
+
+- Exactly **N-1** callables must be decorated with :func:`patch` or :func:`patches`
+- Exactly **1** callable must be decorated with :func:`resource` or :func:`aggregator`
+- Otherwise, a ``ValueError`` is raised
+
+Union Mounting at Entry Point
+------------------------------
+
+At the framework entry point (:func:`resolve`), users can pass multiple packages, modules,
+or objects, which are union-mounted into a unified root :class:`Proxy`, similar to
+https://github.com/mxmlnkn/ratarmount/pull/163.
+
+Endo-Only Resources as Parameters (Best Practice)
+==================================================
+
+Concept
+-------
+
+A resource can be defined **solely** by :func:`patch` or :func:`patches` decorators,
+without a base definition from :func:`resource` or :func:`aggregator`. This **endo-only resource**
+is essentially a "parameter" that allows other resources to depend on it, while the parameter's
+final value comes from injection from an outer scope.
+
+Identity Function Pattern
+--------------------------
+
+Endo-only patches are typically **identity functions** (``lambda x: x``), performing no
+transformation. The key purpose is to **register the resource name in the lexical scope**,
+allowing other resources to find it via lexical scope lookup.
+
+**Recommended:** Use the :func:`parameter` decorator as syntactic sugar instead of writing
+identity functions manually. It makes the intent clearer and reduces boilerplate.
+
+When an endo-only resource is accessed, the system:
+
+1. Looks up the resource name in the lexical scope
+2. Finds the base value injected from outer scope via :class:`KeywordArgumentMixin`
+3. Applies all endo-only patches (usually identity functions, so the value doesn't change)
+4. Passes the final value to resources that depend on it
+
+Example
+-------
+
+Using the recommended :func:`parameter` decorator::
+
+    # config.py
+    from mixinject import parameter, resource
+    from typing import Dict
+
+    @parameter
+    def settings(): ...
+
+    @resource
+    def connection_string(settings: Dict[str, str]) -> str:
+        \"\"\"Depends on parameter injected from outer scope.\"\"\"
+        return f"{settings.get('host', 'localhost')}:{settings.get('port', '5432')}"
+
+    # main.py
+    from mixinject import resolve
+
+    # Inject base value using Proxy.__call__
+    root = resolve(config)(settings={"host": "db.example.com", "port": "3306"})
+    assert root.connection_string == "db.example.com:3306"
+
+Alternatively, using the identity function pattern (more verbose)::
+
+    # config.py
+    from mixinject import patch, resource
+    from typing import Callable, Dict
+
+    @patch
+    def settings() -> Callable[[Dict[str, str]], Dict[str, str]]:
+        \"\"\"Endo-only resource: identity function, no transformation.
+
+        Exists solely to register 'settings' in the lexical scope.
+        \"\"\"
+        return lambda cfg: cfg  # identity function
+
+    @resource
+    def connection_string(settings: Dict[str, str]) -> str:
+        \"\"\"Depends on endo-only resource as parameter.\"\"\"
+        return f"{settings.get('host', 'localhost')}:{settings.get('port', '5432')}"
+
+    # main.py
+    from mixinject import resolve
+
+    root = resolve(config)(settings={"host": "db.example.com", "port": "3306"})
+    assert root.connection_string == "db.example.com:3306"
+
+Key Advantages
+--------------
+
+**Lexical scope registration**
+    Even without a base implementation, endo-only patches register the resource name,
+    making it findable in the lexical scope.
+
+**Flexible injection**
+    Base values can be injected at runtime via outer scope's :class:`KeywordArgumentMixin`.
+
+**Module decoupling**
+    Modules don't need to know concrete resource values, only declare their existence.
+
+Use Cases
+---------
+
+This pattern is useful for:
+
+- **Configuration parameters**: Modules declare they need configuration without defining values
+- **Dependency injection**: Inject external dependencies without hardcoding
+- **Multi-version support**: Combine the same module with different injected values
+
+Proxy as Callable
+=================
+
+Every :class:`Proxy` object is also callable, supporting direct parameter injection.
+
+Implementation
+--------------
+
+:class:`Proxy` implements ``__call__(**kwargs)``, returning a new :class:`Proxy` of the same type
+containing all original mixins plus new values provided via kwargs (as :class:`KeywordArgumentMixin`).
+
+Example::
+
+    # Create an empty Proxy and inject values
+    proxy = CachedProxy(mixins=frozenset([]))
+    new_proxy = proxy(setting="value", count=42)
+
+    # Access injected values
+    assert new_proxy.setting == "value"
+    assert new_proxy.count == 42
+
+Primary Use Case
+----------------
+
+The primary use of Proxy as Callable is to provide base values for **endo-only resources**.
+By using :meth:`Proxy.__call__` in an outer scope to inject parameter values, resources in
+modules can access these values via same-named parameter lookup::
+
+    # Provide base value in outer scope
+    outer_proxy = CachedProxy(mixins=frozenset([])) \\
+        (db_config={"host": "localhost", "port": "5432"})
+
+    def outer_scope() -> Iterator[Proxy]:
+        yield outer_proxy
+
+    # Resources in modules can obtain this value via same-named parameter
+    class Database:
+        @resource
+        def db_config(db_config: dict) -> dict:
+            \"\"\"Same-name parameter: looks up from lexical scope.\"\"\"
+            return db_config
+
+Callables can be used not only to define resources but also to define and transform Proxy objects.
 """
 
 import importlib
@@ -47,7 +312,6 @@ from types import ModuleType
 from typing import (
     Any,
     Callable,
-    Collection,
     Hashable,
     Generic,
     Iterable,
@@ -459,7 +723,7 @@ class SinglePatchDefinition(PatcherDefinition[TPatcher_co]):
 class MultiplePatchDefinition(PatcherDefinition[TPatcher_co]):
     """Definition for patches decorator (multiple patches)."""
 
-    function: Callable[..., Collection[TPatcher_co]]
+    function: Callable[..., Iterable[TPatcher_co]]
 
     @override
     def bind_lexical_scope(
@@ -762,12 +1026,58 @@ def patch(
 
 
 def patches(
-    callable: Callable[..., Collection[TPatcher_co]],
+    callable: Callable[..., Iterable[TPatcher_co]],
 ) -> PatcherDefinition[TPatcher_co]:
     """
     A decorator that converts a callable into a patch definition.
     """
     return MultiplePatchDefinition(function=callable)
+
+
+def parameter(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
+    """
+    A decorator that marks a callable as a parameter placeholder.
+
+    This is syntactic sugar equivalent to :func:`patches` returning an empty collection.
+    It registers the resource name in the lexical scope without providing any patches,
+    making it clear that the value should come from injection from an outer lexical scope
+    via :class:`KeywordArgumentMixin` or :meth:`Proxy.__call__`.
+
+    The decorated callable may have parameters for dependency injection, which will be
+    resolved from the lexical scope when the resource is accessed. However, the callable's
+    return value is ignored.
+
+    Example::
+
+        @parameter
+        def database_url(): ...
+
+        # Equivalent to:
+        @patches
+        def database_url():
+            return ()
+
+    This pattern is useful for:
+
+    - **Configuration parameters**: Declare dependencies without providing values
+    - **Dependency injection**: Mark injection points for external values
+    - **Module decoupling**: Declare required resources without hardcoding
+
+    Args:
+        callable: A callable that may have parameters for dependency injection.
+                 The return value is ignored.
+
+    Returns:
+        A PatcherDefinition that provides no patches.
+    """
+    sig = signature(callable)
+
+    def empty_patches_provider(**_kwargs: Any) -> Iterable[Any]:
+        return ()
+
+    empty_patches_provider.__signature__ = sig  # type: ignore[attr-defined]
+
+    return MultiplePatchDefinition(function=empty_patches_provider)
 
 
 def resource(
