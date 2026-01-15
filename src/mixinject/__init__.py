@@ -1319,6 +1319,8 @@ def _resolve_dependencies_jit(
     can be more efficient than :func:`_resolve_dependencies_kwargs` as it avoids
     creating a dictionary for keyword arguments at each call.
 
+    .. todo:: 需要实现pytest fixture风格的同名依赖注入语义，即当参数名与资源名相同时，从symbol_table.parents中获取符号，而不是从symbol_table本身获取。这需要给 _resolve_dependencies_jit 添加 resource_name 参数，并在生成的AST中实现相应的逻辑。
+
     :param symbol_table: A mapping from resource names to their resolution functions.
     :param function: The function for which to resolve dependencies.
     :return: A wrapper function that takes a lexical scope and a proxy, and returns
