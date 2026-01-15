@@ -263,6 +263,57 @@ result = tuple(item.value for item in items if item.is_valid)
 **When `append` is acceptable:**
 - Never is acceptable
 
+### Mandatory `super()` with `@override`
+
+**ALL** functions decorated with `@override` **MUST** call `super()`.
+
+- **Never** override a concrete implementation without calling `super()`. Doing so often violates the **Liskov Substitution Principle (LSP)** by breaking the base class's established contract, side effects, or state management.
+- **Special Case for `slots=True`**: When using `@dataclass(slots=True)`, you **MUST** use the explicit 2-argument form of `super()`: `super(ClassName, self)`. Do **NOT** use the 0-argument `super()` or `super(__class__, self)`, as these can fail due to how Python reconstructs classes with slots.
+- If the base class method is an `@abstractmethod` and you do **NOT** want to call `super()`, you **MUST NOT** use `@override`.
+- Use `@override` strictly for chain-of-responsibility/extension patterns where you are augmenting base behavior.
+- Do **NOT** use `@override` for simple interface implementations of abstract methods where the base implementation is empty or intended to be ignored.
+
+```python
+# ✗ BAD - replacing concrete implementation without super() (violates LSP)
+class Extended(Base):
+    @override
+    def process(self):
+        # Base.process code is ignored, contract might be broken
+        self.new_logic()
+
+# ✗ BAD - using 0-arg super with slots=True
+@dataclass(slots=True)
+class MyData(Base):
+    @override
+    def process(self):
+        super().process()  # Might fail with slots=True
+
+# ✓ GOOD - extending concrete implementation with super() (respects LSP)
+class Extended(Base):
+    @override
+    def process(self):
+        super().process()
+        self.new_logic()
+
+# ✓ GOOD - 2-arg super with literal class name for slots=True
+@dataclass(slots=True)
+class MyData(Base):
+    @override
+    def process(self):
+        super(MyData, self).process()
+        self.new_logic()
+
+# ✓ GOOD - implementing abstract method WITHOUT @override (no super() needed)
+class Concrete(Abstract):
+    def do_something(self):
+        self.perform_action()
+```
+
+**Why this rule exists:**
+- **Liskov Substitution Principle (LSP):** Subtypes must be substitutable for their base types. Overriding a concrete method without calling `super()` risks breaking the invariant expectations of the base class.
+- **Predictability:** Ensures that method resolution chains are never accidentally broken and that base class logic (initialization, registration, etc.) is always executed.
+- **Clarity:** Clearly distinguishes between *implementing* an interface and *extending* existing behavior.
+
 ### Representing Optional/Absent Values: Anti-patterns and Correct Pattern
 
 The following are all **anti-patterns** for representing optional or absent values:
