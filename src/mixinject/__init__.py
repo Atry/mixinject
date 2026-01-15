@@ -201,19 +201,6 @@ class EndoBuilder(Generic[TResult], Builder[Callable[[TResult], TResult], TResul
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
 
 
-@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class SimpleBuilder(Builder[Any, Resource]):
-    """Builder for simple static values."""
-
-    value: Resource
-
-    @override
-    def create(self, patches: Iterator[Any]) -> Resource:
-        for _ in patches:
-            pass
-        return self.value
-
-
 class Mixin(Mapping[str, Callable[[Proxy], Builder | Patch]], Hashable, ABC):
     """
     Abstract base class for mixins.
@@ -737,7 +724,7 @@ class KeywordArgumentMixin(Mixin):
         value = self.kwargs[key]
 
         def factory(proxy: Proxy) -> Builder[Any, Resource]:
-            return SimpleBuilder(value=cast(Resource, value))
+            return EndoBuilder(base_value=cast(Resource, value))
 
         return factory
 
