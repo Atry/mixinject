@@ -333,6 +333,7 @@ from typing import (
     overload,
     override,
 )
+from warnings import deprecated
 from weakref import WeakValueDictionary
 
 P = ParamSpec("P")
@@ -634,10 +635,21 @@ def _evaluate_resource(
 
 
 class Definition(ABC):
+    @deprecated("Use resolve_symbols() instead")
     @abstractmethod
     def bind_lexical_scope(
         self, outer_lexical_scope: LexicalScope, resource_name: str, /
     ) -> Callable[[Proxy], Builder | Patcher]: ...
+
+    def resolve_symbols(
+        self, symbol_table: "SymbolTable", resource_name: str, /
+    ) -> Callable[[LexicalScope], Callable[[Proxy], Builder | Patcher]]:
+        """
+        The fallback implementation that calls the legacy bind_lexical_scope method, should be overridden in subclasses to avoid the deprecated behavior.
+        """
+        return lambda lexical_scope: self.bind_lexical_scope(
+            lexical_scope, resource_name
+        )
 
 
 class BuilderDefinition(Definition, Generic[TPatch_contra, TResult_co]):
