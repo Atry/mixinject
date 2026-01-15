@@ -473,14 +473,14 @@ def merge_proxies(proxies: Iterable[Proxy]) -> Proxy:
     The resulting proxy's class is the most derived class among the input proxies.
     The resulting proxy's mixins are the union of all input proxies' mixins.
     """
-    proxies_list = list(proxies)
-    if not proxies_list:
+    proxies_tuple = tuple(proxies)
+    if not proxies_tuple:
         raise ValueError("No proxies to merge")
 
-    winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_list))
+    winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_tuple))
 
     def generate_all_mixins() -> Iterator[Mixin]:
-        for p in proxies_list:
+        for p in proxies_tuple:
             yield from p.mixins
 
     return winner_class(mixins=frozenset(generate_all_mixins()))
