@@ -334,7 +334,7 @@ class ResourceDefinition(
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class PatchDefinitionImpl(PatchDefinition[TPatch_co]):
+class SinglePatchDefinition(PatchDefinition[TPatch_co]):
     """Definition for patch decorator (single patch)."""
 
     function: Callable[..., TPatch_co]
@@ -356,7 +356,7 @@ class PatchDefinitionImpl(PatchDefinition[TPatch_co]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class PatchesDefinitionImpl(PatchDefinition[TPatch_co]):
+class MultiplePatchDefinition(PatchDefinition[TPatch_co]):
     """Definition for patches decorator (multiple patches)."""
 
     function: Callable[..., Collection[TPatch_co]]
@@ -579,7 +579,7 @@ def patch(
     """
     A decorator that converts a callable into a patch definition.
     """
-    return PatchDefinitionImpl(function=callable)
+    return SinglePatchDefinition(function=callable)
 
 
 def patches(
@@ -588,7 +588,7 @@ def patches(
     """
     A decorator that converts a callable into a patch definition.
     """
-    return PatchesDefinitionImpl(function=callable)
+    return MultiplePatchDefinition(function=callable)
 
 
 def resource(
