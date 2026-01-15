@@ -48,6 +48,7 @@ from typing import (
     Callable,
     Collection,
     Dict,
+    Hashable,
     Generator,
     Generic,
     Iterable,
@@ -196,7 +197,18 @@ class SimpleBuilder(Builder[Any, Resource]):
         return self.value
 
 
-Component: TypeAlias = Mapping[str, Callable[[Proxy], Builder | Patch]]
+class Component(Mapping[str, Callable[[Proxy], Builder | Patch]], Hashable, ABC):
+    """
+    Abstract base class for components.
+    Components are mappings from resource names to factory functions.
+    They must compare by identity to allow storage in sets.
+    """
+
+    def __hash__(self) -> int:
+        return hash(id(self))
+
+    def __eq__(self, other: object) -> bool:
+        return self is other
 
 
 def _evaluate_resource(
@@ -642,7 +654,7 @@ def resource(
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class CompiledComponent(Mapping[str, Callable[[Proxy], Builder | Patch]]):
+class CompiledComponent(Component):
     lexical_scope: LexicalScope
     normalized_scope_definition: NormalizedScopeDefinition
 
@@ -657,12 +669,6 @@ class CompiledComponent(Mapping[str, Callable[[Proxy], Builder | Patch]]):
 
     def __len__(self) -> int:
         return len(self.normalized_scope_definition)
-
-    def __hash__(self) -> int:
-        return hash(id(self))
-
-    def __eq__(self, other: object) -> bool:
-        return self is other
 
 
 def compile(
@@ -740,7 +746,7 @@ def resolve_root(*objects: object, cls: type[TProxy] = CachedProxy) -> TProxy:
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class SimpleComponent(Mapping[str, Callable[[Proxy], Builder | Patch]]):
+class SimpleComponent(Component):
     kwargs: Mapping[str, object]
 
     def __getitem__(self, key: str) -> Callable[[Proxy], Builder | Patch]:
@@ -758,12 +764,6 @@ class SimpleComponent(Mapping[str, Callable[[Proxy], Builder | Patch]]):
 
     def __len__(self) -> int:
         return len(self.kwargs)
-
-    def __hash__(self) -> int:
-        return hash(id(self))
-
-    def __eq__(self, other: object) -> bool:
-        return self is other
 
 
 def simple_component(**kwargs: object) -> Component:
