@@ -301,6 +301,7 @@ modules can access these values via same-named parameter lookup::
 Callables can be used not only to define resources but also to define and transform Proxy objects.
 """
 
+import ast
 import importlib
 import importlib.util
 import pkgutil
@@ -314,6 +315,8 @@ from typing import (
     AsyncContextManager,
     Awaitable,
     Callable,
+    ChainMap,
+    Concatenate,
     ContextManager,
     Hashable,
     Generic,
@@ -322,13 +325,18 @@ from typing import (
     Mapping,
     MutableMapping,
     NewType,
+    ParamSpec,
     Self,
     TypeAlias,
     TypeVar,
     cast,
+    overload,
     override,
 )
 from weakref import WeakValueDictionary
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 Resource = NewType("Resource", object)
 
@@ -337,11 +345,11 @@ Resource = NewType("Resource", object)
 class Proxy(Mapping[str, "Node"], ABC):
     """
     A Proxy represents resources available via attributes or keys.
-    
+
     .. todo::
         我希望把Proxy/CachedProxy/WeakCachedProxy合并成一个类，按需提供ResourceConfig的24种组合行为。
 
-        我希望可以通过新增的一些decorator提供 ResourceConfig 的配置。注意这个配置是静态的不依赖于 Proxy 和 Scope，也就是说需要放在 Definition里，并且 Mixin 有办法查询到 
+        我希望可以通过新增的一些decorator提供 ResourceConfig 的配置。注意这个配置是静态的不依赖于 Proxy 和 Scope，也就是说需要放在 Definition里，并且 Mixin 有办法查询到
         ```
         class Mixin:
             @abstractmethod
@@ -819,9 +827,6 @@ class _ScopeDefinition(BuilderDefinition[Proxy, Proxy], PatcherDefinition[Proxy]
         return bind_proxy
 
 
-T = TypeVar("T")
-
-
 @dataclass(frozen=True, kw_only=True)
 class _NamespaceDefinition(Mapping[str, Definition], Generic[T]):
     """
@@ -1226,3 +1231,138 @@ class _KeywordArgumentMixin(Mixin):
 
     def __len__(self) -> int:
         return len(self.kwargs)
+
+
+SymbolTable: TypeAlias = ChainMap[str, Callable[[LexicalScope], Node]]
+"""
+A mapping from resource names to functions that take a lexical scope and return a Node.
+
+.. note:: NEVER ever modify a SymbolTable in-place. Always create a new ChainMap layer to add new definitions.
+"""
+
+
+def _resolve_dependencies_kwargs(
+    symbol_table: SymbolTable,
+    function: Callable[P, T],
+) -> Callable[[LexicalScope, Proxy], T]:
+    """
+    Resolve dependencies for a function using standard keyword arguments.
+
+    The first parameter of the function is treated as a :class:`Proxy` if it is
+    positional-only, or if it is positional-or-keyword and its name is not present
+    in the symbol table. All other parameters are resolved from the symbol table.
+
+    This implementation uses a standard closure that constructs a dictionary of
+    resolved dependencies and passes them to the function using ``**kwargs``.
+
+    :param symbol_table: A mapping from resource names to their resolution functions.
+    :param function: The function for which to resolve dependencies.
+    :return: A wrapper function that takes a lexical scope and a proxy, and returns
+             the result of the original function.
+    """
+    sig = signature(function)
+    params = list(sig.parameters.values())
+
+    has_proxy = False
+    if params:
+        p0 = params[0]
+        if (p0.kind == p0.POSITIONAL_ONLY) or (
+            p0.kind == p0.POSITIONAL_OR_KEYWORD and p0.name not in symbol_table
+        ):
+            has_proxy = True
+            kw_params = params[1:]
+        else:
+            kw_params = params
+    else:
+        kw_params = []
+
+    def resolved_function(lexical_scope: LexicalScope, proxy: Proxy) -> T:
+        kwargs = {
+            param.name: symbol_table[param.name](lexical_scope) for param in kw_params
+        }
+        if has_proxy:
+            return function(proxy, **kwargs)  # type: ignore
+        else:
+            return function(**kwargs)  # type: ignore
+
+    return resolved_function
+
+
+def _resolve_dependencies_jit(
+    symbol_table: SymbolTable,
+    function: Callable[P, T],
+) -> Callable[[LexicalScope, Proxy], T]:
+    """
+    Resolve dependencies for a function using JIT-compiled AST.
+
+    The first parameter of the function is treated as a :class:`Proxy` if it is
+    positional-only, or if it is positional-or-keyword and its name is not present
+    in the symbol table. All other parameters are resolved from the symbol table.
+
+    This implementation generates a specialized lambda function using Python's
+    AST module, which directly calls the dependency resolution functions. This
+    can be more efficient than :func:`_resolve_dependencies_kwargs` as it avoids
+    creating a dictionary for keyword arguments at each call.
+
+    :param symbol_table: A mapping from resource names to their resolution functions.
+    :param function: The function for which to resolve dependencies.
+    :return: A wrapper function that takes a lexical scope and a proxy, and returns
+             the result of the original function.
+    """
+    sig = signature(function)
+    params = list(sig.parameters.values())
+
+    if not params:
+        return lambda _ls, _p: function()  # type: ignore
+
+    has_proxy = False
+    p0 = params[0]
+    if (p0.kind == p0.POSITIONAL_ONLY) or (
+        p0.kind == p0.POSITIONAL_OR_KEYWORD and p0.name not in symbol_table
+    ):
+        has_proxy = True
+        kw_params = params[1:]
+    else:
+        kw_params = params
+
+    # Create keyword arguments for the call: name=symbol_table['name'](lexical_scope)
+    keywords = [
+        ast.keyword(
+            arg=p.name,
+            value=ast.Call(
+                func=ast.Subscript(
+                    value=ast.Name(id="symbol_table", ctx=ast.Load()),
+                    slice=ast.Constant(value=p.name),
+                    ctx=ast.Load(),
+                ),
+                args=[ast.Name(id="lexical_scope", ctx=ast.Load())],
+                keywords=[],
+            ),
+        )
+        for p in kw_params
+    ]
+
+    call_node = ast.Call(
+        func=ast.Name(id="function", ctx=ast.Load()),
+        args=[ast.Name(id="proxy", ctx=ast.Load())] if has_proxy else [],
+        keywords=keywords,
+    )
+
+    lambda_node = ast.Lambda(
+        args=ast.arguments(
+            posonlyargs=[],
+            args=[ast.arg(arg="lexical_scope"), ast.arg(arg="proxy")],
+            kwonlyargs=[],
+            kw_defaults=[],
+            defaults=[],
+        ),
+        body=call_node,
+    )
+
+    module_node = ast.Expression(body=lambda_node)
+    ast.fix_missing_locations(module_node)
+    code = compile(
+        module_node, filename="<mixinject__resolve_dependencies_jit>", mode="eval"
+    )
+
+    return eval(code, {"function": function, "symbol_table": symbol_table})
