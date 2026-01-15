@@ -37,6 +37,7 @@ root.ignored_function  # AttributeError: 'CachedProxy' object has no attribute '
 """
 
 import importlib
+import importlib.util
 import pkgutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -269,9 +270,6 @@ class PatchDefinition(Definition, Generic[TPatch_co]):
     ) -> Callable[[Proxy], Patch]: ...
 
 
-DefinitionMapping: TypeAlias = Mapping[str, Definition]
-
-
 def _resolve_dependencies(
     function: Callable[..., Any],
     resource_name: str,
@@ -288,7 +286,13 @@ def _resolve_dependencies(
     """
 
     def resolve_param(param_name: str) -> Any:
+        """
+        Resolve a single parameter by name.
+        1. If param_name == resource_name, look up in outer lexical scope to avoid self-dependency, mimicking pytest fixture behavior.
+        2. Otherwise, try to get from current proxy, falling back to outer lexical scope if not found.
+        """
         if param_name == resource_name:
+            # pytest fixture-like behavior to not recursively depend on itself
             return loop_up(outer_lexical_scope, param_name)
         try:
             return proxy[param_name]
@@ -310,11 +314,10 @@ class AggregatorDefinition(BuilderDefinition[TPatch_contra, TResult_co]):
         self, outer_lexical_scope: LexicalScope, resource_name: str, /
     ) -> Callable[[Proxy], Builder[TPatch_contra, TResult_co]]:
         def factory(proxy: Proxy) -> Builder[TPatch_contra, TResult_co]:
-            resolved_args = _resolve_dependencies(
+            dependencies = _resolve_dependencies(
                 self.function, resource_name, outer_lexical_scope, proxy
             )
-            aggregation_fn = self.function(**resolved_args)
-            return FunctionBuilder(aggregation_function=aggregation_fn)
+            return FunctionBuilder(aggregation_function=self.function(**dependencies))
 
         return factory
 
@@ -389,17 +392,18 @@ class MultiplePatchDefinition(PatchDefinition[TPatch_co]):
 class ScopeDefinition(BuilderDefinition[Mixin, Proxy]):
     """Definition that creates a Proxy from nested ScopeDefinition (lazy evaluation)."""
 
-    definitions: DefinitionMapping
+    definitions: Mapping[str, Definition]
 
     @override
     def bind_lexical_scope(
         self, outer_lexical_scope: LexicalScope, resource_name: str, /
     ) -> Callable[[Proxy], Builder[Mixin, Proxy]]:
         def factory(proxy: Proxy) -> Builder[Mixin, Proxy]:
+            def inner_lexical_scope() -> Iterator[Proxy]:
+                yield proxy
+                yield from outer_lexical_scope()
+
             def create_proxy(patches: Iterator[Mixin]) -> Proxy:
-                def inner_lexical_scope() -> Iterator[Proxy]:
-                    yield proxy
-                    yield from outer_lexical_scope()
 
                 base_mixin = compile(inner_lexical_scope, self.definitions)
                 all_mixins = frozenset((base_mixin, *patches))
@@ -410,34 +414,90 @@ class ScopeDefinition(BuilderDefinition[Mixin, Proxy]):
         return factory
 
 
-@dataclass(frozen=True, kw_only=True, slots=True)
-class LazySubmoduleMapping(Mapping[str, Definition]):
-    """A lazy mapping that discovers submodules via pkgutil and imports them on access."""
+T = TypeVar("T")
 
-    parent_module: ModuleType
-    submodule_names: frozenset[str]
-    direct_attrs: Mapping[str, Definition]
+
+@dataclass(frozen=True, kw_only=True)
+class ObjectMapping(Mapping[str, Definition], Generic[T]):
+    """
+    A lazy mapping that parses definitions from an object's attributes on access.
+    Implements call-by-name semantics using dir() and getattr().
+    """
+
+    underlying: T
 
     def __getitem__(self, key: str) -> Definition:
-        if key in self.direct_attrs:
-            return self.direct_attrs[key]
-        if key in self.submodule_names:
-            full_name = f"{self.parent_module.__name__}.{key}"
-            submod = importlib.import_module(full_name)
-            return ScopeDefinition(definitions=parse_module(submod))
+        try:
+            val = getattr(self.underlying, key)
+        except AttributeError as e:
+            raise KeyError(key) from e
+
+        if isinstance(val, Definition):
+            return val
         raise KeyError(key)
 
     def __iter__(self) -> Iterator[str]:
-        return iter(frozenset(self.direct_attrs.keys()) | self.submodule_names)
+        for name in dir(self.underlying):
+            try:
+                val = getattr(self.underlying, name)
+            except AttributeError:
+                continue
+            if isinstance(val, Definition):
+                yield name
 
     def __len__(self) -> int:
-        return len(frozenset(self.direct_attrs.keys()) | self.submodule_names)
+        return sum(1 for _ in self)
 
+
+@dataclass(frozen=True, kw_only=True)
+class PackageMapping(ObjectMapping[ModuleType]):
+    """A lazy mapping that discovers submodules via pkgutil and imports them on access."""
+
+    @override
+    def __getitem__(self, key: str) -> Definition:
+        # 1. Try to get attribute from module (using super - finds Definition)
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            pass
+
+        # 2. Try to find in submodules (if package)
+        full_name = f"{self.underlying.__name__}.{key}"  # type: ignore
+        try:
+            spec = importlib.util.find_spec(full_name)
+        except ImportError as e:
+            raise KeyError(key) from e
+
+        if spec is None:
+            raise KeyError(key)
+
+        submod = importlib.import_module(full_name)
+        return ScopeDefinition(definitions=parse_module(submod))
+
+    @override
+    def __iter__(self) -> Iterator[str]:
+        # 1. Yield attributes that are Definitions (using super)
+        yield from super().__iter__()
+
+        # 2. Yield submodule names
+        for mod_info in pkgutil.iter_modules(self.underlying.__path__):  # type: ignore
+            yield mod_info.name
+
+    @override
     def __contains__(self, key: object) -> bool:
-        return key in self.direct_attrs or key in self.submodule_names
+        if super().__contains__(key):
+            return True
+        if not isinstance(key, str):
+            return False
+
+        full_name = f"{self.underlying.__name__}.{key}"  # type: ignore
+        try:
+            return importlib.util.find_spec(full_name) is not None
+        except ImportError:
+            return False
 
 
-def parse_object(namespace: object) -> DefinitionMapping:
+def parse_object(namespace: object) -> Mapping[str, Definition]:
     """
     Parses an object into a ScopeDefinition.
 
@@ -447,15 +507,7 @@ def parse_object(namespace: object) -> DefinitionMapping:
     IMPORTANT: Bare callables (without decorators) are NOT automatically included.
     Users must explicitly mark all injectable definitions with appropriate decorators.
     """
-
-    namespace_dict = (
-        vars(namespace) if isinstance(namespace, type) else vars(type(namespace))
-    )
-    result: dict[str, Definition] = {}
-    for name, attr in namespace_dict.items():
-        if isinstance(attr, Definition):
-            result[name] = attr
-    return result
+    return ObjectMapping(underlying=namespace)
 
 
 def scope(cls: type) -> ScopeDefinition:
@@ -466,7 +518,7 @@ def scope(cls: type) -> ScopeDefinition:
     return ScopeDefinition(definitions=parse_object(cls))
 
 
-def parse_module(module: ModuleType) -> DefinitionMapping:
+def parse_module(module: ModuleType) -> Mapping[str, Definition]:
     """
     Parses a module into a ScopeDefinition.
 
@@ -479,27 +531,9 @@ def parse_module(module: ModuleType) -> DefinitionMapping:
     For packages (modules with __path__), uses pkgutil.iter_modules to discover submodules
     and importlib.import_module to lazily import them when accessed.
     """
-
-    direct_attrs_dict: dict[str, Definition] = {}
-    for name in dir(module):
-        attr = getattr(module, name)
-        if isinstance(attr, Definition):
-            direct_attrs_dict[name] = attr
-        elif isinstance(attr, ModuleType):
-            direct_attrs_dict[name] = ScopeDefinition(definitions=parse_module(attr))
-    direct_attrs: Mapping[str, Definition] = direct_attrs_dict
-
     if hasattr(module, "__path__"):
-        submodule_names = frozenset(
-            mod_info.name for mod_info in pkgutil.iter_modules(module.__path__)
-        )
-        return LazySubmoduleMapping(
-            parent_module=module,
-            submodule_names=submodule_names,
-            direct_attrs=direct_attrs,
-        )
-
-    return direct_attrs
+        return PackageMapping(underlying=module)
+    return ObjectMapping(underlying=module)
 
 
 Endo = Callable[[TResult], TResult]
@@ -635,7 +669,7 @@ def resource(
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
 class CompiledMixin(Mixin):
     lexical_scope: LexicalScope
-    normalized_scope_definition: DefinitionMapping
+    normalized_scope_definition: Mapping[str, Definition]
 
     def __getitem__(self, key: str) -> Callable[[Proxy], Builder | Patch]:
         if key not in self.normalized_scope_definition:
@@ -652,7 +686,7 @@ class CompiledMixin(Mixin):
 
 def compile(
     lexical_scope: LexicalScope,
-    normalized_scope_definition: DefinitionMapping,
+    normalized_scope_definition: Mapping[str, Definition],
 ) -> Mixin:
     return CompiledMixin(
         lexical_scope=lexical_scope,
@@ -660,7 +694,7 @@ def compile(
     )
 
 
-def parse(obj: object) -> DefinitionMapping:
+def parse(obj: object) -> Mapping[str, Definition]:
     if isinstance(obj, ModuleType):
         return parse_module(obj)
     else:

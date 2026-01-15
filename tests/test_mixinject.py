@@ -4,18 +4,26 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from mixinject import (
+    AggregatorDefinition,
+    Builder,
     CachedProxy,
-    LazySubmoduleMapping,
+    Mapping[str, Definition],
+    PackageMapping,
+    ObjectMapping,
+    Patch,
     Proxy,
+    ResourceDefinition,
+    SinglePatchDefinition,
     aggregator,
-    parse_module,
+    compile,
     patch,
     patches,
+    resource,
     resolve,
     resolve_root,
-    resource,
     scope,
     simple_mixin,
+    parse_module,
 )
 
 FIXTURES_DIR = str(Path(__file__).parent / "fixtures")
@@ -265,8 +273,8 @@ class TestModuleParsing:
             import regular_pkg
 
             scope_def = parse_module(regular_pkg)
-            assert isinstance(scope_def, LazySubmoduleMapping)
-            assert "child" in scope_def.submodule_names
+            assert isinstance(scope_def, PackageMapping)
+            assert "child" in scope_def
         finally:
             sys.path.remove(FIXTURES_DIR)
             sys.modules.pop("regular_pkg", None)
@@ -305,7 +313,8 @@ class TestModuleParsing:
             import regular_mod
 
             scope_def = parse_module(regular_mod)
-            assert isinstance(scope_def, dict)
+            assert isinstance(scope_def, ObjectMapping)
+            assert not isinstance(scope_def, PackageMapping)
         finally:
             sys.path.remove(FIXTURES_DIR)
             sys.modules.pop("regular_mod", None)
@@ -317,9 +326,9 @@ class TestModuleParsing:
 
             assert hasattr(ns_pkg, "__path__")
             scope_def = parse_module(ns_pkg)
-            assert isinstance(scope_def, LazySubmoduleMapping)
-            assert "mod_a" in scope_def.submodule_names
-            assert "mod_b" in scope_def.submodule_names
+            assert isinstance(scope_def, PackageMapping)
+            assert "mod_a" in scope_def
+            assert "mod_b" in scope_def
 
             root = resolve_root(ns_pkg)
             assert root.mod_a.value_a == "a"
@@ -359,10 +368,10 @@ class TestModuleParsing:
 
                 assert len(ns_pkg.__path__) == 2
                 scope_def = parse_module(ns_pkg)
-                assert isinstance(scope_def, LazySubmoduleMapping)
-                assert "mod_a" in scope_def.submodule_names
-                assert "mod_b" in scope_def.submodule_names
-                assert "mod_c" in scope_def.submodule_names
+                assert isinstance(scope_def, PackageMapping)
+                assert "mod_a" in scope_def
+                assert "mod_b" in scope_def
+                assert "mod_c" in scope_def
 
                 root = resolve_root(ns_pkg)
                 assert root.mod_a.value_a == "a"
