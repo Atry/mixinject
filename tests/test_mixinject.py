@@ -4,17 +4,17 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from mixinject import (
-    AggregatorDefinition,
+    _AggregatorDefinition,
     Builder,
     CachedProxy,
-    KeywordArgumentMixin,
-    PackageMapping,
-    ObjectMapping,
+    _KeywordArgumentMixin,
+    _PackageDefinition,
+    _NamespaceDefinition,
     Proxy,
-    ResourceDefinition,
-    SinglePatchDefinition,
+    _ResourceDefinition,
+    _SinglePatchDefinition,
     aggregator,
-    BoundMixin,
+    _BoundMixin,
     parameter,
     patch,
     patches,
@@ -22,7 +22,7 @@ from mixinject import (
     resolve,
     resolve,
     scope,
-    parse_module,
+    _parse_package,
     WeakCachedScope,
 )
 
@@ -151,12 +151,12 @@ class TestKeywordArgumentMixin:
     """Test KeywordArgumentMixin."""
 
     def test_keyword_argument_mixin_single_value(self) -> None:
-        comp = KeywordArgumentMixin(kwargs={"foo": "bar"})
+        comp = _KeywordArgumentMixin(kwargs={"foo": "bar"})
         proxy = CachedProxy(mixins=frozenset((comp,)))
         assert proxy.foo == "bar"
 
     def test_keyword_argument_mixin_multiple_values(self) -> None:
-        comp = KeywordArgumentMixin(kwargs={"foo": "bar", "count": 42, "flag": True})
+        comp = _KeywordArgumentMixin(kwargs={"foo": "bar", "count": 42, "flag": True})
         proxy = CachedProxy(mixins=frozenset((comp,)))
         assert proxy.foo == "bar"
         assert proxy.count == 42
@@ -254,7 +254,7 @@ class TestProxyAsSymlink:
     """Test Proxy return values acting as symlinks."""
 
     def test_proxy_symlink(self) -> None:
-        comp = KeywordArgumentMixin(kwargs={"inner_value": "inner"})
+        comp = _KeywordArgumentMixin(kwargs={"inner_value": "inner"})
         inner_proxy = CachedProxy(mixins=frozenset((comp,)))
 
         class Namespace:
@@ -274,8 +274,8 @@ class TestModuleParsing:
         try:
             import regular_pkg
 
-            scope_def = parse_module(regular_pkg, get_module_proxy_class=lambda _: CachedProxy)
-            assert isinstance(scope_def, PackageMapping)
+            scope_def = _parse_package(regular_pkg, get_module_proxy_class=lambda _: CachedProxy)
+            assert isinstance(scope_def, _PackageDefinition)
             assert "child" in scope_def
         finally:
             sys.path.remove(FIXTURES_DIR)
@@ -287,7 +287,7 @@ class TestModuleParsing:
         try:
             import regular_pkg
 
-            scope_def = parse_module(regular_pkg, get_module_proxy_class=lambda _: CachedProxy)
+            scope_def = _parse_package(regular_pkg, get_module_proxy_class=lambda _: CachedProxy)
             assert "regular_pkg.child" not in sys.modules
             _ = scope_def["child"]
             assert "regular_pkg.child" in sys.modules
@@ -314,9 +314,9 @@ class TestModuleParsing:
         try:
             import regular_mod
 
-            scope_def = parse_module(regular_mod, get_module_proxy_class=lambda _: CachedProxy)
-            assert isinstance(scope_def, ObjectMapping)
-            assert not isinstance(scope_def, PackageMapping)
+            scope_def = _parse_package(regular_mod, get_module_proxy_class=lambda _: CachedProxy)
+            assert isinstance(scope_def, _NamespaceDefinition)
+            assert not isinstance(scope_def, _PackageDefinition)
         finally:
             sys.path.remove(FIXTURES_DIR)
             sys.modules.pop("regular_mod", None)
@@ -327,8 +327,8 @@ class TestModuleParsing:
             import ns_pkg
 
             assert hasattr(ns_pkg, "__path__")
-            scope_def = parse_module(ns_pkg, get_module_proxy_class=lambda _: CachedProxy)
-            assert isinstance(scope_def, PackageMapping)
+            scope_def = _parse_package(ns_pkg, get_module_proxy_class=lambda _: CachedProxy)
+            assert isinstance(scope_def, _PackageDefinition)
             assert "mod_a" in scope_def
             assert "mod_b" in scope_def
 
@@ -368,8 +368,8 @@ class TestModuleParsing:
                 import ns_pkg
 
                 assert len(ns_pkg.__path__) == 2
-                scope_def = parse_module(ns_pkg, get_module_proxy_class=lambda _: CachedProxy)
-                assert isinstance(scope_def, PackageMapping)
+                scope_def = _parse_package(ns_pkg, get_module_proxy_class=lambda _: CachedProxy)
+                assert isinstance(scope_def, _PackageDefinition)
                 assert "mod_a" in scope_def
                 assert "mod_b" in scope_def
                 assert "mod_c" in scope_def
@@ -391,7 +391,7 @@ class TestProxyCallable:
 
     def test_proxy_call_single_kwarg(self) -> None:
         """Test calling Proxy to inject a single new value."""
-        comp = KeywordArgumentMixin(kwargs={"foo": "foo_value"})
+        comp = _KeywordArgumentMixin(kwargs={"foo": "foo_value"})
         proxy = CachedProxy(mixins=frozenset((comp,)))
 
         # Call proxy with new kwargs to add additional mixins
@@ -402,7 +402,7 @@ class TestProxyCallable:
 
     def test_proxy_call_multiple_kwargs(self) -> None:
         """Test calling Proxy with multiple new kwargs."""
-        comp = KeywordArgumentMixin(kwargs={"x": 1, "y": 2})
+        comp = _KeywordArgumentMixin(kwargs={"x": 1, "y": 2})
         proxy = CachedProxy(mixins=frozenset((comp,)))
 
         # Call to add new mixins (z and w)
@@ -464,7 +464,7 @@ class TestProxyCallable:
             pass
 
         v1, v2 = Value(), Value()
-        comp = KeywordArgumentMixin(kwargs={"x": v1})
+        comp = _KeywordArgumentMixin(kwargs={"x": v1})
 
         # CachedProxy should return CachedProxy
         cached = CachedProxy(mixins=frozenset((comp,)))
@@ -482,7 +482,7 @@ class TestProxyCallable:
 
     def test_proxy_call_creates_fresh_instance(self) -> None:
         """Test that calling a Proxy creates a new instance without modifying the original."""
-        comp = KeywordArgumentMixin(kwargs={"a": 1})
+        comp = _KeywordArgumentMixin(kwargs={"a": 1})
         proxy1 = CachedProxy(mixins=frozenset((comp,)))
 
         # Call to create a new proxy

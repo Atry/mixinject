@@ -1,6 +1,6 @@
 """Branch 1: Provides tag1 patch and another_dependency resource."""
 
-from mixinject import KeywordArgumentMixin, Mixin, patch, resource
+from mixinject import _KeywordArgumentMixin, Mixin, patch, resource
 
 
 @patch
@@ -15,4 +15,4 @@ def another_dependency() -> str:
 
 @patch
 def union_mount_point() -> Mixin:
-    return KeywordArgumentMixin(kwargs={"foo": "foo"})
+    return _KeywordArgumentMixin(kwargs={"foo": "foo"})

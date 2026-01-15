@@ -377,7 +377,7 @@ class Proxy(Mapping[str, "Node"], ABC):
         return (*self, *super(Proxy, self).__dir__())
 
     def __call__(self, **kwargs: object) -> Self:
-        return type(self)(mixins=self.mixins | {KeywordArgumentMixin(kwargs=kwargs)})
+        return type(self)(mixins=self.mixins | {_KeywordArgumentMixin(kwargs=kwargs)})
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -460,7 +460,7 @@ A generator function that yields proxies representing the lexical scope, startin
 """
 
 
-def loop_up(lexical_scope: LexicalScope, name: str) -> "Node":
+def _loop_up(lexical_scope: LexicalScope, name: str) -> "Node":
     """
     Look up a resource by name in the lexical scope chain.
     Returns the first found value, searching from innermost to outermost scope.
@@ -491,7 +491,7 @@ class Patcher(Iterable[TPatcher_co], ABC):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class FunctionPatch(Patcher[TPatcher_co]):
+class FunctionPatcher(Patcher[TPatcher_co]):
     patch_generator: Callable[[], Iterator[TPatcher_co]]
 
     def __iter__(self) -> Iterator[TPatcher_co]:
@@ -514,7 +514,7 @@ TProxy = TypeVar("TProxy", bound=Proxy)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class EndoBuilder(Generic[TResult], Builder[Callable[[TResult], TResult], TResult]):
+class _EndoBuilder(Generic[TResult], Builder[Callable[[TResult], TResult], TResult]):
     """Builder that applies patches as endofunctions via reduce."""
 
     base_value: TResult
@@ -646,18 +646,18 @@ def _resolve_dependencies(
         """
         if param_name == resource_name:
             # pytest fixture-like behavior to not recursively depend on itself
-            return loop_up(outer_lexical_scope, param_name)
+            return _loop_up(outer_lexical_scope, param_name)
         try:
             return proxy[param_name]
         except KeyError:
-            return loop_up(outer_lexical_scope, param_name)
+            return _loop_up(outer_lexical_scope, param_name)
 
     sig = signature(function)
     return {param_name: resolve_param(param_name) for param_name in sig.parameters}
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class AggregatorDefinition(BuilderDefinition[TPatcher_contra, TResult_co]):
+class _AggregatorDefinition(BuilderDefinition[TPatcher_contra, TResult_co]):
     """Definition for aggregator decorator."""
 
     function: Callable[..., Callable[[Iterator[TPatcher_contra]], TResult_co]]
@@ -676,7 +676,7 @@ class AggregatorDefinition(BuilderDefinition[TPatcher_contra, TResult_co]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class ResourceDefinition(
+class _ResourceDefinition(
     Generic[TResult], BuilderDefinition[Callable[[TResult], TResult], TResult]
 ):
     """Definition for resource decorator."""
@@ -692,13 +692,13 @@ class ResourceDefinition(
                 self.function, resource_name, outer_lexical_scope, proxy
             )
             base_value = self.function(**resolved_args)
-            return EndoBuilder(base_value=base_value)
+            return _EndoBuilder(base_value=base_value)
 
         return bind_proxy
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class SinglePatchDefinition(PatcherDefinition[TPatcher_co]):
+class _SinglePatchDefinition(PatcherDefinition[TPatcher_co]):
     """Definition for patch decorator (single patch)."""
 
     function: Callable[..., TPatcher_co]
@@ -714,13 +714,13 @@ class SinglePatchDefinition(PatcherDefinition[TPatcher_co]):
                 )
                 yield self.function(**resolved_args)
 
-            return FunctionPatch(patch_generator=patch_generator)
+            return FunctionPatcher(patch_generator=patch_generator)
 
         return bind_proxy
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class MultiplePatchDefinition(PatcherDefinition[TPatcher_co]):
+class _MultiplePatchDefinition(PatcherDefinition[TPatcher_co]):
     """Definition for patches decorator (multiple patches)."""
 
     function: Callable[..., Iterable[TPatcher_co]]
@@ -736,13 +736,13 @@ class MultiplePatchDefinition(PatcherDefinition[TPatcher_co]):
                 )
                 yield from self.function(**resolved_args)
 
-            return FunctionPatch(patch_generator=patch_generator)
+            return FunctionPatcher(patch_generator=patch_generator)
 
         return bind_proxy
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class ScopeDual(Builder[Proxy, Proxy], Patcher[Proxy]):
+class _ProxyBuilderPatcher(Builder[Proxy, Proxy], Patcher[Proxy]):
     definitions: Mapping[str, Definition]
     lexical_scope: LexicalScope
     proxy_class: type[Proxy]
@@ -751,7 +751,7 @@ class ScopeDual(Builder[Proxy, Proxy], Patcher[Proxy]):
         return self.proxy_class(
             mixins=frozenset(
                 (
-                    BoundMixin(
+                    _BoundMixin(
                         lexical_scope=self.lexical_scope, definitions=self.definitions
                     ),
                 )
@@ -772,7 +772,7 @@ class ScopeDual(Builder[Proxy, Proxy], Patcher[Proxy]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class ScopeDefinition(BuilderDefinition[Proxy, Proxy], PatcherDefinition[Proxy]):
+class _ScopeDefinition(BuilderDefinition[Proxy, Proxy], PatcherDefinition[Proxy]):
     """Definition that creates a Proxy from nested ScopeDefinition (lazy evaluation)."""
 
     definitions: Mapping[str, Definition]
@@ -781,13 +781,13 @@ class ScopeDefinition(BuilderDefinition[Proxy, Proxy], PatcherDefinition[Proxy])
     @override
     def bind_lexical_scope(
         self, outer_lexical_scope: LexicalScope, resource_name: str, /
-    ) -> Callable[[Proxy], ScopeDual]:
-        def bind_proxy(proxy: Proxy) -> ScopeDual:
+    ) -> Callable[[Proxy], _ProxyBuilderPatcher]:
+        def bind_proxy(proxy: Proxy) -> _ProxyBuilderPatcher:
             def inner_lexical_scope() -> Iterator[Proxy]:
                 yield proxy
                 yield from outer_lexical_scope()
 
-            return ScopeDual(
+            return _ProxyBuilderPatcher(
                 definitions=self.definitions,
                 lexical_scope=inner_lexical_scope,
                 proxy_class=self.proxy_class,
@@ -800,7 +800,7 @@ T = TypeVar("T")
 
 
 @dataclass(frozen=True, kw_only=True)
-class ObjectMapping(Mapping[str, Definition], Generic[T]):
+class _NamespaceDefinition(Mapping[str, Definition], Generic[T]):
     """
     A lazy mapping that parses definitions from an object's attributes on access.
     Implements call-by-name semantics using dir() and getattr().
@@ -832,7 +832,7 @@ class ObjectMapping(Mapping[str, Definition], Generic[T]):
 
 
 @dataclass(frozen=True, kw_only=True)
-class PackageMapping(ObjectMapping[ModuleType]):
+class _PackageDefinition(_NamespaceDefinition[ModuleType]):
     """A lazy mapping that discovers submodules via pkgutil and imports them on access."""
 
     get_module_proxy_class: Callable[[ModuleType], type[Proxy]]
@@ -856,8 +856,8 @@ class PackageMapping(ObjectMapping[ModuleType]):
             raise KeyError(key)
 
         submod = importlib.import_module(full_name)
-        return ScopeDefinition(
-            definitions=parse_module(
+        return _ScopeDefinition(
+            definitions=_parse_package(
                 submod, get_module_proxy_class=self.get_module_proxy_class
             ),
             proxy_class=self.get_module_proxy_class(submod),
@@ -886,7 +886,7 @@ class PackageMapping(ObjectMapping[ModuleType]):
             return False
 
 
-def parse_object(namespace: object) -> Mapping[str, Definition]:
+def _parse_namespace(namespace: object) -> Mapping[str, Definition]:
     """
     Parses an object into a ScopeDefinition.
 
@@ -896,26 +896,28 @@ def parse_object(namespace: object) -> Mapping[str, Definition]:
     IMPORTANT: Bare callables (without decorators) are NOT automatically included.
     Users must explicitly mark all injectable definitions with appropriate decorators.
     """
-    return ObjectMapping(underlying=namespace)
+    return _NamespaceDefinition(underlying=namespace)
 
 
 def scope(
     cls: type | None = None, /, *, proxy_class: type[Proxy] = CachedProxy
-) -> ScopeDefinition | Callable[[type], ScopeDefinition]:
+) -> _ScopeDefinition | Callable[[type], _ScopeDefinition]:
     """
     Decorator that converts a class into a ScopeProxyDefinition.
     Nested classes MUST be decorated with @scope to be included as sub-scopes.
     """
 
-    def wrapper(c: type) -> ScopeDefinition:
-        return ScopeDefinition(definitions=parse_object(c), proxy_class=proxy_class)
+    def wrapper(c: type) -> _ScopeDefinition:
+        return _ScopeDefinition(
+            definitions=_parse_namespace(c), proxy_class=proxy_class
+        )
 
     if cls is None:
         return wrapper
     return wrapper(cls)
 
 
-def parse_module(
+def _parse_package(
     module: ModuleType, get_module_proxy_class: Callable[[ModuleType], type[Proxy]]
 ) -> Mapping[str, Definition]:
     """
@@ -931,10 +933,10 @@ def parse_module(
     and importlib.import_module to lazily import them when accessed.
     """
     if hasattr(module, "__path__"):
-        return PackageMapping(
+        return _PackageDefinition(
             underlying=module, get_module_proxy_class=get_module_proxy_class
         )
-    return ObjectMapping(underlying=module)
+    return _NamespaceDefinition(underlying=module)
 
 
 Endo = Callable[[TResult], TResult]
@@ -1013,7 +1015,7 @@ def aggregator(
         def union_mount_point(example_module: Proxy):
             return example_module.mixins
     """
-    return AggregatorDefinition(function=callable)
+    return _AggregatorDefinition(function=callable)
 
 
 def patch(
@@ -1022,7 +1024,7 @@ def patch(
     """
     A decorator that converts a callable into a patch definition.
     """
-    return SinglePatchDefinition(function=callable)
+    return _SinglePatchDefinition(function=callable)
 
 
 def patches(
@@ -1031,7 +1033,7 @@ def patches(
     """
     A decorator that converts a callable into a patch definition.
     """
-    return MultiplePatchDefinition(function=callable)
+    return _MultiplePatchDefinition(function=callable)
 
 
 def parameter(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
@@ -1077,7 +1079,7 @@ def parameter(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
 
     empty_patches_provider.__signature__ = sig  # type: ignore[attr-defined]
 
-    return MultiplePatchDefinition(function=empty_patches_provider)
+    return _MultiplePatchDefinition(function=empty_patches_provider)
 
 
 def resource(
@@ -1110,11 +1112,11 @@ def resource(
                 "Hello"
             )
     """
-    return ResourceDefinition(function=callable)
+    return _ResourceDefinition(function=callable)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class BoundMixin(Mixin):
+class _BoundMixin(Mixin):
     """
     A Mixin that binds a lexical scope to a set of definitions.
     """
@@ -1133,13 +1135,13 @@ class BoundMixin(Mixin):
         return len(self.definitions)
 
 
-def parse(
+def _parse(
     namespace: object, get_module_proxy_class: Callable[[ModuleType], type[Proxy]]
 ) -> Mapping[str, Definition]:
     if isinstance(namespace, ModuleType):
-        return parse_module(namespace, get_module_proxy_class=get_module_proxy_class)
+        return _parse_package(namespace, get_module_proxy_class=get_module_proxy_class)
     else:
-        return parse_object(namespace)
+        return _parse_namespace(namespace)
 
 
 def resolve(
@@ -1167,9 +1169,11 @@ def resolve(
     """
 
     mixins = (
-        BoundMixin(
+        _BoundMixin(
             lexical_scope=lexical_scope,
-            definitions=parse(namespace, get_module_proxy_class=get_module_proxy_class),
+            definitions=_parse(
+                namespace, get_module_proxy_class=get_module_proxy_class
+            ),
         )
         for namespace in namespaces
     )
@@ -1178,7 +1182,7 @@ def resolve(
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class KeywordArgumentMixin(Mixin):
+class _KeywordArgumentMixin(Mixin):
     kwargs: Mapping[str, object]
 
     def __getitem__(self, key: str) -> Callable[[Proxy], Builder]:
@@ -1187,7 +1191,7 @@ class KeywordArgumentMixin(Mixin):
         value = self.kwargs[key]
 
         def bind_proxy(proxy: Proxy) -> Builder[Any, Resource]:
-            return EndoBuilder(base_value=cast(Resource, value))
+            return _EndoBuilder(base_value=cast(Resource, value))
 
         return bind_proxy
 
