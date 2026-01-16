@@ -122,6 +122,56 @@ Definition Types and Their Roles
 | @scope            | Yes      | Yes     | Semigroup for nested Proxy creation      |
 +-------------------+----------+---------+------------------------------------------+
 
+.. todo::
+    支持 phony 伪目标，用于标记返回 ``None`` 的 Semigroup。
+
+    类似于 Makefile 中的 ``.PHONY`` 目标，phony 资源主要用于触发副作用而非产生值。
+    这对于以下场景很有用：
+
+    - 初始化操作（如数据库连接池预热）
+    - 资源清理（如关闭文件句柄）
+    - 触发多个依赖的聚合操作
+
+    设计考虑：
+
+    1. **声明方式**：新增 ``@phony`` 装饰器，标记返回 ``None`` 的资源定义::
+
+           @phony
+           def initialize_logging(config: Config) -> None:
+               logging.basicConfig(level=config.log_level)
+
+    2. **类型安全**：phony 资源的类型应为 ``None``，访问时返回 ``None``::
+
+           root.initialize_logging  # 触发副作用，返回 None
+
+    3. **Semigroup 语义**：多个 phony 定义合并时，所有副作用均会执行。
+       **重要**：用户必须确保多个 phony 定义满足交换律，不得依赖执行顺序::
+
+           @phony
+           def setup():
+               register_handler_a()  # 必须与其他 setup 的副作用相互独立
+
+           @phony
+           def setup():
+               register_handler_b()  # 必须与其他 setup 的副作用相互独立
+
+    4. **依赖追踪**：phony 资源可以依赖其他资源，确保依赖在副作用执行前已就绪::
+
+           @phony
+           def warmup_cache(database: Database, cache: Cache) -> None:
+               cache.populate_from(database)
+
+    5. **与 ``@resource`` 的区别**：
+
+       - ``@resource`` 返回值会被缓存并可被其他资源依赖
+       - ``@phony`` 返回 ``None``，主要目的是触发副作用，多个定义作为 Semigroup 合并
+
+    6. **装饰器表更新**：
+
+       +-------------------+----------+---------+------------------------------------------+
+       | @phony            | Yes      | Yes     | Semigroup for side-effect-only resources |
+       +-------------------+----------+---------+------------------------------------------+
+
 Combining Definitions
 ---------------------
 
