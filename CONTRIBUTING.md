@@ -23,7 +23,7 @@ The project creates a development environment via Nix flake, and `direnv` is res
 
 ### Use `@dataclass` for Structured Data
 
-**Do NOT** use `tuple`, `NamedTuple`, `dict`, `TypedDict`, or custom `__init__` for structured data. Use `@dataclass(kw_only=True)` instead:
+**Do NOT** use `tuple`, `NamedTuple`, `dict`, `TypedDict`, or custom `__init__` for structured data. Use `@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)` instead:
 
 ```python
 # ✗ BAD - tuple (no field names, positional access only)
@@ -56,10 +56,10 @@ class User:
         self.name = name
         self.email = email
 
-# ✓ GOOD - dataclass with kw_only=True
+# ✓ GOOD - dataclass with full options
 from dataclasses import dataclass
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class User:
     id: Final[int]
     name: Final[str]
@@ -68,7 +68,7 @@ class User:
 
 **Why `@dataclass` over alternatives:**
 - **vs tuple**: Named fields, type hints, readable access (`user.name` vs `user[1]`)
-- **vs NamedTuple**: Mutable when needed, methods, `@cached_property`, inheritance
+- **vs NamedTuple**: Methods, `@cached_property`, inheritance, better tooling support
 - **vs dict/TypedDict**: Attribute access, IDE autocomplete, no string key typos
 - **vs custom `__init__`**: Less boilerplate, automatic `__repr__`, `__eq__`, etc.
 
@@ -77,29 +77,39 @@ class User:
 - Prevents positional argument errors when adding/reordering fields
 - Self-documenting at call sites
 
-**Use `Final` for immutability, NOT `frozen=True`:**
+**Why `slots=True`:**
+- Memory efficiency: no `__dict__` per instance
+- Faster attribute access
+- Prevents accidental attribute creation
+
+**Why `frozen=True`:**
+- Immutability by default: prevents accidental mutation
+- Makes instances hashable (can be used as dict keys or in sets)
+- Thread-safe without locks
+
+**Why `weakref_slot=True`:**
+- Allows weak references to instances even with `slots=True`
+- Enables garbage collection of cyclic references
+
+**Use `Final` for field-level type hints:**
 
 ```python
 # ✓ GOOD - Final on field level
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Config:
     name: Final[str]
     value: Final[int]
 ```
 
-**Why `Final` over `frozen`:**
-- Field-level control: most fields should be immutable, but some may need mutation
-- Better flexibility: allows mutable fields (e.g., caches, buffers) when truly needed
-- Same static type checking benefits via type checkers (mypy, pyright)
-- Avoids the all-or-nothing constraint of `frozen=True`
+**Why `Final` with `frozen=True`:**
+- `frozen=True` enforces runtime immutability
+- `Final` provides static type checking immutability guarantees
+- Together they provide both runtime and compile-time safety
 
 **IMPORTANT: All dataclass fields MUST be `Final` by default.**
 - Do NOT create non-`Final` fields without explicit user approval
 - If you need a mutable field, ask the user first and explain why
 - This rule applies to ALL dataclass fields, including those with `field(default_factory=...)`
-
-**When `frozen=True` is acceptable:**
-- When the object needs to be hashable (used as dict key or in sets)
 
 
 ### Avoid `__all__` and Re-exports
@@ -136,7 +146,7 @@ from hpcnc.model.loader import load_model
 
 ```python
 # ✗ BAD - default values hide required parameters
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Config:
     name: Final[str]
     value: Final[int] = 0  # BAD: default value
@@ -146,7 +156,7 @@ def save_state(data: bytes, role: str = "ai") -> None:  # BAD: default value
     ...
 
 # ✓ GOOD - all parameters are explicit and required
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Config:
     name: Final[str]
     value: Final[int]
@@ -179,19 +189,19 @@ def save_state(data: bytes, role: str) -> None:
 
 ```python
 # ✗ BAD - using __post_init__ for derived values
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Rectangle:
     width: Final[float]
     height: Final[float]
     area: float = field(init=False)
 
     def __post_init__(self) -> None:
-        self.area = self.width * self.height
+        object.__setattr__(self, "area", self.width * self.height)
 
 # ✓ GOOD - using @cached_property for derived values
 from functools import cached_property
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Rectangle:
     width: Final[float]
     height: Final[float]
@@ -268,7 +278,7 @@ result = tuple(item.value for item in items if item.is_valid)
 **ALL** functions decorated with `@override` **MUST** call `super()`.
 
 - **Never** override a concrete implementation without calling `super()`. Doing so often violates the **Liskov Substitution Principle (LSP)** by breaking the base class's established contract, side effects, or state management.
-- **Special Case for `slots=True`**: When using `@dataclass(slots=True)`, you **MUST** use the explicit 2-argument form of `super()`: `super(ClassName, self)`. Do **NOT** use the 0-argument `super()` or `super(__class__, self)`, as these can fail due to how Python reconstructs classes with slots.
+- **Special Case for `slots=True`**: When using `@dataclass(..., slots=True, ...)`, you **MUST** use the explicit 2-argument form of `super()`: `super(ClassName, self)`. Do **NOT** use the 0-argument `super()` or `super(__class__, self)`, as these can fail due to how Python reconstructs classes with slots.
 - If the base class method is an `@abstractmethod` and you do **NOT** want to call `super()`, you **MUST NOT** use `@override`.
 - Use `@override` strictly for chain-of-responsibility/extension patterns where you are augmenting base behavior.
 - Do **NOT** use `@override` for simple interface implementations of abstract methods where the base implementation is empty or intended to be ignored.
@@ -282,7 +292,7 @@ class Extended(Base):
         self.new_logic()
 
 # ✗ BAD - using 0-arg super with slots=True
-@dataclass(slots=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class MyData(Base):
     @override
     def process(self):
@@ -296,7 +306,7 @@ class Extended(Base):
         self.new_logic()
 
 # ✓ GOOD - 2-arg super with literal class name for slots=True
-@dataclass(slots=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class MyData(Base):
     @override
     def process(self):
@@ -342,14 +352,13 @@ class ResourceState(Enum):
     RUNNING = auto()
     DESTROYED = auto()
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Container:
-    state: ResourceState
-    resource: Resource | None  # Can become inconsistent with state!
+    state: Final[ResourceState]
+    resource: Final[Resource | None]  # Can become inconsistent with state!
 
-# Problem: state=RUNNING but resource=None, or state=DESTROYED but resource still set
-container.state = ResourceState.DESTROYED
-# Oops, forgot to set resource = None -> inconsistent state
+# Problem: Two separate fields can become inconsistent
+# Even with frozen=True, creating new instances can have mismatched state/resource
 ```
 
 **Why these are anti-patterns:**
@@ -366,14 +375,14 @@ class ResourceSentinel(Enum):
     NOT_STARTED = auto()  # Resource hasn't been created yet
     DESTROYED = auto()    # Resource was cleaned up
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class Container:
-    resource: Resource | ResourceSentinel  # Single field, always consistent
+    resource: Final[Resource | ResourceSentinel]  # Single field, always consistent
 
-# Usage
-container.resource = ResourceSentinel.NOT_STARTED  # Before init
-container.resource = create_resource()              # After init
-container.resource = ResourceSentinel.DESTROYED    # After cleanup
+# Usage - create instances with the appropriate state
+container = Container(resource=ResourceSentinel.NOT_STARTED)  # Before init
+container = Container(resource=create_resource())              # After init
+container = Container(resource=ResourceSentinel.DESTROYED)    # After cleanup
 
 # Type-safe matching
 match container.resource:
@@ -398,19 +407,19 @@ In most cases, the simplest way to avoid `Optional` and `| None` is to make fiel
 
 ```python
 # ✓ GOOD - immutable required fields (best design in most cases)
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class User:
     id: Final[int]        # Required, never None
     name: Final[str]      # Required, never None
     email: Final[str]     # Required, never None
 
 # ✓ GOOD - if a field is truly optional, ask: should it be a separate type?
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class BasicUser:
     id: Final[int]
     name: Final[str]
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
 class VerifiedUser:
     id: Final[int]
     name: Final[str]
