@@ -20,13 +20,6 @@ class InitializationTiming(Enum):
 
 @dataclass(kw_only=True, frozen=True, slots=True, weakref_slot=True)
 class Lifecycle:
-    is_contextmanager: bool
-    """
-    Whether the resource is a context manager.
-
-    If True, the ``TResult`` is either a ``ContextManager`` or ``AsyncContextManager``, and should be registered with ``proxy.exit_stack.enter_context``` or ``proxy.exit_stack.async_enter_context`` depending on ``is_async``.
-    """
-
     is_weak_reference: bool
     """
     Whether the resource is cached using a weak reference.
@@ -53,4 +46,11 @@ class ResourceConfig:
     Whether the resource is async.
 
     When lifecycle is not EPHEMERAL, the resource (possibly after ``async_enter_context``) is converted to a Future when is_async is True.
+    """
+
+    is_contextmanager: bool
+    """
+    Whether the resource is a context manager.
+
+    If True, the ``TResult`` is either a ``ContextManager`` or ``AsyncContextManager``, and should be registered with ``proxy.exit_stack.enter_context``` or ``proxy.exit_stack.async_enter_context`` depending on ``is_async``.
     """

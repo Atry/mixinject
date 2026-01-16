@@ -456,21 +456,21 @@ class Proxy(Mapping[str, "Node"], ABC):
     .. todo::
         我希望把Proxy/CachedProxy/WeakCachedProxy合并成一个类，按需提供ResourceConfig的26种组合行为。
 
-        我希望可以通过新增的一些decorator提供 ResourceConfig 的配置。注意这个配置是静态的不依赖于 Proxy 和 Scope，也就是说需要放在 Definition里，并且 Mixin 有办法查询到
+        我希望可以通过新增的一些decorator提供 ResourceConfig 的配置。注意这个配置是静态的不依赖于 Proxy 和 Scope，且可能将来会被JitCache编译进字节码里。
         ```
-        class Mixin:
-            @abstractmethod
-            def configure(self, previous: ResourceConfig) -> ResourceConfig: ... # forward call to definition
-            ...
-        class Definition:
-            @abstractmethod
-            def bind_lexical_scope(...): ...
-            @abstractmethod
-            def configure(self, previous: ResourceConfig) -> ResourceConfig: ...
+        @dataclass
+        class BuilderDefinition:
+            bind_lexical_scope: Callable[[LexicalScope, str], Callable[[Proxy, ResourceConfig], Merger | Patcher]]
+            config: ResourceConfig
+            '''
+            默认的config由``inspect.signature``推断而来，可以由注解修改
+            '''
+
         ```
 
 
-        用同一套Merger/Patcher接口来处理context manager/async，但是`TResult`的类型取决于ResourceConfig，可能是Awaitable/ContextManager/AsyncContextManager，或是直接的同步类型。`@resource`的`TPatch`的类型也取决于ResourceConfig，可能是`Endofunction`/`ContextManagerEndofunction`/`AsyncEndofunction`/`AsyncContextManagerEndofunction`。也就是说同一套Merger/Patcher接口可以处理同步/异步/上下文管理器的情况，
+        用同一套Merger/Patcher接口来处理context manager/async，但是`TResult`的类型取决于ResourceConfig，可能是Awaitable/ContextManager/AsyncContextManager，或是直接的同步类型。`@resource`的`TPatch`的类型也取决于ResourceConfig，可能是`Endofunction`/`ContextManagerEndofunction`/`AsyncEndofunction`/`AsyncContextManagerEndofunction`。也就是说同一套Merger/Patcher接口可以处理同步/异步/上下文管理器的情况。
+
 
     """
 
