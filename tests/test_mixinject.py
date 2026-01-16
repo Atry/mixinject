@@ -213,8 +213,7 @@ class TestUnionMount:
 
         class Namespace2:
             @extern
-            def base_value() -> str:
-                ...
+            def base_value() -> str: ...
 
             @resource
             def combined(base_value: str) -> str:
@@ -255,6 +254,97 @@ class TestUnionMount:
             sys.modules.pop("union_mount.branch2", None)
 
 
+class TestScalaStylePathDependentTypes:
+    """Test Scala-style path-dependent type mixin pattern.
+
+    This demonstrates the equivalent of Scala's:
+
+    ```scala
+    trait Base {
+        def foo = 10
+    }
+    class MyOuter(i: Int) {
+        trait MyInner extends Base {
+            override def foo = super.foo + i
+        }
+    }
+    val object1 = MyOuter(1)
+    val object2 = MyOuter(2)
+    object MyObjectA extends object1.MyInner with object2.MyInner {
+        override def foo = 100 + super.foo
+    }
+    ```
+
+    In Scala's linearization: MyObjectA -> object2.MyInner -> object1.MyInner -> Base
+    Result: 100 + (10 + 1 + 2) = 113
+    """
+
+    def test_path_dependent_mixin_linearization(self) -> None:
+        """Test that mixinject achieves the same result as Scala's mixin linearization.
+
+        Uses mixinject's features:
+        - @scope for nested scopes (like Scala's inner trait)
+        - @extern for declaring external dependencies
+        - Lexical scope lookup (parameter `i` resolved from outer scope)
+        - Proxy.__call__() for injecting values (like Scala's constructor args)
+        - merge_proxies for combining proxies from different outer instances
+        """
+        from mixinject import merge_proxies
+
+        class Root:
+            @scope
+            class Base:
+                @resource
+                def foo() -> int:
+                    return 10
+
+            @scope
+            class MyOuter:
+                @extern
+                def i() -> int: ...
+
+                @scope
+                class MyInner_body:
+                    @patch
+                    def foo(i: int) -> Callable[[int], int]:
+                        return lambda x: x + i
+
+                @resource
+                def MyInner(MyInner_body: Proxy, Base: Proxy) -> Proxy:
+                    return merge_proxies((MyInner_body, Base))
+
+            @resource
+            def object1(MyOuter: Proxy):
+                return MyOuter(i=1)
+
+            @resource
+            def object2(MyOuter: Proxy):
+                return MyOuter(i=2)
+
+            @scope
+            class MyObjectA_body:
+                @patch
+                def foo() -> Callable[[int], int]:
+                    return lambda x: 100 + x
+
+            @resource
+            def MyObjectA(
+                object1: Proxy,
+                object2: Proxy,
+                MyObjectA_body: Proxy,
+            ) -> Proxy:
+                return merge_proxies(
+                    (
+                        object1.MyInner,
+                        object2.MyInner,
+                        MyObjectA_body,
+                    )
+                )
+
+        root = mount(Root)
+        assert root.MyObjectA.foo == 113
+
+
 class TestProxyAsSymlink:
     """Test Proxy return values acting as symlinks."""
 
@@ -279,7 +369,11 @@ class TestModuleParsing:
         try:
             import regular_pkg
 
-            scope_def = _parse_package(regular_pkg, get_module_proxy_class=lambda _: CachedProxy, symbol_table=ChainMap())
+            scope_def = _parse_package(
+                regular_pkg,
+                get_module_proxy_class=lambda _: CachedProxy,
+                symbol_table=ChainMap(),
+            )
             assert isinstance(scope_def, _PackageDefinition)
         finally:
             sys.path.remove(FIXTURES_DIR)
@@ -318,7 +412,11 @@ class TestModuleParsing:
         try:
             import regular_mod
 
-            scope_def = _parse_package(regular_mod, get_module_proxy_class=lambda _: CachedProxy, symbol_table=ChainMap())
+            scope_def = _parse_package(
+                regular_mod,
+                get_module_proxy_class=lambda _: CachedProxy,
+                symbol_table=ChainMap(),
+            )
             assert isinstance(scope_def, _NamespaceDefinition)
             assert not isinstance(scope_def, _PackageDefinition)
         finally:
@@ -331,7 +429,11 @@ class TestModuleParsing:
             import ns_pkg
 
             assert hasattr(ns_pkg, "__path__")
-            scope_def = _parse_package(ns_pkg, get_module_proxy_class=lambda _: CachedProxy, symbol_table=ChainMap())
+            scope_def = _parse_package(
+                ns_pkg,
+                get_module_proxy_class=lambda _: CachedProxy,
+                symbol_table=ChainMap(),
+            )
             assert isinstance(scope_def, _PackageDefinition)
 
             root = mount(ns_pkg)
@@ -371,7 +473,11 @@ class TestModuleParsing:
                 import ns_pkg
 
                 assert len(ns_pkg.__path__) == 2
-                scope_def = _parse_package(ns_pkg, get_module_proxy_class=lambda _: CachedProxy, symbol_table=ChainMap())
+                scope_def = _parse_package(
+                    ns_pkg,
+                    get_module_proxy_class=lambda _: CachedProxy,
+                    symbol_table=ChainMap(),
+                )
                 assert isinstance(scope_def, _PackageDefinition)
 
                 root = mount(ns_pkg)
@@ -449,6 +555,7 @@ class TestProxyCallable:
 
     def test_proxy_call_returns_same_type(self) -> None:
         """Test that calling a Proxy subclass returns the same type."""
+
         class Value:
             pass
 
