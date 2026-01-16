@@ -172,6 +172,29 @@ Definition Types and Their Roles
        | @phony            | Yes      | Yes     | Semigroup for side-effect-only resources |
        +-------------------+----------+---------+------------------------------------------+
 
+.. todo::
+    支持通过 type annotation 指定 ``PurePath`` 来定位依赖。
+
+    当前依赖解析基于参数名在符号表中查找，需要遍历闭包层级。通过 ``Annotated`` 和
+    ``PurePath`` 可以显式指定依赖的相对路径，避免符号表查找::
+
+        # 期望支持的语法
+        @resource
+        def connection_pool(
+            database_url: Annotated[URL, From(normalized_relative_path=PurePath("../../config/database_url"))]
+        ):
+            return create_connection_pool(database_url)
+
+        # 大致等价于当前语法
+        @resource
+        def connection_pool(config: Proxy):
+            return create_connection_pool(config.database_url)
+
+    前者显式指定了 ``database_url`` 的位置，后者需要在符号表查找 ``config`` 所在的闭包层级。
+
+    ``From`` 的优势在于可以访问不在词法作用域中的资源。即使 ``config`` 不在当前词法作用域的
+    符号表中，``../../config`` 仍然可以通过路径直接定位到它。
+
 Combining Definitions
 ---------------------
 
