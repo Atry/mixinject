@@ -1196,6 +1196,16 @@ def scope(
     """
     Decorator that converts a class into a NamespaceDefinition.
     Nested classes MUST be decorated with @scope to be included as sub-scopes.
+
+    .. todo::
+        支持 vararg 来联合挂载多个 mixin/definition。
+
+        期望 ``@scope(Mixin1, Mixin2)`` 的行为等价于 ``@functools.partial(scope, Mixin1, Mixin2)``::
+
+            @scope(Mixin1, Mixin2)
+            class MyScope:
+                pass
+
     """
 
     def wrapper(c: type) -> _NamespaceDefinition:
