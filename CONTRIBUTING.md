@@ -273,6 +273,69 @@ result = tuple(item.value for item in items if item.is_valid)
 **When `append` is acceptable:**
 - Never is acceptable
 
+### Self-Descriptive Variable Names
+
+**Do NOT** use abbreviated variable names. All variable names MUST be self-descriptive and use complete words:
+
+```python
+# ✗ BAD - abbreviated variable names
+fn = get_handler()
+func = create_processor()
+cb = on_complete
+val = compute_result()
+obj = create_instance()
+res = fetch_data()
+msg = format_output()
+cfg = load_settings()
+ctx = create_context()
+params = get_parameters()
+args = parse_arguments()
+kwargs = extract_keyword_arguments()
+
+# ✓ GOOD - self-descriptive variable names
+handler = get_handler()
+processor = create_processor()
+on_complete_callback = on_complete
+result = compute_result()
+instance = create_instance()
+response = fetch_data()
+message = format_output()
+configuration = load_settings()
+context = create_context()
+parameters = get_parameters()
+arguments = parse_arguments()
+keyword_arguments = extract_keyword_arguments()
+```
+
+**Common forbidden abbreviations:**
+- `fn`, `func` → use `function`, `handler`, `callback`, or a domain-specific name
+- `cb` → use `callback` or `on_xxx_callback`
+- `val` → use `value`, `result`, or a domain-specific name
+- `obj` → use `instance`, `object`, or a domain-specific name
+- `res` → use `result`, `response`, or a domain-specific name
+- `msg` → use `message`
+- `cfg`, `conf` → use `configuration`, `config`, or `settings`
+- `ctx` → use `context`
+- `params` → use `parameters`
+- `args` → use `arguments`
+- `kwargs` → use `keyword_arguments`
+- `idx` → use `index`
+- `cnt` → use `count`
+- `tmp` → use `temporary` or a more descriptive name
+- `ret` → use `result` or `return_value`
+
+**Why self-descriptive names matter:**
+- Code is read far more often than it is written
+- Abbreviations require mental translation and increase cognitive load
+- Self-descriptive names make code self-documenting
+- Reduces the need for comments explaining what variables hold
+- Makes code review and debugging significantly easier
+
+**When abbreviations are acceptable:**
+- Standard loop variables like `i`, `j`, `k` for numeric indices in tight loops
+- Well-established domain abbreviations (e.g., `url`, `html`, `json`, `id`)
+- Never for function references, callbacks, or domain objects
+
 ### Mandatory `super()` with `@override`
 
 **ALL** functions decorated with `@override` **MUST** call `super()`.
