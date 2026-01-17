@@ -933,6 +933,11 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
     Mapping that caches resolve_symbols results for definitions in a namespace.
 
     .. todo:: Also compiles the proxy class into Python bytecode.
+
+    .. todo:: Cache _JitCache instances so that mixins with the same topological
+        structure share the same _JitCache. Currently, a new _JitCache is created
+        every time a mixin is created (in _NamespaceDefinition.create_mixin and
+        _PackageDefinition.create_mixin), which is inefficient.
     """
 
     proxy_definition: Final["_ProxyDefinition"]
