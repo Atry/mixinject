@@ -2,8 +2,7 @@
 
 from typing import Callable, Iterator
 
-from mixinject import CachedProxy, Mixin, merge
-from mixinject.interned_linked_list import EmptyInternedLinkedList
+from mixinject import merge, scope
 
 
 @merge
@@ -11,9 +10,8 @@ def deduplicated_tags() -> Callable[[Iterator[str]], frozenset[str]]:
     return frozenset
 
 
-@merge
-def union_mount_point() -> Callable[[Iterator[Mixin]], CachedProxy]:
-    def create_proxy(mixins: Iterator[Mixin]) -> CachedProxy:
-        return CachedProxy(mixins=frozenset(mixins), reversed_path=EmptyInternedLinkedList.INSTANCE)
+@scope()
+class union_mount_point:
+    """Base empty scope - other branches will merge their definitions into this."""
 
-    return create_proxy
+    pass

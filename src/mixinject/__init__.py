@@ -369,7 +369,7 @@ Concept
 A resource can be defined **solely** by :func:`patch`, :func:`patch_many`, or :func:`extern`
 decorators, without a base definition from :func:`resource` or :func:`merge`. This is
 the **parameter injection pattern** - a way to declare that a value should be provided from
-an outer scope via :class:`KeywordArgumentMixin` or :meth:`Proxy.__call__`.
+an outer scope via :class:`InstanceProxy` or :meth:`StaticProxy.__call__`.
 
 Two Equivalent Approaches
 --------------------------
@@ -386,7 +386,7 @@ Two Equivalent Approaches
         return lambda x: x  # identity function
 
 Both approaches register the resource name in the symbol table and expect the base value
-to be provided via :meth:`Proxy.__call__`. The ``@extern`` decorator is syntactic sugar
+to be provided via :meth:`StaticProxy.__call__`. The ``@extern`` decorator is syntactic sugar
 that makes the intent clearer.
 
 How It Works
@@ -395,7 +395,7 @@ How It Works
 When a parameter-only resource is accessed:
 
 1. The resource name is found in the symbol table (registered by ``@extern`` or ``@patch``)
-2. The base value is looked up from :class:`KeywordArgumentMixin` (injected via ``Proxy.__call__``)
+2. The base value is looked up from :class:`InstanceProxy` (created via ``StaticProxy.__call__``)
 3. All patches are applied (identity patches pass through unchanged)
 4. The final value is returned
 
@@ -440,12 +440,12 @@ Implementation
 --------------
 
 :class:`Proxy` implements ``__call__(**kwargs)``, returning a new :class:`Proxy` of the same type
-containing all original mixins plus new values provided via kwargs (as :class:`KeywordArgumentMixin`).
+creating an :class:`InstanceProxy` that stores kwargs directly for lookup.
 
 Example::
 
     # Create an empty Proxy and inject values
-    proxy = CachedProxy(mixins=frozenset([]))
+    proxy = CachedProxy(_mixins=frozenset([]), _reversed_path=EmptyInternedLinkedList.INSTANCE)
     new_proxy = proxy(setting="value", count=42)
 
     # Access injected values
@@ -460,7 +460,7 @@ By using :meth:`Proxy.__call__` in an outer scope to inject parameter values, re
 modules can access these values via symbol table lookup::
 
     # Provide base value in outer scope
-    outer_proxy = CachedProxy(mixins=frozenset([])) \
+    outer_proxy = CachedProxy(_mixins=frozenset([]), _reversed_path=EmptyInternedLinkedList.INSTANCE) \
         (db_config={"host": "localhost", "port": "5432"})
 
     outer_scope: LexicalScope = (outer_proxy,)
@@ -530,10 +530,16 @@ TKey = TypeVar("TKey", bound=Hashable)
 Resource = NewType("Resource", object)
 
 
-@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class Proxy(Mapping[TKey, "Node"], ABC):
     """
     A Proxy represents resources available via attributes or keys.
+
+    There are two types of proxies:
+
+    - ``StaticProxy``: Represents class/module level static definitions.
+      Contains mixins and supports ``__call__`` to create instances.
+    - ``InstanceProxy``: Created via ``StaticProxy.__call__``.
+      Stores kwargs directly and delegates to base proxy for other lookups.
 
     .. todo::
         我希望把Proxy/CachedProxy/WeakCachedProxy合并成一个类，按需提供ResourceConfig的26种组合行为。
@@ -571,27 +577,25 @@ class Proxy(Mapping[TKey, "Node"], ABC):
             root = mount(MyScope)
             str(root)  # 不会调用自定义的 __str__，而是使用 Proxy 默认的 __str__
 
-    .. todo::
-        区分 ``StaticProxy`` 和 ``InstanceProxy``。
-
-        当前 ``Proxy.__call__`` 返回同类型的 Proxy，通过替换 mixins 来注入参数。
-        应该区分静态和实例两种 Proxy：
-
-        - ``StaticProxy``：表示类/模块级别的静态定义
-        - ``InstanceProxy``：表示通过 ``__call__`` 创建的实例
-
-        ``StaticProxy.__call__`` 应该返回 ``InstanceProxy``。
-
     """
 
-    mixins: frozenset["Mixin[TKey]"]
-    reversed_path: InternedLinkedList[TKey]
+    @property
+    @abstractmethod
+    def mixins(self) -> frozenset["Mixin[TKey]"]:
+        """The mixins that provide resources for this proxy."""
+        ...
+
+    @property
+    @abstractmethod
+    def reversed_path(self) -> "InternedLinkedList[TKey] | InstanceReversedPath[TKey]":
+        """The reversed path from root to this proxy."""
+        ...
 
     def __getitem__(self, key: TKey) -> "Node":
         def generate_resource() -> Iterator[Merger | Patcher]:
-            for mixins in self.mixins:
+            for mixin in self.mixins:
                 try:
-                    factory_or_patch = mixins[key]
+                    factory_or_patch = mixin[key]
                 except KeyError:
                     continue
                 yield factory_or_patch(self)
@@ -606,16 +610,16 @@ class Proxy(Mapping[TKey, "Node"], ABC):
 
     def __iter__(self) -> Iterator[TKey]:
         visited: set[TKey] = set()
-        for mixins in self.mixins:
-            for key in mixins:
+        for mixin in self.mixins:
+            for key in mixin:
                 if key not in visited:
                     visited.add(key)
                     yield key
 
     def __len__(self) -> int:
         keys: set[TKey] = set()
-        for mixins in self.mixins:
-            keys.update(mixins)
+        for mixin in self.mixins:
+            keys.update(mixin)
         return len(keys)
 
     @override
@@ -628,15 +632,115 @@ class Proxy(Mapping[TKey, "Node"], ABC):
             *super(Proxy, self).__dir__(),
         )
 
-    def __call__(self, **kwargs: object) -> "Proxy[Any]":
-        mixins: frozenset[Mixin[Any]] = self.mixins | {
-            _KeywordArgumentMixin(kwargs=kwargs)
-        }
-        return type(self)(mixins=mixins, reversed_path=self.reversed_path)
+
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+class StaticProxy(Proxy[str], ABC):
+    """
+    A static proxy representing class/module level definitions.
+
+    StaticProxy stores mixins directly and supports ``__call__`` to create
+    InstanceProxy with additional kwargs.
+    """
+
+    _mixins: Final[frozenset["Mixin[str]"]]
+    _reversed_path: Final[InternedLinkedList[str]]
+
+    @property
+    @override
+    def mixins(self) -> frozenset["Mixin[str]"]:
+        return self._mixins
+
+    @property
+    @override
+    def reversed_path(self) -> InternedLinkedList[str]:
+        return self._reversed_path
+
+    def __call__(self, **kwargs: object) -> "InstanceProxy":
+        return InstanceProxy(
+            base_proxy=self,
+            kwargs=kwargs,
+        )
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class CachedProxy(Proxy[str]):
+class InstanceReversedPath(Generic[TKey]):
+    """
+    A wrapper for reversed path in InstanceProxy.
+
+    This distinguishes the reversed path of an InstanceProxy from its base StaticProxy,
+    allowing the path to be different for identity purposes.
+    """
+
+    base_reversed_path: Final[InternedLinkedList[TKey]]
+
+
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+class InstanceProxy(Proxy[str]):
+    """
+    An instance proxy created via StaticProxy.__call__.
+
+    InstanceProxy stores kwargs directly and checks them first during lookup,
+    then delegates to the base proxy for other resources.
+    """
+
+    base_proxy: Final[StaticProxy]
+    kwargs: Final[Mapping[str, object]]
+
+    @property
+    @override
+    def mixins(self) -> frozenset["Mixin[str]"]:
+        return self.base_proxy.mixins
+
+    @property
+    @override
+    def reversed_path(self) -> InstanceReversedPath[str]:
+        return InstanceReversedPath(base_reversed_path=self.base_proxy.reversed_path)
+
+    @override
+    def __getitem__(self, key: str) -> "Node":
+        if key in self.kwargs:
+            value = self.kwargs[key]
+
+            def generate_resource() -> Iterator[Merger | Patcher]:
+                # Yield the kwargs value as a Merger
+                yield _EndofunctionMerger(base_value=cast(Resource, value))
+                # Also collect any Patchers from mixins
+                for mixin in self.mixins:
+                    try:
+                        factory_or_patch = mixin[key]
+                    except KeyError:
+                        continue
+                    yield factory_or_patch(self)
+
+            return _evaluate_resource(resource_generator=generate_resource)
+        return super(InstanceProxy, self).__getitem__(key)
+
+    @override
+    def __iter__(self) -> Iterator[str]:
+        yield from self.kwargs
+        for key in super(InstanceProxy, self).__iter__():
+            if key not in self.kwargs:
+                yield key
+
+    @override
+    def __len__(self) -> int:
+        base_keys: set[str] = set()
+        for mixin in self.mixins:
+            base_keys.update(mixin)
+        return len(base_keys | set(self.kwargs))
+
+    def __call__(self, **kwargs: object) -> "InstanceProxy":
+        merged_kwargs: Mapping[str, object] = {**self.kwargs, **kwargs}
+        return InstanceProxy(
+            base_proxy=self.base_proxy,
+            kwargs=merged_kwargs,
+        )
+
+
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+class CachedProxy(StaticProxy):
+    """A StaticProxy with cached resource lookups."""
+
     _cache: MutableMapping[str, "Node"] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )
@@ -656,6 +760,8 @@ class CachedProxy(Proxy[str]):
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class WeakCachedScope(CachedProxy):
+    """A CachedProxy with weak reference caching."""
+
     _cache: MutableMapping[str, "Node"] = field(
         default_factory=WeakValueDictionary, init=False, repr=False, compare=False
     )
@@ -750,7 +856,7 @@ class FunctionMerger(Merger[TPatch_contra, TResult_co]):
 
 
 TResult = TypeVar("TResult")
-TProxy = TypeVar("TProxy", bound=Proxy)
+TProxy = TypeVar("TProxy", bound=StaticProxy)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -845,7 +951,7 @@ class _NamespaceMixin(Mixin[str]):
 class _PackageMixin(_NamespaceMixin):
     """Mixin that lazily resolves definitions including submodules."""
 
-    get_module_proxy_class: Callable[[ModuleType], type[Proxy[str]]]
+    get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]]
 
     @override
     def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
@@ -1110,8 +1216,8 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
                 yield from proxy.mixins
 
         return winner_class(
-            mixins=frozenset(generate_all_mixins()),
-            reversed_path=EmptyInternedLinkedList.INSTANCE,
+            _mixins=frozenset(generate_all_mixins()),
+            _reversed_path=EmptyInternedLinkedList.INSTANCE,
         )
 
     @override
@@ -1166,7 +1272,7 @@ def _resolve_resource_reference(
 
 @dataclass(frozen=True, kw_only=True)
 class _ProxyDefinition(MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy]):
-    proxy_class: type[Proxy]
+    proxy_class: type[StaticProxy]
     underlying: object
     extend: tuple["ResourceReference[str]", ...] = ()
 
@@ -1219,8 +1325,8 @@ class _ProxyDefinition(MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy])
                         yield from extended_proxy.mixins
 
                 return self.proxy_class(
-                    mixins=frozenset(generate_all_mixins()),
-                    reversed_path=NonEmptyInternedLinkedList(
+                    _mixins=frozenset(generate_all_mixins()),
+                    _reversed_path=NonEmptyInternedLinkedList(
                         head=resource_name,
                         tail=parent_reversed_path,
                     ),
@@ -1254,7 +1360,7 @@ class _NamespaceDefinition(_ProxyDefinition):
 class _PackageDefinition(_ProxyDefinition):
     """A definition for packages that discovers submodules via pkgutil."""
 
-    get_module_proxy_class: Callable[[ModuleType], type[Proxy]]
+    get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]]
     underlying: ModuleType
 
     def generate_keys(self) -> Iterator[str]:
@@ -1277,7 +1383,7 @@ class _PackageDefinition(_ProxyDefinition):
 
 
 def _parse_namespace(
-    namespace: object, symbol_table: SymbolTable, proxy_class: type[Proxy]
+    namespace: object, symbol_table: SymbolTable, proxy_class: type[StaticProxy]
 ) -> _NamespaceDefinition:
     """
     Parses an object into a NamespaceDefinition.
@@ -1296,7 +1402,7 @@ def _parse_namespace(
 
 def scope(
     *,
-    proxy_class: type[Proxy] = CachedProxy,
+    proxy_class: type[StaticProxy] = CachedProxy,
     extend: Iterable["ResourceReference[str]"] = (),
 ) -> Callable[[type], _NamespaceDefinition]:
     """
@@ -1335,7 +1441,7 @@ def scope(
 
 def _parse_package(
     module: ModuleType,
-    get_module_proxy_class: Callable[[ModuleType], type[Proxy]],
+    get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]],
     symbol_table: SymbolTable,
 ) -> _ProxyDefinition:
     """
@@ -1407,7 +1513,7 @@ def merge(
         # In branch1.py:
         @patch
         def union_mount_point():
-            return KeywordArgumentMixin(kwargs={"foo": "foo"})
+            return CachedProxy(_mixins=frozenset(), _reversed_path=EmptyInternedLinkedList.INSTANCE)(foo="foo")
 
         # In branch2.py:
         @dataclass
@@ -1467,7 +1573,7 @@ def extern(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
     This is syntactic sugar equivalent to :func:`patch_many` returning an empty collection.
     It registers the resource name in the lexical scope without providing any patches,
     making it clear that the value should come from injection from an outer lexical scope
-    via :class:`KeywordArgumentMixin` or :meth:`Proxy.__call__`.
+    via :class:`InstanceProxy` or :meth:`StaticProxy.__call__`.
 
     The decorated callable may have parameters for dependency injection, which will be
     resolved from the lexical scope when the resource is accessed. However, the callable's
@@ -1541,9 +1647,9 @@ def resource(
 
 def _parse(
     namespace: object,
-    get_module_proxy_class: Callable[[ModuleType], type[Proxy]],
+    get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]],
     symbol_table: SymbolTable,
-    root_proxy_class: type[Proxy],
+    root_proxy_class: type[StaticProxy],
 ) -> _ProxyDefinition:
     if isinstance(namespace, ModuleType):
         return _parse_package(
@@ -1562,7 +1668,7 @@ def mount(
     lexical_scope: LexicalScope = (),
     symbol_table: SymbolTable = SymbolTableSentinel.ROOT,
     root_proxy_class: type[TProxy] = CachedProxy,
-    get_module_proxy_class: Callable[[ModuleType], type[Proxy]] = lambda _: CachedProxy,
+    get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]] = lambda _: CachedProxy,
 ) -> TProxy:
     """
     Resolves a Proxy from the given objects using the provided lexical scope.
@@ -1614,30 +1720,9 @@ def mount(
             )
 
     return root_proxy_class(
-        mixins=frozenset(make_mixin(nd) for nd in namespace_definitions),
-        reversed_path=EmptyInternedLinkedList.INSTANCE,
+        _mixins=frozenset(make_mixin(nd) for nd in namespace_definitions),
+        _reversed_path=EmptyInternedLinkedList.INSTANCE,
     )
-
-
-@dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class _KeywordArgumentMixin(Mixin[str]):
-    kwargs: Mapping[str, object]
-
-    def __getitem__(self, key: str) -> Callable[[Proxy[str]], Merger]:
-        if key not in self.kwargs:
-            raise KeyError(key)
-        value = self.kwargs[key]
-
-        def bind_proxy(proxy: Proxy[str]) -> Merger[Any, Resource]:
-            return _EndofunctionMerger(base_value=cast(Resource, value))
-
-        return bind_proxy
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.kwargs)
-
-    def __len__(self) -> int:
-        return len(self.kwargs)
 
 
 def _make_jit_factory(name: str, index: int) -> Callable[[LexicalScope], "Node"]:

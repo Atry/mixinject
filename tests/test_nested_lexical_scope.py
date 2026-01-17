@@ -6,6 +6,7 @@ from mixinject import (
     Merger,
     Patcher,
     Proxy,
+    StaticProxy,
     CachedProxy,
     WeakCachedScope,
     resource,
@@ -278,7 +279,8 @@ class TestNestedLexicalScope:
         class Base:
             pass
 
-        class CustomProxy(Proxy):
+        @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+        class CustomProxy(StaticProxy):
             pass
 
         @scope(proxy_class=CustomProxy)
