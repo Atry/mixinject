@@ -1116,7 +1116,7 @@ class Definition(ABC):
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
     is_eager: bool = False
-    is_public: bool = False
+    is_local: bool = False
 
     @abstractmethod
     def resolve_symbols(
@@ -1726,27 +1726,27 @@ def eager(definition: TMergerDefinition) -> TMergerDefinition:
     return replace(definition, is_eager=True)
 
 
-def public(definition: TMergerDefinition) -> TMergerDefinition:
+def local(definition: TMergerDefinition) -> TMergerDefinition:
     """
-    Decorator to mark a MergerDefinition as public.
+    Decorator to mark a resource as local.
 
-    Public resources are exposed in the proxy's public interface.
-
+    Local resources are intermediate values, served as dependencies of other resources in the same scope.
+    They are inaccessible from neither child scopes via dependency injection nor from getattr/getitem access.
     Example::
 
-        @public
+        @local
         @resource
         def api_endpoint() -> str:
             return "/api/v1"
 
-    :param definition: A MergerDefinition to mark as public.
-    :return: A new MergerDefinition with is_public=True.
+    :param definition: A MergerDefinition to mark as local.
+    :return: A new MergerDefinition with is_local=True.
     """
-    return replace(definition, is_public=True)
+    return replace(definition, is_local=True)
 
 
 def mount(
-    name: TStrKey,
+    name: TKey,
     namespace: ModuleType | _NamespaceDefinition,
     lexical_scope: LexicalScope = (),
     symbol_table: SymbolTable = SymbolTableSentinel.ROOT,
@@ -1754,7 +1754,7 @@ def mount(
     get_module_proxy_class: Callable[
         [ModuleType], type[StaticProxy]
     ] = lambda _: CachedProxy,
-) -> TProxy:
+) -> StaticProxy[TKey]:
     """
     Resolves a Proxy from the given object using the provided lexical scope.
 
@@ -1801,7 +1801,7 @@ def mount(
         symbol_table=per_namespace_symbol_table,
     )
 
-    root_path: NonEmptyInternedLinkedList[TStrKey] = NonEmptyInternedLinkedList(
+    root_path: NonEmptyInternedLinkedList[TKey] = NonEmptyInternedLinkedList(
         head=name,
         tail=EmptyInternedLinkedList.INSTANCE,
     )
@@ -2047,3 +2047,4 @@ def resource_reference_from_pure_path(path: PurePath) -> ResourceReference[str]:
             remaining_parts.append(part)
 
     return RelativeReference(levels_up=levels_up, path=tuple(remaining_parts))
+
