@@ -481,12 +481,14 @@ Callables can be used not only to define resources but also to define and transf
 import ast
 from enum import Enum, auto
 import importlib
+import os
 import importlib.util
 import pkgutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import cached_property, reduce
 from inspect import signature
+from pathlib import PurePath
 from types import MappingProxyType, ModuleType
 from typing import (
     Any,
@@ -1716,6 +1718,57 @@ class ResourceReference(Generic[T]):
 
     This is used to refer to resources in the current scope.
     """
+
+    @staticmethod
+    def from_pure_path(path: PurePath) -> "ResourceReference[str]":
+        """
+        Parse a PurePath into a ResourceReference[str].
+
+        Raises ValueError if the path is not normalized.
+        A normalized path:
+        - Has no '.' components (except a single '.' meaning current directory)
+        - Has '..' only at the beginning (for relative paths)
+
+        Examples:
+            >>> ResourceReference.from_pure_path(PurePath("../foo/bar"))
+            RelativeReference(levels_up=1, parts=('foo', 'bar'))
+            >>> ResourceReference.from_pure_path(PurePath("../../config"))
+            RelativeReference(levels_up=2, parts=('config',))
+            >>> ResourceReference.from_pure_path(PurePath("/absolute/path"))
+            AbsoluteReference(parts=('absolute', 'path'))
+            >>> ResourceReference.from_pure_path(PurePath("foo/../bar"))
+            Traceback (most recent call last):
+                ...
+            ValueError: Path is not normalized: foo/../bar
+        """
+        if path.is_absolute():
+            path_parts = path.parts[1:]
+            for part in path_parts:
+                if part == os.curdir or part == os.pardir:
+                    raise ValueError(f"Path is not normalized: {path}")
+            return AbsoluteReference(parts=path_parts)
+
+        all_parts = path.parts
+
+        if all_parts == (os.curdir,):
+            return RelativeReference(levels_up=0, parts=())
+
+        levels_up = 0
+        remaining_parts: list[str] = []
+        finished_pardir = False
+
+        for part in all_parts:
+            if part == os.curdir:
+                raise ValueError(f"Path is not normalized: {path}")
+            elif part == os.pardir:
+                if finished_pardir:
+                    raise ValueError(f"Path is not normalized: {path}")
+                levels_up += 1
+            else:
+                finished_pardir = True
+                remaining_parts.append(part)
+
+        return RelativeReference(levels_up=levels_up, parts=tuple(remaining_parts))
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
