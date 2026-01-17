@@ -565,6 +565,8 @@ class DependencyGraph(ABC, Generic[TKey]):
         >>> cache = {graph1: "cached_value"}
         >>> cache[graph2]  # Same key due to interning
         'cached_value'
+
+    .. todo:: 继承 ``Mapping[TKey, StaticChildDependencyGraph]``。
     """
 
     intern_pool: Final[
@@ -580,6 +582,9 @@ class RootDependencyGraph(DependencyGraph[T]):
 
     Each RootDependencyGraph instance has its own intern pool for interning
     StaticChildDependencyGraph nodes within that dependency graph.
+
+    .. todo:: 不实现 ``Mapping`` 的抽象方法 (``__getitem__``, ``__iter__``, ``__len__``)，
+              保持抽象，让用户自行实现。
     """
 
 
@@ -590,11 +595,27 @@ class ChildDependencyGraph(DependencyGraph[TKey]):
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
     This works because interned graphs with equal head within the same parent
     are the same object.
+
+    .. todo:: 添加 ``proxy_definition: _ProxyDefinition`` 字段。
+    .. todo:: 实现 ``__getitem__`` 用于懒创建子依赖图。
+    .. todo:: 实现 ``__call__(lexical_scope: LexicalScope) -> _ProxySemigroup``，
+              使 ``ChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
     tail: Final[DependencyGraph[Any]]
     """
     .. todo:: Rename this field to ``parent``.
+    """
+
+    jit_caches: Mapping["ChildDependencyGraph[Any]", "_JitCache"] = field(
+        default_factory=dict
+    )
+    """
+    Mapping from dependency graph paths to their corresponding JIT caches.
+    Corresponds one-to-one with Proxy.mixins keys.
+
+    .. todo:: 拆分为 ``jit_cache: _JitCache`` (单个) + ``base_jit_caches: ChainMap[ChildDependencyGraph, _JitCache]``，
+              ``jit_caches`` 改为 ``cached_property`` 合并两者。
     """
 
 
@@ -688,6 +709,8 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         Each proxy's own properties (not from extend=) are stored at
         mixins[self.reversed_path]. Extended proxies contribute their mixins
         with their original reversed_path keys.
+
+        .. todo:: 改用 ``ChainMap`` 代替 ``dict``。
         """
         ...
 
@@ -755,6 +778,12 @@ class StaticProxy(Proxy[TKey], ABC):
     reversed_path: StaticChildDependencyGraph[TKey]  # type: ignore[misc]
 
     def __call__(self, **kwargs: object) -> InstanceProxy[Any]:  # type: ignore[type-var]
+        """
+        Create an InstanceProxy with the given kwargs.
+
+        .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
+                  when creating ``InstanceChildDependencyGraph``.
+        """
         # Get or create InstanceChildDependencyGraph (memoized via weak reference)
         cached_ref = self.reversed_path._cached_instance_dependency_graph
         instance_path = cached_ref() if cached_ref is not None else None
@@ -976,6 +1005,11 @@ class Mixin(Mapping[TKey, Callable[["Proxy[TKey]"], Merger | Patcher]], Hashable
     Abstract base class for mixins.
     Mixins are mappings from resource names to factory functions.
     They must compare by identity to allow storage in sets.
+
+    .. todo:: 转换为 dataclass。
+    .. todo:: 添加 ``dependency_graph: ChildDependencyGraph`` 字段。
+    .. todo:: 添加 ``lexical_scope: LexicalScope`` 字段。
+    .. todo:: ``jit_cache`` 改为 property，返回 ``self.dependency_graph.jit_cache``。
     """
 
     def __hash__(self) -> int:
@@ -1037,7 +1071,10 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
 class _NamespaceMixin(Mixin[str]):
-    """Mixin that lazily resolves definitions from a NamespaceDefinition."""
+    """Mixin that lazily resolves definitions from a NamespaceDefinition.
+
+    .. todo:: 删除 ``jit_cache`` 和 ``lexical_scope`` 字段，改为从基类 ``Mixin`` 继承。
+    """
 
     jit_cache: Final[_JitCache]
     lexical_scope: Final[LexicalScope]
@@ -1316,6 +1353,12 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
 
     @override
     def create(self, patches: Iterator[Proxy]) -> Proxy:
+        """
+        Create a merged Proxy from factory and patches.
+
+        .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
+        """
+
         def all_proxies() -> Iterator[Proxy]:
             yield self.proxy_factory()
             return (yield from patches)
@@ -1362,6 +1405,9 @@ def _resolve_resource_reference(
         path resolves to an InstanceProxy. Used by extend to prevent referencing
         paths through InstanceProxy (e.g., object1.MyInner where object1 is an
         InstanceProxy).
+
+    .. todo:: 添加 ``_resolve_dependency_graph_reference`` 辅助函数，类似本函数，
+              但参数为 ``dependency_graph: DependencyGraph``，返回 ``ChildDependencyGraph``。
     """
     match reference:
         case RelativeReference(levels_up=levels_up, path=parts):
@@ -1424,12 +1470,20 @@ class _ProxyDefinition(
         """
         Create a Mixin for this ProxyDefinition given the lexical scope and JIT cache.
         Must be implemented by subclasses.
+
+        .. todo:: 签名从 ``(lexical_scope, jit_cache)`` 改为 ``(dependency_graph, lexical_scope)``。
         """
         raise NotImplementedError()
 
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
     ) -> Callable[[LexicalScope], _ProxySemigroup]:
+        """
+        Resolve symbols for this definition given the symbol table and resource name.
+
+        .. todo:: 返回 ``ChildDependencyGraph`` (它是 ``Callable[[LexicalScope], _ProxySemigroup]``)，
+                  而不是返回闭包。使用 ``parent[resource_name](lexical_scope)`` 模式。
+        """
         inner_symbol_table: SymbolTable = _extend_symbol_table_jit(
             outer=symbol_table, names=self.generate_keys()
         )
@@ -1448,6 +1502,8 @@ class _ProxyDefinition(
                 parent_reversed_path = lexical_scope[-1].reversed_path
 
                 # Memoization: check if StaticChildDependencyGraph already exists
+                # .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
+                #           when creating ``StaticChildDependencyGraph``.
                 intern_pool = parent_reversed_path.intern_pool
                 existing = intern_pool.get(resource_name)
                 if existing is not None:
@@ -1459,6 +1515,7 @@ class _ProxyDefinition(
                     )
                     intern_pool[resource_name] = proxy_reversed_path
 
+                # .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
                 def generate_all_mixin_items() -> (
                     Iterator[tuple[StaticChildDependencyGraph[str], Mixin[str]]]
                 ):
@@ -1833,6 +1890,9 @@ def mount(
 
         # Use weak reference caching
         root = mount("root", MyNamespace, root_proxy_class=WeakCachedScope)
+
+    .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
+              when creating ``StaticChildDependencyGraph``.
     """
     if symbol_table is SymbolTableSentinel.ROOT:
         assert (
