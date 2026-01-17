@@ -508,7 +508,6 @@ from typing import (
     MutableMapping,
     NewType,
     ParamSpec,
-    Self,
     Sequence,
     TypeAlias,
     TypeVar,
@@ -519,12 +518,13 @@ from weakref import WeakValueDictionary
 
 P = ParamSpec("P")
 T = TypeVar("T")
+TKey = TypeVar("TKey")
 
 Resource = NewType("Resource", object)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class Proxy(Mapping[str, "Node"], ABC):
+class Proxy(Mapping[TKey, "Node"], ABC):
     """
     A Proxy represents resources available via attributes or keys.
 
@@ -577,9 +577,9 @@ class Proxy(Mapping[str, "Node"], ABC):
 
     """
 
-    mixins: frozenset["Mixin"]
+    mixins: frozenset["Mixin[TKey]"]
 
-    def __getitem__(self, key: str) -> "Node":
+    def __getitem__(self, key: TKey) -> "Node":
         def generate_resource() -> Iterator[Merger | Patcher]:
             for mixins in self.mixins:
                 try:
@@ -592,12 +592,12 @@ class Proxy(Mapping[str, "Node"], ABC):
 
     def __getattr__(self, key: str) -> "Node":
         try:
-            return self[key]
+            return self[key]  # type: ignore[arg-type]
         except KeyError as e:
             raise AttributeError(name=key, obj=self) from e
 
-    def __iter__(self) -> Iterator[str]:
-        visited: set[str] = set()
+    def __iter__(self) -> Iterator[TKey]:
+        visited: set[TKey] = set()
         for mixins in self.mixins:
             for key in mixins:
                 if key not in visited:
@@ -605,24 +605,30 @@ class Proxy(Mapping[str, "Node"], ABC):
                     yield key
 
     def __len__(self) -> int:
-        keys: set[str] = set()
+        keys: set[TKey] = set()
         for mixins in self.mixins:
             keys.update(mixins)
         return len(keys)
 
     @override
-    def __dir__(self):
+    def __dir__(self) -> Sequence[str]:
         """
         .. note:: This method uses the two-arg super() as a workaround for https://github.com/python/cpython/pull/124455
         """
-        return (*self, *super(Proxy, self).__dir__())
+        return (
+            *(key for key in self if isinstance(key, str)),
+            *super(Proxy, self).__dir__(),
+        )
 
-    def __call__(self, **kwargs: object) -> Self:
-        return type(self)(mixins=self.mixins | {_KeywordArgumentMixin(kwargs=kwargs)})
+    def __call__(self, **kwargs: object) -> "Proxy[Any]":
+        mixins: frozenset[Mixin[Any]] = self.mixins | {
+            _KeywordArgumentMixin(kwargs=kwargs)
+        }
+        return type(self)(mixins=mixins)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class CachedProxy(Proxy):
+class CachedProxy(Proxy[str]):
     _cache: MutableMapping[str, "Node"] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )
@@ -771,7 +777,7 @@ class _EndofunctionMerger(
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
 
 
-class Mixin(Mapping[str, Callable[[Proxy], Merger | Patcher]], Hashable, ABC):
+class Mixin(Mapping[TKey, Callable[["Proxy[TKey]"], Merger | Patcher]], Hashable, ABC):
     """
     Abstract base class for mixins.
     Mixins are mappings from resource names to factory functions.
@@ -824,16 +830,16 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class _NamespaceMixin(Mixin):
+class _NamespaceMixin(Mixin[str]):
     """Mixin that lazily resolves definitions from a NamespaceDefinition."""
 
     jit_cache: Final[_JitCache]
     lexical_scope: Final[LexicalScope]
 
-    def __getitem__(self, key: str, /) -> Callable[[Proxy], Merger | Patcher]:
+    def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
         resolved_function = self.jit_cache[key]
 
-        def bind_proxy(proxy: Proxy) -> Merger | Patcher:
+        def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
             inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
             return resolved_function(inner_lexical_scope)
 
@@ -850,10 +856,10 @@ class _NamespaceMixin(Mixin):
 class _PackageMixin(_NamespaceMixin):
     """Mixin that lazily resolves definitions including submodules."""
 
-    get_module_proxy_class: Callable[[ModuleType], type[Proxy]]
+    get_module_proxy_class: Callable[[ModuleType], type[Proxy[str]]]
 
     @override
-    def __getitem__(self, key: str, /) -> Callable[[Proxy], Merger | Patcher]:
+    def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
         # 1. Try parent implementation (attributes that are Definition)
         try:
             return super(_PackageMixin, self).__getitem__(key)
@@ -889,7 +895,7 @@ class _PackageMixin(_NamespaceMixin):
             self.jit_cache.symbol_table, key
         )
 
-        def bind_proxy(proxy: Proxy) -> Merger | Patcher:
+        def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
             inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
             return resolved_function(inner_lexical_scope)
 
@@ -1538,15 +1544,15 @@ def mount(
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class _KeywordArgumentMixin(Mixin):
+class _KeywordArgumentMixin(Mixin[str]):
     kwargs: Mapping[str, object]
 
-    def __getitem__(self, key: str) -> Callable[[Proxy], Merger]:
+    def __getitem__(self, key: str) -> Callable[[Proxy[str]], Merger]:
         if key not in self.kwargs:
             raise KeyError(key)
         value = self.kwargs[key]
 
-        def bind_proxy(proxy: Proxy) -> Merger[Any, Resource]:
+        def bind_proxy(proxy: Proxy[str]) -> Merger[Any, Resource]:
             return _EndofunctionMerger(base_value=cast(Resource, value))
 
         return bind_proxy
