@@ -14,7 +14,7 @@ from mixinject import RootDependencyGraph, StaticChildDependencyGraph
 
 def _empty_proxy() -> CachedProxy:
     """Create an empty proxy for testing."""
-    return CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+    return CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
 
 def _make_getitem_factory(
     name: str, index: int

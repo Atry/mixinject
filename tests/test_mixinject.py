@@ -198,13 +198,13 @@ class TestInstanceProxy:
     """Test InstanceProxy created via StaticProxy.__call__."""
 
     def test_instance_proxy_single_value(self) -> None:
-        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         proxy = base_proxy(foo="bar")
         assert isinstance(proxy, InstanceProxy)
         assert proxy.foo == "bar"
 
     def test_instance_proxy_multiple_values(self) -> None:
-        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         proxy = base_proxy(foo="bar", count=42, flag=True)
         assert isinstance(proxy, InstanceProxy)
         assert proxy.foo == "bar"
@@ -710,7 +710,7 @@ class TestProxyAsSymlink:
     """Test Proxy return values acting as symlinks."""
 
     def test_proxy_symlink(self) -> None:
-        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         inner_proxy = base_proxy(inner_value="inner")
 
         @scope()
@@ -856,7 +856,7 @@ class TestProxyCallable:
 
     def test_proxy_call_single_kwarg(self) -> None:
         """Test calling Proxy to inject a single new value."""
-        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         proxy = base_proxy(foo="foo_value")
 
         # Call proxy with new kwargs to add additional values
@@ -867,7 +867,7 @@ class TestProxyCallable:
 
     def test_proxy_call_multiple_kwargs(self) -> None:
         """Test calling Proxy with multiple new kwargs."""
-        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         proxy = base_proxy(x=1, y=2)
 
         # Call to add new values (z and w)
@@ -881,7 +881,7 @@ class TestProxyCallable:
     def test_proxy_call_injected_values_accessible(self) -> None:
         """Test that values injected via Proxy call are accessible as resources."""
         # Create empty proxy and inject values via call
-        proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))(config={"db": "postgres"})(timeout=30)
+        proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))(config={"db": "postgres"})(timeout=30)
 
         # Injected values should be accessible
         assert proxy.config == {"db": "postgres"}
@@ -921,7 +921,7 @@ class TestProxyCallable:
         v1, v2 = Value(), Value()
 
         # CachedProxy.__call__ should return InstanceProxy
-        cached = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        cached = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         instance1 = cached(x=v1)
         assert isinstance(instance1, InstanceProxy)
         assert instance1.x is v1
@@ -933,14 +933,14 @@ class TestProxyCallable:
         assert instance2.y is v2
 
         # WeakCachedScope.__call__ should also return InstanceProxy
-        weak = WeakCachedScope(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        weak = WeakCachedScope(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         weak_instance = weak(x=v1)
         assert isinstance(weak_instance, InstanceProxy)
         assert weak_instance.x is v1
 
     def test_proxy_call_creates_fresh_instance(self) -> None:
         """Test that calling a Proxy creates a new instance without modifying the original."""
-        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", tail=RootDependencyGraph()))
+        base_proxy = CachedProxy(mixins={}, dependency_graph=StaticChildDependencyGraph(head="test", parent=RootDependencyGraph()))
         proxy1 = base_proxy(a=1)
 
         # Call to create a new proxy

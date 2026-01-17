@@ -448,7 +448,7 @@ Example::
     from mixinject import StaticChildDependencyGraph, RootDependencyGraph
     proxy = CachedProxy(
         mixins={},
-        dependency_graph=StaticChildDependencyGraph(head="my_proxy", tail=RootDependencyGraph()),
+        dependency_graph=StaticChildDependencyGraph(head="my_proxy", parent=RootDependencyGraph()),
     )
     new_proxy = proxy(setting="value", count=42)
 
@@ -552,8 +552,8 @@ class DependencyGraph(ABC, Generic[TKey]):
     Example::
 
         >>> root = RootDependencyGraph()
-        >>> graph1 = StaticChildDependencyGraph(head=1, tail=root)
-        >>> graph2 = StaticChildDependencyGraph(head=1, tail=root)
+        >>> graph1 = StaticChildDependencyGraph(head=1, parent=root)
+        >>> graph2 = StaticChildDependencyGraph(head=1, parent=root)
         >>> graph1 is graph2  # Same object due to interning within same root
         True
 
@@ -574,7 +574,6 @@ class DependencyGraph(ABC, Generic[TKey]):
     ] = field(default_factory=weakref.WeakValueDictionary)
 
 
-@final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
 
@@ -629,9 +628,9 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     """
     .. todo:: Remove this field. It's legacy and useless now.
     """
-    tail: Final[DependencyGraph[Any]]
+    parent: Final[DependencyGraph[Any]]
     """
-    .. todo:: Rename this field to ``parent``.
+    .. todo:: Remove this todo since this field has been renamed to ``parent``.
     """
 
 
@@ -645,9 +644,9 @@ class InstanceChildDependencyGraph(DependencyGraph[TKey | str], Generic[TKey]):
     are the same object.
     """
 
-    tail: Final[StaticDependencyGraph[Any]]
+    prototype: Final[StaticDependencyGraph[Any]]
     """
-    .. todo:: Rename this field to ``parent``.
+    The static dependency graph that this instance is based on.
     """
 
 
@@ -793,7 +792,7 @@ class StaticProxy(Proxy[TKey], ABC):
         instance_path = cached_ref() if cached_ref is not None else None
         if instance_path is None:
             instance_path = InstanceChildDependencyGraph[Any](
-                tail=self.dependency_graph
+                prototype=self.dependency_graph
             )
             self.dependency_graph._cached_instance_dependency_graph = weakref.ref(
                 instance_path
@@ -1561,7 +1560,7 @@ class _ProxyDefinition(
                     else:
                         proxy_reversed_path = StaticChildDependencyGraph(
                             head=resource_name,
-                            tail=parent_reversed_path,
+                            parent=parent_reversed_path,
                         )
                         intern_pool[resource_name] = proxy_reversed_path
 
@@ -1980,7 +1979,7 @@ def mount(
     else:
         root_path = StaticChildDependencyGraph(
             head=name,
-            tail=parent_reversed_path,
+            parent=parent_reversed_path,
         )
         intern_pool[name] = root_path
 
