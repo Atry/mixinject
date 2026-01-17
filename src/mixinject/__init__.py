@@ -1416,7 +1416,7 @@ def scope(
         extend: ResourceReferences to other scopes whose mixins should be included.
             This allows composing scopes without explicit merge operations.
 
-    Example::
+    Example - Using extend to inherit from another scope::
 
         @scope(extend=(
             RelativeReference(levels_up=1, parts=("Base",)),
@@ -1425,6 +1425,38 @@ def scope(
             @patch
             def foo() -> Callable[[int], int]:
                 return lambda x: x + 1
+
+    Example - Union mounting multiple scopes across modules::
+
+        Multiple ``@scope()`` definitions with the same name are automatically merged
+        as semigroups. This is the recommended way to create union mount points::
+
+            # In branch0.py:
+            @scope()
+            class union_mount_point:
+                pass  # Base empty scope
+
+            # In branch1.py:
+            @scope()
+            class union_mount_point:
+                @resource
+                def foo() -> str:
+                    return "foo"
+
+            # In branch2.py:
+            @scope()
+            class union_mount_point:
+                @extern
+                def foo() -> str: ...
+
+                @resource
+                def bar(foo: str) -> str:
+                    return f"{foo}_bar"
+
+            # In main.py:
+            root = mount(branch0, branch1, branch2)
+            root.union_mount_point.foo  # "foo"
+            root.union_mount_point.bar  # "foo_bar"
 
     """
     extend_tuple = tuple(extend)
@@ -1505,45 +1537,15 @@ def merge(
         def deduplicated_tags(another_dependency):
             return f"tag2_{another_dependency}"
 
-        # In branch0.py:
-        @merge
-        def union_mount_point():
-            return lambda mixins: CachedProxy(frozenset(mixins))
-
-        # In branch1.py:
-        @patch
-        def union_mount_point():
-            return CachedProxy(_mixins=frozenset(), _reversed_path=EmptyInternedLinkedList.INSTANCE)(foo="foo")
-
-        # In branch2.py:
-        @dataclass
-        class Mixin2:
-            def bar(self, foo: str) -> str:
-                return f"{foo}_bar"
-
-        # Still in branch2.py:
-        @patch_many
-        def union_mount_point():
-            return mount(Mixin2()).mixins
-
         # In main.py:
         import branch0
         import branch1
         import branch2
-        import branch3
-        root = mount(branch0, branch1, branch2, branch3)
+        root = mount(branch0, branch1, branch2)
         root.deduplicated_tags  # frozenset(("tag1", "tag2_dependency_value"))
-        root.union_mount_point.foo  # "foo"
-        root.union_mount_point.bar  # "foo_bar"
-        root.union_mount_point.mixins  # frozenset of all mixins from branch0, branch1, branch2, branch3
 
-
-    Suppose we have an `branch3/example_module.py` defined in the same directory, and we can mount it in `branch3/__init__.py`:
-
-        # In __init__.py:
-        @patch_many
-        def union_mount_point(example_module: Proxy):
-            return example_module.mixins
+    Note: For union mounting multiple scopes, use ``@scope()`` semigroups instead.
+    See :func:`scope` for examples.
     """
     return _MergerDefinition(function=callable)
 
