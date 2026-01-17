@@ -26,6 +26,7 @@ from mixinject import (
     _parse_package,
     WeakCachedScope,
 )
+from mixinject.interned_linked_list import EmptyInternedLinkedList
 
 FIXTURES_DIR = str(Path(__file__).parent / "fixtures")
 
@@ -153,12 +154,12 @@ class TestKeywordArgumentMixin:
 
     def test_keyword_argument_mixin_single_value(self) -> None:
         comp = _KeywordArgumentMixin(kwargs={"foo": "bar"})
-        proxy = CachedProxy(mixins=frozenset((comp,)))
+        proxy = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
         assert proxy.foo == "bar"
 
     def test_keyword_argument_mixin_multiple_values(self) -> None:
         comp = _KeywordArgumentMixin(kwargs={"foo": "bar", "count": 42, "flag": True})
-        proxy = CachedProxy(mixins=frozenset((comp,)))
+        proxy = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
         assert proxy.foo == "bar"
         assert proxy.count == 42
         assert proxy.flag is True
@@ -350,7 +351,7 @@ class TestProxyAsSymlink:
 
     def test_proxy_symlink(self) -> None:
         comp = _KeywordArgumentMixin(kwargs={"inner_value": "inner"})
-        inner_proxy = CachedProxy(mixins=frozenset((comp,)))
+        inner_proxy = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
 
         class Namespace:
             @resource
@@ -499,7 +500,7 @@ class TestProxyCallable:
     def test_proxy_call_single_kwarg(self) -> None:
         """Test calling Proxy to inject a single new value."""
         comp = _KeywordArgumentMixin(kwargs={"foo": "foo_value"})
-        proxy = CachedProxy(mixins=frozenset((comp,)))
+        proxy = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
 
         # Call proxy with new kwargs to add additional mixins
         new_proxy = proxy(bar="bar_value")
@@ -510,7 +511,7 @@ class TestProxyCallable:
     def test_proxy_call_multiple_kwargs(self) -> None:
         """Test calling Proxy with multiple new kwargs."""
         comp = _KeywordArgumentMixin(kwargs={"x": 1, "y": 2})
-        proxy = CachedProxy(mixins=frozenset((comp,)))
+        proxy = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
 
         # Call to add new mixins (z and w)
         new_proxy = proxy(z=3, w=4)
@@ -523,7 +524,7 @@ class TestProxyCallable:
     def test_proxy_call_injected_values_accessible(self) -> None:
         """Test that values injected via Proxy call are accessible as resources."""
         # Create empty proxy and inject values via call
-        proxy = CachedProxy(mixins=frozenset([]))(config={"db": "postgres"})(timeout=30)
+        proxy = CachedProxy(mixins=frozenset([]), reversed_path=EmptyInternedLinkedList.INSTANCE)(config={"db": "postgres"})(timeout=30)
 
         # Injected values should be accessible
         assert proxy.config == {"db": "postgres"}
@@ -563,14 +564,14 @@ class TestProxyCallable:
         comp = _KeywordArgumentMixin(kwargs={"x": v1})
 
         # CachedProxy should return CachedProxy
-        cached = CachedProxy(mixins=frozenset((comp,)))
+        cached = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
         new_cached = cached(y=v2)
         assert isinstance(new_cached, CachedProxy)
         assert new_cached.x is v1
         assert new_cached.y is v2
 
         # WeakCachedScope should return WeakCachedScope
-        weak = WeakCachedScope(mixins=frozenset((comp,)))
+        weak = WeakCachedScope(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
         new_weak = weak(y=v2)
         assert isinstance(new_weak, WeakCachedScope)
         assert new_weak.x is v1
@@ -579,7 +580,7 @@ class TestProxyCallable:
     def test_proxy_call_creates_fresh_instance(self) -> None:
         """Test that calling a Proxy creates a new instance without modifying the original."""
         comp = _KeywordArgumentMixin(kwargs={"a": 1})
-        proxy1 = CachedProxy(mixins=frozenset((comp,)))
+        proxy1 = CachedProxy(mixins=frozenset((comp,)), reversed_path=EmptyInternedLinkedList.INSTANCE)
 
         # Call to create a new proxy
         proxy2 = proxy1(b=2)

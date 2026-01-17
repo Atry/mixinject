@@ -516,9 +516,15 @@ from typing import (
 )
 from weakref import WeakValueDictionary
 
+from mixinject.interned_linked_list import (
+    EmptyInternedLinkedList,
+    InternedLinkedList,
+    NonEmptyInternedLinkedList,
+)
+
 P = ParamSpec("P")
 T = TypeVar("T")
-TKey = TypeVar("TKey")
+TKey = TypeVar("TKey", bound=Hashable)
 
 Resource = NewType("Resource", object)
 
@@ -578,6 +584,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
     """
 
     mixins: frozenset["Mixin[TKey]"]
+    reversed_path: InternedLinkedList[TKey]
 
     def __getitem__(self, key: TKey) -> "Node":
         def generate_resource() -> Iterator[Merger | Patcher]:
@@ -624,7 +631,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         mixins: frozenset[Mixin[Any]] = self.mixins | {
             _KeywordArgumentMixin(kwargs=kwargs)
         }
-        return type(self)(mixins=mixins)
+        return type(self)(mixins=mixins, reversed_path=self.reversed_path)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -698,7 +705,7 @@ def merge_proxies(proxies: Iterable[Proxy]) -> Proxy:
         for p in proxies_tuple:
             yield from p.mixins
 
-    return winner_class(mixins=frozenset(generate_all_mixins()))
+    return winner_class(mixins=frozenset(generate_all_mixins()), reversed_path=EmptyInternedLinkedList.INSTANCE)
 
 
 LexicalScope: TypeAlias = Sequence[Proxy]
@@ -1152,7 +1159,10 @@ class _ProxyDefinition(MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy])
         def resolve_lexical_scope(
             lexical_scope: LexicalScope,
         ) -> _ProxySemigroup:
-            def proxy_factory() -> Proxy:
+            def proxy_factory() -> Proxy[str]:
+                parent_reversed_path: InternedLinkedList[str] = (
+                    lexical_scope[-1].reversed_path if lexical_scope else EmptyInternedLinkedList.INSTANCE
+                )
                 return self.proxy_class(
                     mixins=frozenset(
                         (
@@ -1161,7 +1171,11 @@ class _ProxyDefinition(MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy])
                                 symbol_table=inner_symbol_table,
                             ),
                         )
-                    )
+                    ),
+                    reversed_path=NonEmptyInternedLinkedList(
+                        head=resource_name,
+                        tail=parent_reversed_path,
+                    ),
                 )
 
             return _ProxySemigroup(proxy_factory=proxy_factory)
@@ -1539,7 +1553,8 @@ def mount(
             )
 
     return root_proxy_class(
-        mixins=frozenset(make_mixin(nd) for nd in namespace_definitions)
+        mixins=frozenset(make_mixin(nd) for nd in namespace_definitions),
+        reversed_path=EmptyInternedLinkedList.INSTANCE,
     )
 
 
