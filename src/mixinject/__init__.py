@@ -1026,6 +1026,10 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
 
     .. todo:: Also compiles the proxy class into Python bytecode.
 
+    .. todo:: Phase 8: 修改 Mapping 签名
+       - 改为 ``Mapping[str, Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]]``
+       - ``__getitem__`` 缓存第一层 callable
+
     .. note:: _JitCache instances are shared among all mixins created from the same
         _ProxyDefinition (the Python class decorated with @scope()). For example::
 
@@ -1080,6 +1084,9 @@ class _NamespaceMixin(Mixin[str]):
     lexical_scope: Final[LexicalScope]
 
     def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
+        """
+        .. todo:: Phase 8: 调用 ``self.jit_cache[key](self.dependency_graph)`` 获得第二层 callable
+        """
         resolved_function = self.jit_cache[key]
 
         def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
@@ -1216,6 +1223,9 @@ class Definition(ABC):
         """
         Resolve symbols in the definition and return a function that takes a lexical scope
         and returns a Merger or Patcher.
+
+        .. todo:: Phase 8: 修改 resolve_symbols 返回类型
+           - 改为 ``Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]``
         """
         raise NotImplementedError()
 
@@ -1480,9 +1490,6 @@ class _ProxyDefinition(
     ) -> Callable[[LexicalScope], _ProxySemigroup]:
         """
         Resolve symbols for this definition given the symbol table and resource name.
-
-        .. todo:: 返回 ``ChildDependencyGraph`` (它是 ``Callable[[LexicalScope], _ProxySemigroup]``)，
-                  而不是返回闭包。使用 ``parent[resource_name](lexical_scope)`` 模式。
         """
         inner_symbol_table: SymbolTable = _extend_symbol_table_jit(
             outer=symbol_table, names=self.generate_keys()
