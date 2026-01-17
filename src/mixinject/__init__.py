@@ -935,16 +935,16 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
     .. todo:: Also compiles the proxy class into Python bytecode.
 
     .. note:: _JitCache instances are shared among all mixins created from the same
-        _ProxyDefinition, regardless of access path. For example, given a nested scope
-        ``Root.Outer.Inner``, the following all share the same _JitCache::
+        _ProxyDefinition (the Python class decorated with @scope()). For example::
 
             root.Outer(arg="v1").Inner.mixins[...].jit_cache
             root.Outer(arg="v2").Inner.mixins[...].jit_cache
             root.Outer.Inner.mixins[...].jit_cache
+            root.object1(arg="v").Inner.mixins[...].jit_cache  # object1 extends Outer
 
-        This is because the _JitCache is created once in _ProxyDefinition.resolve_symbols
-        and captured in the closure. The _JitCache is tied to the definition (the ``Inner``
-        class), not to the path through which the proxy is accessed.
+        All share the same _JitCache because they reference the same ``Inner`` class.
+        The _JitCache is created once in _ProxyDefinition.resolve_symbols and captured
+        in the closure, tied to the definition itself, not to the access path.
     """
 
     proxy_definition: Final["_ProxyDefinition"]

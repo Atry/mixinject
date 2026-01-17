@@ -11,6 +11,7 @@ from mixinject import (
     CachedProxy,
     InstanceMarker,
     InstanceProxy,
+    _JitCache,
     LexicalScope,
     _PackageDefinition,
     _NamespaceDefinition,
@@ -620,6 +621,146 @@ class TestInstanceProxyReversedPath:
 
         # Verify the resource works correctly
         assert my_inner.foo == "foo_42"
+
+
+class TestJitCacheSharing:
+    """Test that _JitCache instances are shared among mixins from the same _ProxyDefinition."""
+
+    def test_jit_cache_shared_across_different_instance_args(self) -> None:
+        """_JitCache should be shared when accessing Inner through different Outer instances."""
+        @scope()
+        class Root:
+            @scope()
+            class Outer:
+                @extern
+                def arg() -> str: ...
+
+                @scope()
+                class Inner:
+                    @resource
+                    def value(arg: str) -> str:
+                        return f"value_{arg}"
+
+        root = mount("root", Root)
+
+        inner1 = root.Outer(arg="v1").Inner
+        inner2 = root.Outer(arg="v2").Inner
+
+        inner1_path = NonEmptyInternedLinkedList(
+            head="Inner",
+            tail=NonEmptyInternedLinkedList(
+                head=InstanceMarker(key="Outer"),
+                tail=NonEmptyInternedLinkedList(
+                    head="root",
+                    tail=EmptyInternedLinkedList.INSTANCE,
+                ),
+            ),
+        )
+
+        jit_cache1 = inner1.mixins[inner1_path].jit_cache
+        jit_cache2 = inner2.mixins[inner1_path].jit_cache
+
+        assert jit_cache1 is jit_cache2
+
+    def test_jit_cache_shared_between_instance_and_static_access(self) -> None:
+        """_JitCache should be shared between InstanceProxy and StaticProxy access paths."""
+        @scope()
+        class Root:
+            @scope()
+            class Outer:
+                @extern
+                def arg() -> str: ...
+
+                @scope()
+                class Inner:
+                    @resource
+                    def value(arg: str) -> str:
+                        return f"value_{arg}"
+
+        root = mount("root", Root)
+
+        instance_inner = root.Outer(arg="v1").Inner
+        static_inner = root.Outer.Inner
+
+        instance_path = NonEmptyInternedLinkedList(
+            head="Inner",
+            tail=NonEmptyInternedLinkedList(
+                head=InstanceMarker(key="Outer"),
+                tail=NonEmptyInternedLinkedList(
+                    head="root",
+                    tail=EmptyInternedLinkedList.INSTANCE,
+                ),
+            ),
+        )
+
+        static_path = NonEmptyInternedLinkedList(
+            head="Inner",
+            tail=NonEmptyInternedLinkedList(
+                head="Outer",
+                tail=NonEmptyInternedLinkedList(
+                    head="root",
+                    tail=EmptyInternedLinkedList.INSTANCE,
+                ),
+            ),
+        )
+
+        instance_jit_cache = instance_inner.mixins[instance_path].jit_cache
+        static_jit_cache = static_inner.mixins[static_path].jit_cache
+
+        assert instance_jit_cache is static_jit_cache
+
+    def test_jit_cache_shared_when_scope_extends_another(self) -> None:
+        """_JitCache should be shared when accessing Inner through extending scopes."""
+        @scope()
+        class Root:
+            @scope()
+            class Outer:
+                @extern
+                def arg() -> str: ...
+
+                @scope()
+                class Inner:
+                    @resource
+                    def value(arg: str) -> str:
+                        return f"value_{arg}"
+
+            @scope(extend=(R(levels_up=1, path=("Outer",)),))
+            class object1:
+                @extern
+                def arg() -> str: ...
+
+        root = mount("root", Root)
+
+        outer_inner = root.Outer(arg="v1").Inner
+        object1_inner = root.object1(arg="v2").Inner
+
+        outer_inner_path = NonEmptyInternedLinkedList(
+            head="Inner",
+            tail=NonEmptyInternedLinkedList(
+                head=InstanceMarker(key="Outer"),
+                tail=NonEmptyInternedLinkedList(
+                    head="root",
+                    tail=EmptyInternedLinkedList.INSTANCE,
+                ),
+            ),
+        )
+
+        object1_inner_path = NonEmptyInternedLinkedList(
+            head="Inner",
+            tail=NonEmptyInternedLinkedList(
+                head=InstanceMarker(key="object1"),
+                tail=NonEmptyInternedLinkedList(
+                    head="root",
+                    tail=EmptyInternedLinkedList.INSTANCE,
+                ),
+            ),
+        )
+
+        outer_jit_cache = outer_inner.mixins[outer_inner_path].jit_cache
+        object1_jit_cache = object1_inner.mixins[object1_inner_path].jit_cache
+
+        assert outer_jit_cache is object1_jit_cache
+        assert outer_jit_cache.proxy_definition is object1_jit_cache.proxy_definition
 
 
 class TestProxyAsSymlink:
