@@ -15,6 +15,7 @@ from mixinject import (
     mount,
     scope,
     Definition,
+    DependencyGraph,
     LexicalScope,
     SymbolTable,
     RelativeReference as R,
@@ -108,8 +109,8 @@ class DirectDefinition(Definition):
     @override
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
-    ) -> Callable[[LexicalScope], Merger | Patcher]:
-        return lambda lexical_scope: self.item
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]:
+        return lambda _dependency_graph: lambda _lexical_scope: self.item
 
 
 @pytest.mark.parametrize("proxy_class", [CachedProxy, WeakCachedScope])

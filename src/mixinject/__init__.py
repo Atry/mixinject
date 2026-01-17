@@ -1062,9 +1062,14 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
             raise KeyError(key) from e
         if not isinstance(val, Definition):
             raise KeyError(key)
-        resolved = val.resolve_symbols(self.symbol_table, key)
-        self.cache[key] = resolved
-        return resolved
+        outer = val.resolve_symbols(self.symbol_table, key)
+
+        def inner(lexical_scope: LexicalScope) -> Merger | Patcher:
+            dependency_graph = lexical_scope[-1].reversed_path
+            return outer(dependency_graph)(lexical_scope)
+
+        self.cache[key] = inner
+        return inner
 
     def __iter__(self) -> Iterator[str]:
         return self.proxy_definition.generate_keys()
@@ -1141,13 +1146,14 @@ class _PackageMixin(_NamespaceMixin):
                 underlying=submod,
                 proxy_class=self.get_module_proxy_class(submod),
             )
-        resolved_function = submod_definition.resolve_symbols(
+        outer = submod_definition.resolve_symbols(
             self.jit_cache.symbol_table, key
         )
 
         def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
             inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
-            return resolved_function(inner_lexical_scope)
+            dependency_graph = inner_lexical_scope[-1].reversed_path
+            return outer(dependency_graph)(inner_lexical_scope)
 
         return bind_proxy
 
@@ -1219,13 +1225,10 @@ class Definition(ABC):
     @abstractmethod
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Merger | Patcher]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]:
         """
-        Resolve symbols in the definition and return a function that takes a lexical scope
-        and returns a Merger or Patcher.
-
-        .. todo:: Phase 8: 修改 resolve_symbols 返回类型
-           - 改为 ``Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]``
+        Resolve symbols in the definition and return a two-layer callable.
+        First layer takes DependencyGraph, second layer takes LexicalScope.
         """
         raise NotImplementedError()
 
@@ -1238,7 +1241,7 @@ class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
     @abstractmethod
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Merger]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger]]:
         raise NotImplementedError()
 
 
@@ -1246,7 +1249,7 @@ class PatcherDefinition(Definition, Generic[TPatch_co]):
     @abstractmethod
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Patcher]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Patcher]]:
         raise NotImplementedError()
 
 
@@ -1259,20 +1262,25 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
             resource_name=resource_name,
         )
 
-        def resolve_lexical_scope(
-            lexical_scope: LexicalScope,
-        ) -> Merger[TPatch_contra, TResult_co]:
-            aggregation_function = jit_compiled_function(lexical_scope)
-            return FunctionMerger(aggregation_function=aggregation_function)
+        def with_dependency_graph(
+            _dependency_graph: DependencyGraph,
+        ) -> Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]:
+            def resolve_lexical_scope(
+                lexical_scope: LexicalScope,
+            ) -> Merger[TPatch_contra, TResult_co]:
+                aggregation_function = jit_compiled_function(lexical_scope)
+                return FunctionMerger(aggregation_function=aggregation_function)
 
-        return resolve_lexical_scope
+            return resolve_lexical_scope
+
+        return with_dependency_graph
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -1286,20 +1294,25 @@ class _ResourceDefinition(
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
             resource_name=resource_name,
         )
 
-        def resolve_lexical_scope(
-            lexical_scope: LexicalScope,
-        ) -> Merger[Callable[[TResult], TResult], TResult]:
-            base_value = jit_compiled_function(lexical_scope)
-            return _EndofunctionMerger(base_value=base_value)
+        def with_dependency_graph(
+            _dependency_graph: DependencyGraph,
+        ) -> Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]]:
+            def resolve_lexical_scope(
+                lexical_scope: LexicalScope,
+            ) -> Merger[Callable[[TResult], TResult], TResult]:
+                base_value = jit_compiled_function(lexical_scope)
+                return _EndofunctionMerger(base_value=base_value)
 
-        return resolve_lexical_scope
+            return resolve_lexical_scope
+
+        return with_dependency_graph
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -1311,20 +1324,25 @@ class _SinglePatchDefinition(PatcherDefinition[TPatch_co]):
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Patcher[TPatch_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
             resource_name=resource_name,
         )
 
-        def resolve_lexical_scope(lexical_scope: LexicalScope) -> Patcher[TPatch_co]:
-            def patch_generator() -> Iterator[TPatch_co]:
-                yield jit_compiled_function(lexical_scope)
+        def with_dependency_graph(
+            _dependency_graph: DependencyGraph,
+        ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
+            def resolve_lexical_scope(lexical_scope: LexicalScope) -> Patcher[TPatch_co]:
+                def patch_generator() -> Iterator[TPatch_co]:
+                    yield jit_compiled_function(lexical_scope)
 
-            return FunctionPatcher(patch_generator=patch_generator)
+                return FunctionPatcher(patch_generator=patch_generator)
 
-        return resolve_lexical_scope
+            return resolve_lexical_scope
+
+        return with_dependency_graph
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
@@ -1336,20 +1354,25 @@ class _MultiplePatchDefinition(PatcherDefinition[TPatch_co]):
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Patcher[TPatch_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
             resource_name=resource_name,
         )
 
-        def resolve_lexical_scope(lexical_scope: LexicalScope) -> Patcher[TPatch_co]:
-            def patch_generator() -> Iterator[TPatch_co]:
-                return (yield from jit_compiled_function(lexical_scope))
+        def with_dependency_graph(
+            _dependency_graph: DependencyGraph,
+        ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
+            def resolve_lexical_scope(lexical_scope: LexicalScope) -> Patcher[TPatch_co]:
+                def patch_generator() -> Iterator[TPatch_co]:
+                    return (yield from jit_compiled_function(lexical_scope))
 
-            return FunctionPatcher(patch_generator=patch_generator)
+                return FunctionPatcher(patch_generator=patch_generator)
 
-        return resolve_lexical_scope
+            return resolve_lexical_scope
+
+        return with_dependency_graph
 
 
 DefinitionMapping: TypeAlias = Mapping[
@@ -1487,7 +1510,7 @@ class _ProxyDefinition(
 
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
-    ) -> Callable[[LexicalScope], _ProxySemigroup]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], _ProxySemigroup]]:
         """
         Resolve symbols for this definition given the symbol table and resource name.
         """
@@ -1499,58 +1522,63 @@ class _ProxyDefinition(
             symbol_table=inner_symbol_table,
         )
 
-        def resolve_lexical_scope(
-            lexical_scope: LexicalScope,
-        ) -> _ProxySemigroup:
-            def proxy_factory() -> Proxy[str]:
-                assert (
-                    lexical_scope
-                ), "lexical_scope must not be empty when resolving resources"
-                parent_reversed_path = lexical_scope[-1].reversed_path
+        def with_dependency_graph(
+            _dependency_graph: DependencyGraph,
+        ) -> Callable[[LexicalScope], _ProxySemigroup]:
+            def resolve_lexical_scope(
+                lexical_scope: LexicalScope,
+            ) -> _ProxySemigroup:
+                def proxy_factory() -> Proxy[str]:
+                    assert (
+                        lexical_scope
+                    ), "lexical_scope must not be empty when resolving resources"
+                    parent_reversed_path = lexical_scope[-1].reversed_path
 
-                # Memoization: check if StaticChildDependencyGraph already exists
-                # .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
-                #           when creating ``StaticChildDependencyGraph``.
-                intern_pool = parent_reversed_path.intern_pool
-                existing = intern_pool.get(resource_name)
-                if existing is not None:
-                    proxy_reversed_path = existing
-                else:
-                    proxy_reversed_path = StaticChildDependencyGraph(
-                        head=resource_name,
-                        tail=parent_reversed_path,
-                    )
-                    intern_pool[resource_name] = proxy_reversed_path
-
-                # .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
-                def generate_all_mixin_items() -> (
-                    Iterator[tuple[StaticChildDependencyGraph[str], Mixin[str]]]
-                ):
-                    # Include mixin from this definition, keyed by proxy's path
-                    yield (
-                        proxy_reversed_path,
-                        self.create_mixin(
-                            lexical_scope=lexical_scope,
-                            jit_cache=jit_cache,
-                        ),
-                    )
-                    # Include mixins from extended proxies, preserving their original keys
-                    for reference in self.extend:
-                        extended_proxy = _resolve_resource_reference(
-                            reference=reference,
-                            lexical_scope=lexical_scope,
-                            forbid_instance_proxy=True,
+                    # Memoization: check if StaticChildDependencyGraph already exists
+                    # .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
+                    #           when creating ``StaticChildDependencyGraph``.
+                    intern_pool = parent_reversed_path.intern_pool
+                    existing = intern_pool.get(resource_name)
+                    if existing is not None:
+                        proxy_reversed_path = existing
+                    else:
+                        proxy_reversed_path = StaticChildDependencyGraph(
+                            head=resource_name,
+                            tail=parent_reversed_path,
                         )
-                        yield from extended_proxy.mixins.items()
+                        intern_pool[resource_name] = proxy_reversed_path
 
-                return self.proxy_class(
-                    mixins=dict(generate_all_mixin_items()),
-                    reversed_path=proxy_reversed_path,
-                )
+                    # .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
+                    def generate_all_mixin_items() -> (
+                        Iterator[tuple[StaticChildDependencyGraph[str], Mixin[str]]]
+                    ):
+                        # Include mixin from this definition, keyed by proxy's path
+                        yield (
+                            proxy_reversed_path,
+                            self.create_mixin(
+                                lexical_scope=lexical_scope,
+                                jit_cache=jit_cache,
+                            ),
+                        )
+                        # Include mixins from extended proxies, preserving their original keys
+                        for reference in self.extend:
+                            extended_proxy = _resolve_resource_reference(
+                                reference=reference,
+                                lexical_scope=lexical_scope,
+                                forbid_instance_proxy=True,
+                            )
+                            yield from extended_proxy.mixins.items()
 
-            return _ProxySemigroup(proxy_factory=proxy_factory)
+                    return self.proxy_class(
+                        mixins=dict(generate_all_mixin_items()),
+                        reversed_path=proxy_reversed_path,
+                    )
 
-        return resolve_lexical_scope
+                return _ProxySemigroup(proxy_factory=proxy_factory)
+
+            return resolve_lexical_scope
+
+        return with_dependency_graph
 
 
 @dataclass(frozen=True, kw_only=True)
