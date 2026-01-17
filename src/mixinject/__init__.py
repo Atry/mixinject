@@ -1708,3 +1708,32 @@ def _resolve_dependencies_jit(
             "symbol_table": symbol_table,
         },
     )
+
+
+class ResourceReference(Generic[T]):
+    """
+    A reference to a resource in the lexical scope.
+
+    This is used to refer to resources in the current scope.
+    """
+
+
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+class AbsoluteReference(ResourceReference[T], Generic[T]):
+    parts: Final[tuple[T, ...]]
+
+
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+class RelativeReference(ResourceReference[T], Generic[T]):
+    """
+    A reference to a resource relative to the current lexical scope.
+
+    This is used to refer to resources in parent scopes.
+    """
+
+    levels_up: Final[int]
+    """
+    Number of levels to go up in the lexical scope.
+    """
+
+    parts: Final[tuple[T, ...]]
