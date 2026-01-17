@@ -495,7 +495,7 @@ import os
 import importlib.util
 import pkgutil
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property, reduce
 from inspect import signature
 from pathlib import PurePath
@@ -1113,7 +1113,10 @@ class Definition(ABC):
         raise NotImplementedError()
 
 
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
+    is_eager: bool = False
+    is_public: bool = False
 
     @abstractmethod
     def resolve_symbols(
@@ -1698,6 +1701,48 @@ def resource(
             )
     """
     return _ResourceDefinition(function=callable)
+
+
+TMergerDefinition = TypeVar("TMergerDefinition", bound=MergerDefinition[Any, Any])
+
+
+def eager(definition: TMergerDefinition) -> TMergerDefinition:
+    """
+    Decorator to mark a MergerDefinition as eager.
+
+    Eager resources are evaluated immediately when the proxy is accessed,
+    rather than being lazily evaluated on first use.
+
+    Example::
+
+        @eager
+        @resource
+        def config() -> dict:
+            return load_config()  # Loaded immediately
+
+    :param definition: A MergerDefinition to mark as eager.
+    :return: A new MergerDefinition with is_eager=True.
+    """
+    return replace(definition, is_eager=True)
+
+
+def public(definition: TMergerDefinition) -> TMergerDefinition:
+    """
+    Decorator to mark a MergerDefinition as public.
+
+    Public resources are exposed in the proxy's public interface.
+
+    Example::
+
+        @public
+        @resource
+        def api_endpoint() -> str:
+            return "/api/v1"
+
+    :param definition: A MergerDefinition to mark as public.
+    :return: A new MergerDefinition with is_public=True.
+    """
+    return replace(definition, is_public=True)
 
 
 def mount(
