@@ -575,6 +575,29 @@ class DependencyGraph(ABC, Generic[TKey]):
 
 
 @final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
+
+    _cached_instance_dependency_graph: (
+        weakref.ReferenceType[InstanceChildDependencyGraph[TKey]] | None
+    ) = field(default=None, init=False)
+    """
+    Cache for the corresponding InstanceChildDependencyGraph.
+    """
+
+    jit_caches: Mapping["DependencyGraph[Any]", "_JitCache"] = field(
+        default_factory=dict
+    )
+    """
+    Mapping from dependency graph paths to their corresponding JIT caches.
+    Corresponds one-to-one with Proxy.mixins keys.
+
+    .. todo:: 拆分为 ``jit_cache: _JitCache`` (单个) + ``base_jit_caches: ChainMap[StaticChildDependencyGraph, _JitCache]``，
+              ``jit_caches`` 改为 ``cached_property`` 合并两者。
+    """
+
+
+@final
 @dataclass(kw_only=True, slots=True, weakref_slot=False, eq=False)
 class RootDependencyGraph(DependencyGraph[T]):
     """
@@ -589,7 +612,7 @@ class RootDependencyGraph(DependencyGraph[T]):
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class ChildDependencyGraph(DependencyGraph[TKey]):
+class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -599,29 +622,22 @@ class ChildDependencyGraph(DependencyGraph[TKey]):
     .. todo:: 添加 ``proxy_definition: _ProxyDefinition`` 字段。
     .. todo:: 实现 ``__getitem__`` 用于懒创建子依赖图。
     .. todo:: 实现 ``__call__(lexical_scope: LexicalScope) -> _ProxySemigroup``，
-              使 ``ChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
+              使 ``StaticChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
+    head: Final[TKey]
+    """
+    .. todo:: Remove this field. It's legacy and useless now.
+    """
     tail: Final[DependencyGraph[Any]]
     """
     .. todo:: Rename this field to ``parent``.
     """
 
-    jit_caches: Mapping["ChildDependencyGraph[Any]", "_JitCache"] = field(
-        default_factory=dict
-    )
-    """
-    Mapping from dependency graph paths to their corresponding JIT caches.
-    Corresponds one-to-one with Proxy.mixins keys.
-
-    .. todo:: 拆分为 ``jit_cache: _JitCache`` (单个) + ``base_jit_caches: ChainMap[ChildDependencyGraph, _JitCache]``，
-              ``jit_caches`` 改为 ``cached_property`` 合并两者。
-    """
-
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class InstanceChildDependencyGraph(ChildDependencyGraph[TKey | str], Generic[TKey]):
+class InstanceChildDependencyGraph(DependencyGraph[TKey | str], Generic[TKey]):
     """Non-empty dependency graph node for InstanceProxy.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -629,21 +645,9 @@ class InstanceChildDependencyGraph(ChildDependencyGraph[TKey | str], Generic[TKe
     are the same object.
     """
 
-
-@final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class StaticChildDependencyGraph(ChildDependencyGraph[TKey], Generic[TKey]):
-
-    head: Final[TKey]
+    tail: Final[StaticDependencyGraph[Any]]
     """
-    .. todo:: Remove this field. It's legacy and useless now.
-    """
-
-    _cached_instance_dependency_graph: (
-        weakref.ReferenceType[InstanceChildDependencyGraph[TKey]] | None
-    ) = field(default=None, init=False)
-    """
-    Cache for the corresponding InstanceChildDependencyGraph.
+    .. todo:: Rename this field to ``parent``.
     """
 
 
@@ -714,7 +718,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         """
         ...
 
-    dependency_graph: "ChildDependencyGraph[TKey]"
+    dependency_graph: "StaticChildDependencyGraph[TKey]"
     """The runtime access path from root to this proxy, in reverse order.
 
     This path reflects how the proxy was accessed at runtime, not where
@@ -788,7 +792,9 @@ class StaticProxy(Proxy[TKey], ABC):
         cached_ref = self.dependency_graph._cached_instance_dependency_graph
         instance_path = cached_ref() if cached_ref is not None else None
         if instance_path is None:
-            instance_path = InstanceChildDependencyGraph[Any](tail=self.dependency_graph)
+            instance_path = InstanceChildDependencyGraph[Any](
+                tail=self.dependency_graph
+            )
             self.dependency_graph._cached_instance_dependency_graph = weakref.ref(
                 instance_path
             )
@@ -1007,7 +1013,7 @@ class Mixin(Mapping[TKey, Callable[["Proxy[TKey]"], Merger | Patcher]], Hashable
     They must compare by identity to allow storage in sets.
 
     .. todo:: 转换为 dataclass。
-    .. todo:: 添加 ``dependency_graph: ChildDependencyGraph`` 字段。
+    .. todo:: 添加 ``dependency_graph: StaticChildDependencyGraph`` 字段。
     .. todo:: 添加 ``lexical_scope: LexicalScope`` 字段。
     .. todo:: ``jit_cache`` 改为 property，返回 ``self.dependency_graph.jit_cache``。
     """
@@ -1150,9 +1156,7 @@ class _PackageMixin(_NamespaceMixin):
                 underlying=submod,
                 proxy_class=self.get_module_proxy_class(submod),
             )
-        outer = submod_definition.resolve_symbols(
-            self.jit_cache.symbol_table, key
-        )
+        outer = submod_definition.resolve_symbols(self.jit_cache.symbol_table, key)
 
         def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
             inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
@@ -1266,7 +1270,9 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]]:
+    ) -> Callable[
+        [DependencyGraph], Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]
+    ]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
@@ -1298,7 +1304,10 @@ class _ResourceDefinition(
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]]]:
+    ) -> Callable[
+        [DependencyGraph],
+        Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]],
+    ]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
@@ -1338,7 +1347,9 @@ class _SinglePatchDefinition(PatcherDefinition[TPatch_co]):
         def with_dependency_graph(
             _dependency_graph: DependencyGraph,
         ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
-            def resolve_lexical_scope(lexical_scope: LexicalScope) -> Patcher[TPatch_co]:
+            def resolve_lexical_scope(
+                lexical_scope: LexicalScope,
+            ) -> Patcher[TPatch_co]:
                 def patch_generator() -> Iterator[TPatch_co]:
                     yield jit_compiled_function(lexical_scope)
 
@@ -1368,7 +1379,9 @@ class _MultiplePatchDefinition(PatcherDefinition[TPatch_co]):
         def with_dependency_graph(
             _dependency_graph: DependencyGraph,
         ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
-            def resolve_lexical_scope(lexical_scope: LexicalScope) -> Patcher[TPatch_co]:
+            def resolve_lexical_scope(
+                lexical_scope: LexicalScope,
+            ) -> Patcher[TPatch_co]:
                 def patch_generator() -> Iterator[TPatch_co]:
                     return (yield from jit_compiled_function(lexical_scope))
 
@@ -1444,7 +1457,7 @@ def _resolve_resource_reference(
         InstanceProxy).
 
     .. todo:: 添加 ``_resolve_dependency_graph_reference`` 辅助函数，类似本函数，
-              但参数为 ``dependency_graph: DependencyGraph``，返回 ``ChildDependencyGraph``。
+              但参数为 ``dependency_graph: DependencyGraph``，返回 ``StaticChildDependencyGraph``。
     """
     match reference:
         case RelativeReference(levels_up=levels_up, path=parts):
