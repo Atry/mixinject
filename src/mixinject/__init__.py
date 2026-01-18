@@ -494,6 +494,7 @@ from __future__ import annotations
 import ast
 from enum import Enum, auto
 import importlib
+import logging
 import os
 import importlib.util
 import pkgutil
@@ -534,6 +535,7 @@ from weakref import WeakValueDictionary
 
 import weakref
 
+_logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
@@ -1051,9 +1053,12 @@ def _mixin_getitem(
     """
     Get a factory function from a dependency graph by key.
 
-    .. todo:: Phase 8: 调用 ``dependency_graph.jit_cache[key](dependency_graph)`` 获得第二层 callable
+    Calls ``dependency_graph.jit_cache[key](dependency_graph)`` to get the
+    second-level callable, passing the mixin's dependency_graph (not the
+    proxy's dependency_graph from lexical_scope).
     """
-    resolved_function = dependency_graph.jit_cache[key]
+    first_level = dependency_graph.jit_cache[key]
+    resolved_function = first_level(dependency_graph)
 
     def bind_proxy(proxy: "Proxy[TKey]") -> Evaluator:
         inner_lexical_scope: LexicalScope = (*lexical_scope, proxy)
@@ -1063,15 +1068,14 @@ def _mixin_getitem(
 
 
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
-class _JitCache(Mapping[TKey, Callable[[LexicalScope], Evaluator]], Generic[TKey]):
+class _JitCache(
+    Mapping[TKey, Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]],
+    Generic[TKey],
+):
     """
     Mapping that caches resolve_symbols results for definitions in a namespace.
 
     .. todo:: Also compiles the proxy class into Python bytecode.
-
-    .. todo:: Phase 8: 修改 Mapping 签名
-       - 改为 ``Mapping[str, Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]]``
-       - ``__getitem__`` 缓存第一层 callable
 
     .. note:: _JitCache instances are shared among all mixins created from the same
         _ProxyDefinition (the Python class decorated with @scope()). For example::
@@ -1088,22 +1092,19 @@ class _JitCache(Mapping[TKey, Callable[[LexicalScope], Evaluator]], Generic[TKey
 
     proxy_definition: Final["_ProxyDefinition"]
     symbol_table: Final[SymbolTable]
-    cache: Final[dict[TKey, Callable[[LexicalScope], Evaluator]]] = field(
-        default_factory=dict
-    )
+    cache: Final[
+        dict[TKey, Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]]
+    ] = field(default_factory=dict)
 
-    def __getitem__(self, key: TKey) -> Callable[[LexicalScope], Evaluator]:
+    def __getitem__(
+        self, key: TKey
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]:
         if key in self.cache:
             return self.cache[key]
         val = self.proxy_definition.get_definition(key)
         outer = val.resolve_symbols(self.symbol_table, key)
-
-        def inner(lexical_scope: LexicalScope) -> Evaluator:
-            dependency_graph = lexical_scope[-1].dependency_graph
-            return outer(dependency_graph)(lexical_scope)
-
-        self.cache[key] = inner
-        return inner
+        self.cache[key] = outer
+        return outer
 
     def __iter__(self) -> Iterator[TKey]:
         return self.proxy_definition.generate_keys()
@@ -1372,8 +1373,20 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
                 yield from proxy.mixins.items()
 
         primary_proxy = proxies_tuple[0]
+        all_mixin_items = list(generate_all_mixin_items())
+        merged_mixins = dict(all_mixin_items)
+        _logger.debug(
+            "proxies_count=%(proxies_count)d "
+            "total_mixin_items=%(total_mixin_items)d "
+            "unique_after_dict=%(unique_after_dict)d",
+            {
+                "proxies_count": len(proxies_tuple),
+                "total_mixin_items": len(all_mixin_items),
+                "unique_after_dict": len(merged_mixins),
+            },
+        )
         return winner_class(
-            mixins=dict(generate_all_mixin_items()),
+            mixins=merged_mixins,
             dependency_graph=primary_proxy.dependency_graph,
         )
 
@@ -1536,6 +1549,18 @@ class _ProxyDefinition(
                 resource_name=resource_name,
             )
             intern_pool[resource_name] = proxy_dependency_graph
+            _logger.debug(
+                "resource_name=%(resource_name)r "
+                "underlying=%(underlying)r "
+                "outer_resource_name=%(outer_resource_name)r",
+                {
+                    "resource_name": resource_name,
+                    "underlying": self.underlying,
+                    "outer_resource_name": getattr(
+                        outer_dependency_graph, "resource_name", "ROOT"
+                    ),
+                },
+            )
             return proxy_dependency_graph
 
         return with_dependency_graph
