@@ -1352,6 +1352,7 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
         Create a merged Proxy from factory and patches.
 
         .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
+        .. todo:: 不应该使用 ``primary_proxy.dependency_graph`` 作为合并后的dependency_graph，这是错的。需要修复。
         """
 
         def all_proxies() -> Iterator[Proxy]:
