@@ -1382,15 +1382,18 @@ class TestProxySemigroupDependencyGraph:
         )
 
     @pytest.mark.xfail(
-        reason="BUG: _ProxySemigroup.create incorrectly merges proxies, causing nested "
-        "scope resources to be lost when multiple base scopes provide the same nested scope."
+        reason="BUG: _ProxySemigroup.create uses primary_proxy.dependency_graph for merged "
+        "proxy, causing extended_another.dependency_graph.outer to be 'Base' instead of 'Extended'."
     )
     def test_nested_scope_in_extended_has_distinct_dependency_graph(self) -> None:
         """Nested scope in Extended should have different dependency_graph than in Base.
 
-        .. todo:: Fix _ProxySemigroup.create to correctly merge proxies when multiple
-            base scopes provide the same nested scope. Currently, resources from some
-            mixins are lost during the merge, causing "No Factory definition provided" errors.
+        .. todo:: Fix _ProxySemigroup.create to use correct dependency_graph for merged proxy.
+
+            Currently ``dependency_graph=primary_proxy.dependency_graph`` causes the merged
+            proxy to inherit the primary proxy's dependency_graph, but it should have its
+            own dependency_graph that reflects the actual access path (e.g., ``Extended``
+            instead of ``Base``).
 
         Expected behavior:
         - base_another.dependency_graph.resource_name == "Another"
