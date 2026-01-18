@@ -47,7 +47,7 @@ def _empty_dependency_graph() -> StaticChildDependencyGraph[str]:
     proxy_def = _empty_proxy_definition()
     return StaticChildDependencyGraph(
         proxy_definition=proxy_def,
-        parent=RootDependencyGraph(proxy_definition=proxy_def),
+        outer=RootDependencyGraph(proxy_definition=proxy_def),
     )
 
 
@@ -115,10 +115,12 @@ class TestPatch:
                 def value() -> Callable[[int], int]:
                     return lambda x: x * 2
 
-            @scope(extend=[
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Patcher",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Base",)),
+                    R(levels_up=0, path=("Patcher",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -146,11 +148,13 @@ class TestPatch:
                 def value() -> Callable[[int], int]:
                     return lambda x: x + 3
 
-            @scope(extend=[
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Patch1",)),
-                R(levels_up=0, path=("Patch2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Base",)),
+                    R(levels_up=0, path=("Patch1",)),
+                    R(levels_up=0, path=("Patch2",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -176,10 +180,12 @@ class TestPatches:
                 def value() -> tuple[Callable[[int], int], ...]:
                     return ((lambda x: x + 5), (lambda x: x + 3))
 
-            @scope(extend=[
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Patcher",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Base",)),
+                    R(levels_up=0, path=("Patcher",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -250,11 +256,13 @@ class TestMerger:
                 def tags() -> str:
                     return "tag2"
 
-            @scope(extend=[
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Provider1",)),
-                R(levels_up=0, path=("Provider2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Base",)),
+                    R(levels_up=0, path=("Provider1",)),
+                    R(levels_up=0, path=("Provider2",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -280,10 +288,12 @@ class TestUnionMount:
                 def bar() -> str:
                     return "bar_value"
 
-            @scope(extend=[
-                R(levels_up=0, path=("Namespace1",)),
-                R(levels_up=0, path=("Namespace2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Namespace1",)),
+                    R(levels_up=0, path=("Namespace2",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -300,9 +310,11 @@ class TestUnionMount:
                 def base_value() -> str:
                     return "base"
 
-            @scope(extend=[
-                R(levels_up=0, path=("Namespace1",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Namespace1",)),
+                ]
+            )
             class Namespace2:
                 @extern
                 def base_value() -> str: ...
@@ -316,6 +328,7 @@ class TestUnionMount:
 
     def test_deduplicated_tags_from_docstring(self) -> None:
         """Test union mounting with @scope(extend=...) to combine branches."""
+
         @scope()
         class Root:
             @scope()
@@ -343,11 +356,13 @@ class TestUnionMount:
                 def deduplicated_tags(another_dependency: str) -> str:
                     return f"tag2_{another_dependency}"
 
-            @scope(extend=[
-                R(levels_up=0, path=("branch0",)),
-                R(levels_up=0, path=("branch1",)),
-                R(levels_up=0, path=("branch2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("branch0",)),
+                    R(levels_up=0, path=("branch1",)),
+                    R(levels_up=0, path=("branch2",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -358,6 +373,7 @@ class TestUnionMount:
 
     def test_union_mount_point_from_docstring(self) -> None:
         """Test union mounting with @scope(extend=...) to combine scope resources."""
+
         @scope()
         class Root:
             @scope()
@@ -375,10 +391,12 @@ class TestUnionMount:
                 def bar(foo: str) -> str:
                     return f"{foo}_bar"
 
-            @scope(extend=[
-                R(levels_up=0, path=("branch1",)),
-                R(levels_up=0, path=("branch2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("branch1",)),
+                    R(levels_up=0, path=("branch2",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -392,6 +410,7 @@ class TestExtendInstanceProxyProhibition:
 
     def test_extend_instance_proxy_raises_type_error(self) -> None:
         """Extending from an InstanceProxy should raise TypeError."""
+
         @scope()
         class Root:
             @scope()
@@ -408,9 +427,11 @@ class TestExtendInstanceProxyProhibition:
                 return MyOuter(i=42)
 
             # This should fail because my_instance is an InstanceProxy
-            @scope(extend=[
-                R(levels_up=0, path=("my_instance",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("my_instance",)),
+                ]
+            )
             class Invalid:
                 pass
 
@@ -420,6 +441,7 @@ class TestExtendInstanceProxyProhibition:
 
     def test_extend_path_through_instance_proxy_raises_type_error(self) -> None:
         """Extending from a path through InstanceProxy should raise TypeError."""
+
         @scope()
         class Root:
             @scope()
@@ -439,9 +461,11 @@ class TestExtendInstanceProxyProhibition:
 
             # This should fail because my_instance is an InstanceProxy,
             # even though MyInner is a StaticProxy
-            @scope(extend=[
-                R(levels_up=0, path=("my_instance", "MyInner")),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("my_instance", "MyInner")),
+                ]
+            )
             class Invalid:
                 pass
 
@@ -460,6 +484,7 @@ class TestExtendInstanceProxyProhibition:
         traverse through any InstanceProxy - it's a direct sibling reference within
         the same scope.
         """
+
         @scope()
         class Root:
             @scope()
@@ -473,9 +498,7 @@ class TestExtendInstanceProxyProhibition:
                     def base_value() -> int:
                         return 100
 
-                @scope(extend=(
-                    R(levels_up=0, path=("Inner2",)),
-                ))
+                @scope(extend=(R(levels_up=0, path=("Inner2",)),))
                 class Inner1:
                     @patch
                     def base_value(i: int) -> Callable[[int], int]:
@@ -534,6 +557,7 @@ class TestScalaStylePathDependentTypes:
         Note: Unlike InstanceProxy which captures kwargs at runtime, static @scope
         requires each scope to provide its own patches with local dependencies.
         """
+
         @scope()
         class Root:
             @scope()
@@ -550,9 +574,7 @@ class TestScalaStylePathDependentTypes:
                 def i() -> int:
                     return 1
 
-                @scope(extend=(
-                    R(levels_up=1, path=("Base",)),
-                ))
+                @scope(extend=(R(levels_up=1, path=("Base",)),))
                 class MyInner:
                     @patch
                     def foo(i: int) -> Callable[[int], int]:
@@ -564,19 +586,19 @@ class TestScalaStylePathDependentTypes:
                 def i() -> int:
                     return 2
 
-                @scope(extend=(
-                    R(levels_up=1, path=("Base",)),
-                ))
+                @scope(extend=(R(levels_up=1, path=("Base",)),))
                 class MyInner:
                     @patch
                     def foo(i: int) -> Callable[[int], int]:
                         return lambda x: x + i
 
             # MyObjectA extends object1.MyInner, object2.MyInner and adds its own patch
-            @scope(extend=(
-                R(levels_up=0, path=("object1", "MyInner")),
-                R(levels_up=0, path=("object2", "MyInner")),
-            ))
+            @scope(
+                extend=(
+                    R(levels_up=0, path=("object1", "MyInner")),
+                    R(levels_up=0, path=("object2", "MyInner")),
+                )
+            )
             class MyObjectA:
                 @patch
                 def foo() -> Callable[[int], int]:
@@ -602,6 +624,7 @@ class TestInstanceProxyReversedPath:
         self,
     ) -> None:
         """When accessing nested proxy through InstanceProxy, path should use InstanceChildDependencyGraph."""
+
         @scope()
         class Root:
             @scope()
@@ -637,6 +660,7 @@ class TestJitCacheSharing:
 
     def test_jit_cache_shared_across_different_instance_args(self) -> None:
         """_JitCache should be shared when accessing Inner through different Outer instances."""
+
         @scope()
         class Root:
             @scope()
@@ -663,6 +687,7 @@ class TestJitCacheSharing:
 
     def test_jit_cache_shared_between_instance_and_static_access(self) -> None:
         """_JitCache should be shared between InstanceProxy and StaticProxy access paths."""
+
         @scope()
         class Root:
             @scope()
@@ -682,13 +707,16 @@ class TestJitCacheSharing:
         static_inner = root.Outer.Inner
 
         # Use the proxies' actual dependency_graph to look up the mixin
-        instance_jit_cache = instance_inner.mixins[instance_inner.dependency_graph].jit_cache
+        instance_jit_cache = instance_inner.mixins[
+            instance_inner.dependency_graph
+        ].jit_cache
         static_jit_cache = static_inner.mixins[static_inner.dependency_graph].jit_cache
 
         assert instance_jit_cache is static_jit_cache
 
     def test_jit_cache_shared_when_scope_extends_another(self) -> None:
         """_JitCache should be shared when accessing Inner through extending scopes."""
+
         @scope()
         class Root:
             @scope()
@@ -714,7 +742,9 @@ class TestJitCacheSharing:
 
         # Use the proxies' actual dependency_graph to look up the mixin
         outer_jit_cache = outer_inner.mixins[outer_inner.dependency_graph].jit_cache
-        object1_jit_cache = object1_inner.mixins[object1_inner.dependency_graph].jit_cache
+        object1_jit_cache = object1_inner.mixins[
+            object1_inner.dependency_graph
+        ].jit_cache
 
         assert outer_jit_cache is object1_jit_cache
         assert outer_jit_cache.proxy_definition is object1_jit_cache.proxy_definition
@@ -895,7 +925,9 @@ class TestProxyCallable:
     def test_proxy_call_injected_values_accessible(self) -> None:
         """Test that values injected via Proxy call are accessible as resources."""
         # Create empty proxy and inject values via call
-        proxy = CachedProxy(mixins={}, dependency_graph=_empty_dependency_graph())(config={"db": "postgres"})(timeout=30)
+        proxy = CachedProxy(mixins={}, dependency_graph=_empty_dependency_graph())(
+            config={"db": "postgres"}
+        )(timeout=30)
 
         # Injected values should be accessible
         assert proxy.config == {"db": "postgres"}
@@ -1061,10 +1093,12 @@ class TestProxyDir:
                 def bar() -> str:
                     return "bar"
 
-            @scope(extend=[
-                R(levels_up=0, path=("Namespace1",)),
-                R(levels_up=0, path=("Namespace2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Namespace1",)),
+                    R(levels_up=0, path=("Namespace2",)),
+                ]
+            )
             class Combined:
                 pass
 
@@ -1090,10 +1124,12 @@ class TestProxyDir:
                 def shared() -> Callable[[str], str]:
                     return lambda s: s + "_patched"
 
-            @scope(extend=[
-                R(levels_up=0, path=("Namespace1",)),
-                R(levels_up=0, path=("Namespace2",)),
-            ])
+            @scope(
+                extend=[
+                    R(levels_up=0, path=("Namespace1",)),
+                    R(levels_up=0, path=("Namespace2",)),
+                ]
+            )
             class Combined:
                 pass
 

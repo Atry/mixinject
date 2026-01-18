@@ -318,7 +318,7 @@ Two patterns look similar but work differently:
 1. **@resource with same-name parameter** (Merger, looks up from PARENT scope)::
 
        @resource
-       def counter(counter: int) -> int:  # parameter resolved from parent
+       def counter(counter: int) -> int:  # parameter resolved from outer
            return counter + 1
 
 2. **@patch returning endo** (Patcher, endo receives base value from Merger)::
@@ -330,7 +330,7 @@ Two patterns look similar but work differently:
 The key difference:
 
 - ``@resource`` with same-name parameter creates a **new Merger** that shadows the
-  outer definition. The parameter is resolved at compile-time from the parent scope's
+  outer definition. The parameter is resolved at compile-time from the outer scope's
   symbol table.
 - ``@patch`` returning an endo creates a **Patcher** that transforms an existing
   Merger's result. The endo function's argument receives the base value at runtime.
@@ -609,11 +609,11 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
-    This works because interned graphs within the same parent are the same object.
+    This works because interned graphs within the same outer are the same object.
 
     """
 
-    parent: Final[DependencyGraph[Any]]
+    outer: Final[DependencyGraph[Any]]
 
 
 @final
@@ -622,7 +622,7 @@ class InstanceChildDependencyGraph(DependencyGraph[TKey | str], Generic[TKey]):
     """Non-empty dependency graph node for InstanceProxy.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
-    This works because interned graphs with equal head within the same parent
+    This works because interned graphs with equal head within the same outer
     are the same object.
     """
 
@@ -1106,7 +1106,7 @@ class _PackageMixin(_NamespaceMixin):
 
     @override
     def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
-        # 1. Try parent implementation (attributes that are Definition)
+        # 1. Try outer implementation (attributes that are Definition)
         try:
             return super(_PackageMixin, self).__getitem__(key)
         except KeyError:
@@ -1446,7 +1446,7 @@ def _resolve_resource_reference(
                 raise ValueError(
                     f"Cannot navigate {levels_up} levels up from scope of depth {len(lexical_scope)}"
                 )
-            # Navigate up: levels_up=0 means innermost (last), levels_up=1 means parent, etc.
+            # Navigate up: levels_up=0 means innermost (last), levels_up=1 means outer, etc.
             scope_index = len(lexical_scope) - 1 - levels_up
             current: Proxy | Resource = lexical_scope[scope_index]
         case AbsoluteReference(path=parts):
@@ -1533,7 +1533,7 @@ class _ProxyDefinition(
             else:
                 proxy_dependency_graph = StaticChildDependencyGraph(
                     proxy_definition=self,
-                    parent=outer_dependency_graph,
+                    outer=outer_dependency_graph,
                 )
                 intern_pool[resource_name] = proxy_dependency_graph
 
@@ -2004,7 +2004,7 @@ def _resolve_dependencies_jit(
     The first parameter of the function is treated as a :class:`Proxy` if it is
     positional-only. All other parameters are resolved from the symbol table.
 
-    Special case: when param_name == resource_name, uses parent symbol table to
+    Special case: when param_name == resource_name, uses outer symbol table to
     avoid self-dependency, mimicking pytest fixture behavior.
 
     :param symbol_table: A mapping from resource names to their resolution functions.
@@ -2033,12 +2033,12 @@ def _resolve_dependencies_jit(
         kw_params = params
 
     # Create keyword arguments for the call:
-    # For same-name parameters (param_name == resource_name), look up from parent symbol table
+    # For same-name parameters (param_name == resource_name), look up from outer symbol table
     # to avoid self-dependency. For other parameters, resolve from symbol_table.
     keywords = []
     for p in kw_params:
         if p.name == resource_name:
-            # Same-name dependency: look up from parent symbol table
+            # Same-name dependency: look up from outer symbol table
             value_expr = ast.Call(
                 func=ast.Subscript(
                     value=ast.Attribute(
@@ -2121,7 +2121,7 @@ class RelativeReference(Generic[T]):
     """
     A reference to a resource relative to the current lexical scope.
 
-    This is used to refer to resources in parent scopes.
+    This is used to refer to resources in outer scopes.
     """
 
     levels_up: Final[int]

@@ -23,7 +23,7 @@ def _empty_dependency_graph() -> StaticChildDependencyGraph[str]:
     proxy_def = _empty_proxy_definition()
     return StaticChildDependencyGraph(
         proxy_definition=proxy_def,
-        parent=RootDependencyGraph(proxy_definition=proxy_def),
+        outer=RootDependencyGraph(proxy_definition=proxy_def),
     )
 
 
@@ -90,7 +90,7 @@ def test_symbol_table_extension_consistency():
     assert st_getitem_inner["b"](ls_full) == 2
     assert st_jit_inner["b"](ls_full) == 2
     
-    # 'c' should still resolve to outer value (3) from the parent layer
+    # 'c' should still resolve to outer value (3) from the outer layer
     assert st_getitem_inner["c"](ls_full) == 3
     assert st_jit_inner["c"](ls_full) == 3
 
