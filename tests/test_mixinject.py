@@ -31,7 +31,7 @@ from mixinject import (
     _parse_package,
     WeakCachedScope,
 )
-from mixinject import RootDependencyGraph, StaticChildDependencyGraph
+from mixinject import RootDependencyGraph, ChildDependencyGraph
 
 R = RelativeReference
 
@@ -51,11 +51,11 @@ def _empty_jit_cache(proxy_definition: _NamespaceDefinition) -> _JitCache:
     )
 
 
-def _empty_dependency_graph() -> StaticChildDependencyGraph[str]:
+def _empty_dependency_graph() -> ChildDependencyGraph[str]:
     """Create a minimal dependency graph for testing."""
     proxy_def = _empty_proxy_definition()
     jit_cache = _empty_jit_cache(proxy_def)
-    return StaticChildDependencyGraph(
+    return ChildDependencyGraph(
         outer=RootDependencyGraph(jit_cache=jit_cache),
         jit_cache=jit_cache,
         resource_name="test",

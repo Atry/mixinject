@@ -558,7 +558,7 @@ class DependencyGraph(ABC, Generic[TKey]):
     """
 
     intern_pool: Final[
-        weakref.WeakValueDictionary[TKey, "StaticChildDependencyGraph[Any]"]
+        weakref.WeakValueDictionary[TKey, "ChildDependencyGraph[Any]"]
     ] = field(default_factory=weakref.WeakValueDictionary)
 
 
@@ -567,13 +567,13 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
     """
     .. todo:: 实现 ``__getitem__`` 用于懒创建子依赖图。
     .. todo:: 实现 ``__call__(lexical_scope: LexicalScope) -> _ProxySemigroup``，
-              使 ``StaticChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
+              使 ``ChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
     jit_cache: Final["_JitCache"]
     """
     The JIT cache for this dependency graph, providing cached symbol resolution.
-    Subclasses (RootDependencyGraph, StaticChildDependencyGraph) must define this field.
+    Subclasses (RootDependencyGraph, ChildDependencyGraph) must define this field.
     """
 
     _cached_instance_dependency_graph: (
@@ -590,7 +590,7 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
     Mapping from dependency graph paths to their corresponding JIT caches.
     Corresponds one-to-one with Proxy.mixins keys.
 
-    .. todo:: 拆分为 ``jit_cache: _JitCache`` (单个) + ``base_jit_caches: ChainMap[StaticChildDependencyGraph, _JitCache]``，
+    .. todo:: 拆分为 ``jit_cache: _JitCache`` (单个) + ``base_jit_caches: ChainMap[ChildDependencyGraph, _JitCache]``，
               ``jit_caches`` 改为 ``cached_property`` 合并两者。
     """
 
@@ -614,13 +614,13 @@ class RootDependencyGraph(StaticDependencyGraph[T]):
     Root of a dependency graph.
 
     Each RootDependencyGraph instance has its own intern pool for interning
-    StaticChildDependencyGraph nodes within that dependency graph.
+    ChildDependencyGraph nodes within that dependency graph.
 
     """
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
+class ChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -758,7 +758,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         """
         ...
 
-    dependency_graph: "StaticChildDependencyGraph[TKey]"
+    dependency_graph: "ChildDependencyGraph[TKey]"
     """The runtime access path from root to this proxy, in reverse order.
 
     This path reflects how the proxy was accessed at runtime, not where
@@ -1428,7 +1428,7 @@ def _resolve_resource_reference(
     .. todo:: 添加 ``_resolve_dependency_graph_reference`` 辅助函数，类似本函数，
               但参数为 ``dependency_graph: DependencyGraph`` 而非 ``lexical_scope: LexicalScope``，
               返回类型为 ``Callable[[LexicalScope], Evaluator]``
-              （实际上是 ``StaticChildDependencyGraph``，它本质上是特殊的
+              （实际上是 ``ChildDependencyGraph``，它本质上是特殊的
               ``Callable[[LexicalScope], Evaluator]``）。
 
               该函数用于在 dependency graph 中查找静态的 ``Callable[[LexicalScope], Evaluator]``。
@@ -1436,7 +1436,7 @@ def _resolve_resource_reference(
 
               - ``_resolve_resource_reference``: 运行时解析，遍历 lexical_scope 中的 Proxy 对象
               - ``_resolve_dependency_graph_reference``: 编译时解析，遍历 dependency_graph 中的
-                ``StaticChildDependencyGraph``，返回可被 JIT 缓存的 callable
+                ``ChildDependencyGraph``，返回可被 JIT 缓存的 callable
 
               签名示例::
 
@@ -1519,14 +1519,14 @@ class _ProxyDefinition(
 
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
-    ) -> Callable[[DependencyGraph], StaticChildDependencyGraph[Any]]:
+    ) -> Callable[[DependencyGraph], ChildDependencyGraph[Any]]:
         """
         Resolve symbols for this definition given the symbol table and resource name.
 
         Returns a function that takes an outer DependencyGraph and returns a
-        StaticChildDependencyGraph that implements ``Callable[[LexicalScope], _ProxySemigroup]``.
+        ChildDependencyGraph that implements ``Callable[[LexicalScope], _ProxySemigroup]``.
 
-        .. todo:: Phase 2: Add ``base_jit_caches`` parameter to ``StaticChildDependencyGraph``
+        .. todo:: Phase 2: Add ``base_jit_caches`` parameter to ``ChildDependencyGraph``
                   for inherited JIT caches from extended scopes.
         """
         inner_symbol_table: SymbolTable = _extend_symbol_table_jit(
@@ -1539,11 +1539,11 @@ class _ProxyDefinition(
 
         def with_dependency_graph(
             outer_dependency_graph: DependencyGraph[Any],
-        ) -> StaticChildDependencyGraph[Any]:
+        ) -> ChildDependencyGraph[Any]:
             """
-            Create or retrieve a memoized StaticChildDependencyGraph for the given outer dependency graph.
+            Create or retrieve a memoized ChildDependencyGraph for the given outer dependency graph.
 
-            Memoization ensures that the same StaticChildDependencyGraph instance is reused
+            Memoization ensures that the same ChildDependencyGraph instance is reused
             for the same (outer_dependency_graph, resource_name) pair, enabling O(1) identity-based
             equality comparison.
             """
@@ -1551,7 +1551,7 @@ class _ProxyDefinition(
             existing = intern_pool.get(resource_name)
             if existing is not None:
                 return existing
-            proxy_dependency_graph = StaticChildDependencyGraph(
+            proxy_dependency_graph = ChildDependencyGraph(
                 outer=outer_dependency_graph,
                 jit_cache=jit_cache,
                 resource_name=resource_name,
@@ -1928,7 +1928,7 @@ def mount(
         root = mount(MyNamespace)
 
     .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
-              when creating ``StaticChildDependencyGraph``.
+              when creating ``ChildDependencyGraph``.
     """
     lexical_scope: LexicalScope = ()
     symbol_table: SymbolTable = SymbolTableSentinel.ROOT

@@ -28,8 +28,8 @@ class DependencyGraph(ABC, Generic[T]):
     Example::
 
         >>> root = RootDependencyGraph()
-        >>> graph1 = StaticChildDependencyGraph(head=1, outer=root)
-        >>> graph2 = StaticChildDependencyGraph(head=1, outer=root)
+        >>> graph1 = ChildDependencyGraph(head=1, outer=root)
+        >>> graph2 = ChildDependencyGraph(head=1, outer=root)
         >>> graph1 is graph2  # Same object due to interning within same root
         True
 
@@ -43,7 +43,7 @@ class DependencyGraph(ABC, Generic[T]):
         'cached_value'
     """
 
-    intern_pool: Final[weakref.WeakValueDictionary[T, "StaticChildDependencyGraph[T]"]] = (
+    intern_pool: Final[weakref.WeakValueDictionary[T, "ChildDependencyGraph[T]"]] = (
         field(default_factory=weakref.WeakValueDictionary)
     )
 
@@ -55,13 +55,13 @@ class RootDependencyGraph(DependencyGraph[T]):
     Root of a dependency graph, representing an empty dependency chain.
 
     Each RootDependencyGraph instance has its own intern pool for interning
-    StaticChildDependencyGraph nodes within that dependency graph.
+    ChildDependencyGraph nodes within that dependency graph.
     """
 
 
 @final
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True, eq=False)
-class StaticChildDependencyGraph(DependencyGraph[T]):
+class ChildDependencyGraph(DependencyGraph[T]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -83,7 +83,7 @@ def _replace_init():
     """
     Replace dataclass-generated ``__init__`` with a custom ``__new__`` for interning.
 
-    This function patches :class:`StaticChildDependencyGraph` to support the
+    This function patches :class:`ChildDependencyGraph` to support the
     flyweight/interning pattern with a frozen dataclass.
 
     Why delete ``__init__``?
@@ -122,26 +122,26 @@ def _replace_init():
 
     This ensures ``__init__`` is only called once per unique instance.
     """
-    original_init = StaticChildDependencyGraph.__init__
-    StaticChildDependencyGraph.__init__ = lambda self, *args, **kwargs: None
+    original_init = ChildDependencyGraph.__init__
+    ChildDependencyGraph.__init__ = lambda self, *args, **kwargs: None
 
     def __new__(
-        cls: Type[StaticChildDependencyGraph[T]],
+        cls: Type[ChildDependencyGraph[T]],
         *,
         head: T,
         outer: DependencyGraph[T],
-    ) -> StaticChildDependencyGraph[T]:
+    ) -> ChildDependencyGraph[T]:
         intern_pool = outer.intern_pool
         existing = intern_pool.get(head)
         if existing is not None:
             return existing
         else:
-            instance = super(StaticChildDependencyGraph, cls).__new__(cls)
+            instance = super(ChildDependencyGraph, cls).__new__(cls)
             original_init(instance, head=head, outer=outer)
             intern_pool[head] = instance
             return instance
 
-    StaticChildDependencyGraph.__new__ = __new__
+    ChildDependencyGraph.__new__ = __new__
 
 
 _replace_init()

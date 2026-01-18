@@ -1,7 +1,7 @@
 import gc
 
 from mixinject import (
-    StaticChildDependencyGraph,
+    ChildDependencyGraph,
     DependencyGraph,
     Proxy,
     RootDependencyGraph,
@@ -59,8 +59,8 @@ class TestInterning:
         proxy_def = _empty_proxy_definition()
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(jit_cache=jit_cache)
-        child1 = StaticChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test1")
-        child2 = StaticChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test2")
+        child1 = ChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test1")
+        child2 = ChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test2")
         # Without interning, these are different objects
         assert child1 is not child2
 
@@ -69,16 +69,16 @@ class TestInterning:
         jit_cache = _empty_jit_cache(proxy_def)
         root1 = RootDependencyGraph(jit_cache=jit_cache)
         root2 = RootDependencyGraph(jit_cache=jit_cache)
-        child1 = StaticChildDependencyGraph(outer=root1, jit_cache=jit_cache, resource_name="test")
-        child2 = StaticChildDependencyGraph(outer=root2, jit_cache=jit_cache, resource_name="test")
+        child1 = ChildDependencyGraph(outer=root1, jit_cache=jit_cache, resource_name="test")
+        child2 = ChildDependencyGraph(outer=root2, jit_cache=jit_cache, resource_name="test")
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         proxy_def = _empty_proxy_definition()
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(jit_cache=jit_cache)
-        child1 = StaticChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="child1")
-        child2 = StaticChildDependencyGraph(outer=child1, jit_cache=jit_cache, resource_name="child2")
+        child1 = ChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="child1")
+        child2 = ChildDependencyGraph(outer=child1, jit_cache=jit_cache, resource_name="child2")
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -129,7 +129,7 @@ class TestWeakReference:
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(jit_cache=jit_cache)
         # Add an entry manually to the pool
-        child = StaticChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test")
+        child = ChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test")
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -149,7 +149,7 @@ class TestSubclass:
         assert issubclass(RootDependencyGraph, DependencyGraph)
 
     def test_child_is_subclass_of_dependency_graph(self) -> None:
-        assert issubclass(StaticChildDependencyGraph, DependencyGraph)
+        assert issubclass(ChildDependencyGraph, DependencyGraph)
 
     def test_root_instance_is_instance_of_dependency_graph(self) -> None:
         proxy_def = _empty_proxy_definition()
@@ -161,5 +161,5 @@ class TestSubclass:
         proxy_def = _empty_proxy_definition()
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(jit_cache=jit_cache)
-        child = StaticChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test")
+        child = ChildDependencyGraph(outer=root, jit_cache=jit_cache, resource_name="test")
         assert isinstance(child, DependencyGraph)
