@@ -1346,6 +1346,15 @@ DefinitionMapping: TypeAlias = Mapping[
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
+    """
+    Semigroup for merging Proxy instances from extended scopes.
+
+    .. todo:: 改为只支持 ``StaticProxy`` 的合并，禁止 ``InstanceProxy`` 的合并。
+
+        应将类型签名改为 ``Merger[StaticProxy, StaticProxy]``，并在 ``create``
+        方法中添加断言确保不会传入 ``InstanceProxy``。
+    """
+
     proxy_factory: Callable[[], Proxy]
 
     @override
