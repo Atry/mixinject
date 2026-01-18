@@ -1113,12 +1113,22 @@ class _NestedSymbol(_Symbol):
     @cached_property
     def getter(self) -> Callable[[LexicalScope], "Node"]:
         """
-        A JIT-compiled getter function for retrieving the resource from a lexical scope.
+        A getter function for retrieving the resource from a lexical scope.
 
-        Note that the index is depth - 1 because the root proxy itself is not a named referenceable resource, i.e. you can never inject the root proxy itself into any resource.
+        Note that the index is depth - 1 because the root proxy itself is not
+        a named referenceable resource, i.e. you can never inject the root proxy
+        itself into any resource.
+
+        When ``resource_name`` is a ``str``, uses JIT-compiled attribute access
+        (``lexical_scope[index].name``). Otherwise, uses a closure with bracket
+        syntax (``lexical_scope[index][resource_name]``).
         """
         index = self.depth - 1
-        return _make_jit_getter(cast(str, self.resource_name), index)
+        resource_name = self.resource_name
+        if isinstance(resource_name, str):
+            return _make_jit_getter(resource_name, index)
+        # For non-string keys, use bracket syntax via closure
+        return lambda lexical_scope: lexical_scope[index][resource_name]
 
 
 @dataclass(kw_only=True, eq=False)
