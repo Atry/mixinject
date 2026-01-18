@@ -1061,7 +1061,7 @@ def _mixin_getitem(
     second-level callable, passing the mixin's mixin (not the
     proxy's mixin from lexical_scope).
     """
-    first_level = mixin.symbol.cached_resolve_symbols(key)
+    first_level = mixin.symbol[key]
     resolved_function = first_level.compile(mixin)
 
     def bind_proxy(proxy: Proxy) -> Evaluator:
@@ -1140,7 +1140,7 @@ class _SimpleSymbol(_NestedSymbol):
 
 @dataclass(kw_only=True)
 class _MixinSymbol(
-    Mapping[Hashable, "_Symbol"],
+    Mapping[Hashable, "_NestedSymbol"],
     _Symbol,
 ):
     """
@@ -1164,7 +1164,9 @@ class _MixinSymbol(
     """
 
     proxy_definition: Final["_MixinDefinition"]
-    cache: Final[dict[Hashable, "_Symbol"]] = field(default_factory=dict)
+    cache: Final[WeakValueDictionary[Hashable, "_NestedSymbol"]] = field(
+        default_factory=WeakValueDictionary
+    )
 
     @property
     @abstractmethod
@@ -1172,7 +1174,7 @@ class _MixinSymbol(
         """The symbol table for this mixin, providing name resolution."""
         ...
 
-    def cached_resolve_symbols(self, key: Hashable) -> "_Symbol":
+    def __getitem__(self, key: Hashable) -> "_NestedSymbol":
         if key in self.cache:
             return self.cache[key]
         val = self.proxy_definition.__getitem__(key)
@@ -1180,14 +1182,11 @@ class _MixinSymbol(
         self.cache[key] = resolved
         return resolved
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[Hashable]:
         return self.proxy_definition.__iter__()
 
     def __len__(self) -> int:
         return sum(1 for _ in self)
-
-    def __getitem__(self, key: Hashable) -> "_Symbol":
-        return self.cached_resolve_symbols(key)
 
 
 @dataclass(kw_only=True)
@@ -1246,9 +1245,7 @@ class _NestedMixinSymbol(_MixinSymbol, _NestedSymbol):
         )
         intern_pool[self.name] = proxy_mixin
         _logger.debug(
-            "name=%(name)r "
-            "underlying=%(underlying)r "
-            "outer_name=%(outer_name)r",
+            "name=%(name)r " "underlying=%(underlying)r " "outer_name=%(outer_name)r",
             {
                 "name": self.name,
                 "underlying": self.proxy_definition.underlying,
@@ -1324,9 +1321,7 @@ class _SinglePatchSymbol(_Symbol, Generic[TPatch_co]):
 
     jit_compiled_function: Final[Callable[[LexicalScope], TPatch_co]]
 
-    def compile(
-        self, _mixin: Mixin
-    ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
+    def compile(self, _mixin: Mixin) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
         def resolve_lexical_scope(
             lexical_scope: LexicalScope,
         ) -> Patcher[TPatch_co]:
@@ -1344,9 +1339,7 @@ class _MultiplePatchSymbol(_Symbol, Generic[TPatch_co]):
 
     jit_compiled_function: Final[Callable[[LexicalScope], Iterable[TPatch_co]]]
 
-    def compile(
-        self, _mixin: Mixin
-    ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
+    def compile(self, _mixin: Mixin) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
         def resolve_lexical_scope(
             lexical_scope: LexicalScope,
         ) -> Patcher[TPatch_co]:
@@ -1423,9 +1416,7 @@ def _evaluate_resource(
 
 class Definition(ABC):
     @abstractmethod
-    def resolve_symbols(
-        self, outer: "_MixinSymbol", name: str, /
-    ) -> _Symbol:
+    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
         """
         Resolve symbols in the definition and return a compiled symbol.
         Call .compile(mixin) on the result to get a LexicalScope resolver.
@@ -1439,17 +1430,13 @@ class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
     is_local: bool = False
 
     @abstractmethod
-    def resolve_symbols(
-        self, outer: "_MixinSymbol", name: str, /
-    ) -> _Symbol:
+    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _Symbol:
         raise NotImplementedError()
 
 
 class PatcherDefinition(Definition, Generic[TPatch_co]):
     @abstractmethod
-    def resolve_symbols(
-        self, outer: "_MixinSymbol", name: str, /
-    ) -> _Symbol:
+    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _Symbol:
         raise NotImplementedError()
 
 
@@ -1457,9 +1444,7 @@ class MixinDefinition(Definition):
     """Base class for definitions that resolve to nested mixin symbols."""
 
     @abstractmethod
-    def resolve_symbols(
-        self, outer: "_MixinSymbol", name: str, /
-    ) -> _Symbol:
+    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _Symbol:
         raise NotImplementedError()
 
 
