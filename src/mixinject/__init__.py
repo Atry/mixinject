@@ -645,9 +645,9 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
                 """
                 yield (
                     self,
-                    self.proxy_definition.create_mixin(
-                        lexical_scope=lexical_scope,
+                    Mixin(
                         jit_cache=self.jit_cache,
+                        lexical_scope=lexical_scope,
                     ),
                 )
                 for reference in self.proxy_definition.extend:
@@ -1517,17 +1517,6 @@ class _ProxyDefinition(
             raise KeyError(key)
         return val
 
-    def create_mixin(self, lexical_scope: LexicalScope, jit_cache: _JitCache) -> Mixin:
-        """
-        Create a Mixin for this ProxyDefinition given the lexical scope and JIT cache.
-
-        .. todo:: 签名从 ``(lexical_scope, jit_cache)`` 改为 ``(dependency_graph, lexical_scope)``。
-        """
-        return Mixin(
-            jit_cache=jit_cache,
-            lexical_scope=lexical_scope,
-        )
-
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
     ) -> Callable[[DependencyGraph], StaticChildDependencyGraph[Any]]:
@@ -1955,9 +1944,9 @@ def mount(
         proxy_definition=namespace_definition,
         symbol_table=per_namespace_symbol_table,
     )
-    mixin = namespace_definition.create_mixin(
-        lexical_scope=lexical_scope,
+    mixin = Mixin(
         jit_cache=jit_cache,
+        lexical_scope=lexical_scope,
     )
 
     root_dependency_graph = RootDependencyGraph[str](
