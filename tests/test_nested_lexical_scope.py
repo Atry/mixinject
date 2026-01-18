@@ -17,7 +17,6 @@ from mixinject import (
     Definition,
     Mixin,
     LexicalScope,
-    SymbolTable,
     RelativeReference as R,
 )
 
@@ -103,14 +102,25 @@ class PureMerger(Merger[Any, Any]):
 
 
 @dataclass
+class _DirectSymbol:
+    """Symbol that directly returns an item without any dependency resolution."""
+
+    item: Any
+
+    def compile(
+        self, mixin: Mixin, /
+    ) -> Callable[[LexicalScope], Merger[Any, Any] | Patcher[Any]]:
+        return lambda _lexical_scope: self.item
+
+
+@dataclass
 class DirectDefinition(Definition):
     item: Any
 
-    @override
-    def resolve_symbols(
-        self, symbol_table: SymbolTable, name: str, /
-    ) -> Callable[[Mixin], Callable[[LexicalScope], Merger | Patcher]]:
-        return lambda _mixin: lambda _lexical_scope: self.item
+    def resolve_symbols(  # type: ignore[override]
+        self, outer: Any, name: str, /
+    ) -> "_DirectSymbol":
+        return _DirectSymbol(item=self.item)
 
 
 @pytest.mark.parametrize("proxy_class", [CachedProxy, WeakCachedScope])

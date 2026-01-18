@@ -37,6 +37,9 @@ class _MockSymbol(_Symbol):
     def resource_name(self) -> str:
         return self._resource_name
 
+    def compile(self, mixin: Any, /) -> Any:
+        raise NotImplementedError("_MockSymbol is not compilable")
+
 
 def _make_mock_symbol_table(mapping: dict[str, Callable[[LexicalScope], Any]]) -> SymbolTable:
     """Create a symbol table from a dict of name -> getter function."""

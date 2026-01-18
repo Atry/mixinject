@@ -1,5 +1,5 @@
 from collections import ChainMap
-from typing import Callable, Final, Iterable
+from typing import Any, Callable, Final, Iterable
 import pytest
 from dataclasses import dataclass
 from mixinject import (
@@ -74,6 +74,9 @@ class _TestSymbol(_Symbol):
     @property
     def resource_name(self) -> str:
         return self._resource_name
+
+    def compile(self, mixin: Any, /) -> Any:
+        raise NotImplementedError("_TestSymbol is not compilable")
 
 
 def extend_symbol_table_getitem(

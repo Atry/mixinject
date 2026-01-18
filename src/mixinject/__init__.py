@@ -1062,7 +1062,7 @@ def _mixin_getitem(
     proxy's mixin from lexical_scope).
     """
     first_level = mixin.symbol.cached_resolve_symbols(key)
-    resolved_function = first_level(mixin)
+    resolved_function = first_level.compile(mixin)
 
     def bind_proxy(proxy: Proxy) -> Evaluator:
         inner_lexical_scope: LexicalScope = (*lexical_scope, proxy)
@@ -1076,8 +1076,11 @@ def _mixin_getitem(
 
 
 @dataclass(kw_only=True)
-class _Symbol:
-    pass
+class _Symbol(ABC):
+    @abstractmethod
+    def compile(self, mixin: "Mixin", /) -> Any:
+        """Compile this symbol for a given mixin."""
+        ...
 
 
 @dataclass(kw_only=True)
@@ -1113,6 +1116,9 @@ class _NestedSymbol(_Symbol):
 class _SimpleSymbol(_NestedSymbol):
     """
     Concrete implementation of _Symbol for individual resource entries in SymbolTable.
+
+    .. todo:: Delete this class after replacing the dict comprehension in
+              ``_cached_symbol_table`` with ``self`` as the symbol table.
     """
 
     _depth: Final[int]
@@ -1128,10 +1134,13 @@ class _SimpleSymbol(_NestedSymbol):
     def resource_name(self) -> str:
         return self._resource_name
 
+    def compile(self, mixin: "Mixin", /) -> Any:
+        raise NotImplementedError("_SimpleSymbol is not compilable")
+
 
 @dataclass(kw_only=True)
 class _MixinSymbol(
-    Mapping[Hashable, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]],
+    Mapping[Hashable, "_Symbol"],
     _Symbol,
 ):
     """
@@ -1155,9 +1164,7 @@ class _MixinSymbol(
     """
 
     proxy_definition: Final["_MixinDefinition"]
-    cache: Final[
-        dict[Hashable, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]]
-    ] = field(default_factory=dict)
+    cache: Final[dict[Hashable, "_Symbol"]] = field(default_factory=dict)
 
     @property
     @abstractmethod
@@ -1165,9 +1172,7 @@ class _MixinSymbol(
         """The symbol table for this mixin, providing name resolution."""
         ...
 
-    def cached_resolve_symbols(
-        self, key: Hashable
-    ) -> Callable[[Mixin], Callable[[LexicalScope], Evaluator]]:
+    def cached_resolve_symbols(self, key: Hashable) -> "_Symbol":
         if key in self.cache:
             return self.cache[key]
         val = self.proxy_definition.__getitem__(key)
@@ -1181,9 +1186,7 @@ class _MixinSymbol(
     def __len__(self) -> int:
         return sum(1 for _ in self)
 
-    def __getitem__(
-        self, key: Hashable
-    ) -> Callable[[Mixin], Callable[[LexicalScope], Evaluator]]:
+    def __getitem__(self, key: Hashable) -> "_Symbol":
         return self.cached_resolve_symbols(key)
 
 
@@ -1224,7 +1227,7 @@ class _NestedMixinSymbol(_MixinSymbol, _NestedSymbol):
     def symbol_table(self) -> SymbolTable:
         return self._cached_symbol_table
 
-    def __call__(self, outer_mixin: Mixin) -> "NestedMixin":
+    def compile(self, outer_mixin: Mixin) -> "NestedMixin":
         """
         Create or retrieve a memoized NestedMixin for the given outer mixin.
 
@@ -1273,6 +1276,9 @@ class _RootSymbol(_MixinSymbol):
     def symbol_table(self) -> SymbolTable:
         return self._cached_symbol_table
 
+    def compile(self, mixin: "Mixin", /) -> Any:
+        raise NotImplementedError("_RootSymbol is not compilable")
+
 
 @dataclass(kw_only=True)
 class _MergerSymbol(_Symbol, Generic[TPatch_contra, TResult_co]):
@@ -1282,7 +1288,7 @@ class _MergerSymbol(_Symbol, Generic[TPatch_contra, TResult_co]):
         Callable[[LexicalScope], Callable[[Iterator[TPatch_contra]], TResult_co]]
     ]
 
-    def __call__(
+    def compile(
         self, _mixin: Mixin
     ) -> Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]:
         def resolve_lexical_scope(
@@ -1300,7 +1306,7 @@ class _ResourceSymbol(_Symbol, Generic[TResult]):
 
     jit_compiled_function: Final[Callable[[LexicalScope], TResult]]
 
-    def __call__(
+    def compile(
         self, _mixin: Mixin
     ) -> Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]]:
         def resolve_lexical_scope(
@@ -1318,7 +1324,7 @@ class _SinglePatchSymbol(_Symbol, Generic[TPatch_co]):
 
     jit_compiled_function: Final[Callable[[LexicalScope], TPatch_co]]
 
-    def __call__(
+    def compile(
         self, _mixin: Mixin
     ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
         def resolve_lexical_scope(
@@ -1338,7 +1344,7 @@ class _MultiplePatchSymbol(_Symbol, Generic[TPatch_co]):
 
     jit_compiled_function: Final[Callable[[LexicalScope], Iterable[TPatch_co]]]
 
-    def __call__(
+    def compile(
         self, _mixin: Mixin
     ) -> Callable[[LexicalScope], Patcher[TPatch_co]]:
         def resolve_lexical_scope(
@@ -1419,10 +1425,10 @@ class Definition(ABC):
     @abstractmethod
     def resolve_symbols(
         self, outer: "_MixinSymbol", name: str, /
-    ) -> Callable[[Mixin], Callable[[LexicalScope], Evaluator]]:
+    ) -> _Symbol:
         """
-        Resolve symbols in the definition and return a two-layer callable.
-        First layer takes Mixin, second layer takes LexicalScope.
+        Resolve symbols in the definition and return a compiled symbol.
+        Call .compile(mixin) on the result to get a LexicalScope resolver.
         """
         raise NotImplementedError()
 
@@ -1435,7 +1441,7 @@ class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
     @abstractmethod
     def resolve_symbols(
         self, outer: "_MixinSymbol", name: str, /
-    ) -> Callable[[Mixin], Callable[[LexicalScope], Merger]]:
+    ) -> _Symbol:
         raise NotImplementedError()
 
 
@@ -1443,7 +1449,17 @@ class PatcherDefinition(Definition, Generic[TPatch_co]):
     @abstractmethod
     def resolve_symbols(
         self, outer: "_MixinSymbol", name: str, /
-    ) -> Callable[[Mixin], Callable[[LexicalScope], Patcher]]:
+    ) -> _Symbol:
+        raise NotImplementedError()
+
+
+class MixinDefinition(Definition):
+    """Base class for definitions that resolve to nested mixin symbols."""
+
+    @abstractmethod
+    def resolve_symbols(
+        self, outer: "_MixinSymbol", name: str, /
+    ) -> _Symbol:
         raise NotImplementedError()
 
 
@@ -1688,8 +1704,7 @@ def _resolve_resource_reference(
 @dataclass(frozen=True, kw_only=True)
 class _MixinDefinition(
     Mapping[Hashable, Definition],
-    MergerDefinition[Proxy, Proxy],
-    PatcherDefinition[Proxy],
+    MixinDefinition,
 ):
     """Base class for proxy definitions that create Proxy instances from underlying objects."""
 
