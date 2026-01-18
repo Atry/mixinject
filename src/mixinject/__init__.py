@@ -573,6 +573,12 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
     The definition that describes resources, patches, and nested scopes for this dependency graph.
     """
 
+    jit_cache: Final["_JitCache"]
+    """
+    The JIT cache for this dependency graph, providing cached symbol resolution.
+    Subclasses (RootDependencyGraph, StaticChildDependencyGraph) must define this field.
+    """
+
     _cached_instance_dependency_graph: (
         weakref.ReferenceType[InstanceChildDependencyGraph[TKey]] | None
     ) = field(default=None, init=False)
@@ -603,8 +609,6 @@ class RootDependencyGraph(StaticDependencyGraph[T]):
 
     """
 
-    jit_cache: Final["_JitCache"]
-
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
@@ -618,7 +622,6 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     """
 
     outer: Final[DependencyGraph[Any]]
-    jit_cache: Final["_JitCache"]
 
     def __call__(self, lexical_scope: LexicalScope) -> "_ProxySemigroup":
         """
@@ -638,20 +641,14 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
             ), "lexical_scope must not be empty when resolving resources"
 
             def generate_all_mixin_items() -> (
-                Iterator[tuple["StaticChildDependencyGraph[Any]", Mixin[Any]]]
+                Iterator[tuple["StaticDependencyGraph[Any]", LexicalScope]]
             ):
                 """
                 Generate all mixin items for the proxy, including:
-                - Mixin from this definition, keyed by proxy's path
-                - Mixins from extended proxies, preserving their original keys
+                - LexicalScope from this definition, keyed by proxy's dependency_graph
+                - LexicalScopes from extended proxies, preserving their original keys
                 """
-                yield (
-                    self,
-                    Mixin(
-                        jit_cache=self.jit_cache,
-                        lexical_scope=lexical_scope,
-                    ),
-                )
+                yield (self, lexical_scope)
                 for reference in self.proxy_definition.extend:
                     extended_proxy = _resolve_resource_reference(
                         reference=reference,
@@ -740,7 +737,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
     @abstractmethod
     def mixins(
         self,
-    ) -> Mapping["StaticChildDependencyGraph[TKey]", "Mixin[TKey]"]:
+    ) -> Mapping["StaticDependencyGraph[TKey]", LexicalScope]:
         """The mixins that provide resources for this proxy, keyed by dependency_graph.
 
         Each proxy's own properties (not from extend=) are stored at
@@ -762,9 +759,11 @@ class Proxy(Mapping[TKey, "Node"], ABC):
 
     def __getitem__(self, key: TKey) -> "Node":
         def generate_resource() -> Iterator[Evaluator]:
-            for mixin in self.mixins.values():
+            for dependency_graph, lexical_scope in self.mixins.items():
                 try:
-                    factory_or_patch = _mixin_getitem(mixin, key)
+                    factory_or_patch = _mixin_getitem(
+                        dependency_graph, lexical_scope, key
+                    )
                 except KeyError:
                     continue
                 yield factory_or_patch(self)
@@ -808,7 +807,7 @@ class StaticProxy(Proxy[TKey], ABC):
     InstanceProxy with additional kwargs.
     """
 
-    mixins: Mapping[StaticDependencyGraph[TKey], "Mixin[TKey]"]  # type: ignore[misc]
+    mixins: Mapping[StaticDependencyGraph[TKey], LexicalScope]  # type: ignore[misc]
     dependency_graph: StaticDependencyGraph[TKey]  # type: ignore[misc]
 
     def __call__(self, **kwargs: object) -> InstanceProxy[Any]:  # type: ignore[type-var]
@@ -855,7 +854,7 @@ class InstanceProxy(Proxy[TKey | str], Generic[TKey]):
     @override
     def mixins(
         self,
-    ) -> Mapping[StaticChildDependencyGraph[TKey | str], Mixin[TKey | str]]:
+    ) -> Mapping[StaticDependencyGraph[TKey | str], LexicalScope]:
         return self.base_proxy.mixins
 
     @override
@@ -867,9 +866,11 @@ class InstanceProxy(Proxy[TKey | str], Generic[TKey]):
                 # Yield the kwargs value as a Merger
                 yield _EndofunctionMerger(base_value=cast(Resource, value))
                 # Also collect any Patchers from mixins
-                for mixin in self.mixins.values():
+                for dependency_graph, lexical_scope in self.mixins.items():
                     try:
-                        factory_or_patch = _mixin_getitem(mixin, key)
+                        factory_or_patch = _mixin_getitem(
+                            dependency_graph, lexical_scope, key
+                        )
                     except KeyError:
                         continue
                     yield factory_or_patch(self)
@@ -1040,39 +1041,21 @@ class _EndofunctionMerger(
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
 
 
-@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class Mixin(Hashable, Generic[TKey]):
-    """
-    Mixin holds a jit_cache and lexical_scope for resource resolution.
-    They must compare by identity to allow storage in sets.
-
-    .. todo:: 添加 ``dependency_graph: StaticChildDependencyGraph`` 字段。
-    .. todo:: ``jit_cache`` 改为 property，返回 ``self.dependency_graph.jit_cache``。
-    .. todo:: 添加 ``@final`` 装饰器，禁止子类化。
-    """
-
-    def __hash__(self) -> int:
-        return hash(id(self))
-
-    def __eq__(self, other: object) -> bool:
-        return self is other
-
-    jit_cache: Final[_JitCache]
-    lexical_scope: Final[LexicalScope]
-
-
 def _mixin_getitem(
-    mixin: Mixin[TKey], key: TKey, /
+    dependency_graph: "StaticDependencyGraph[TKey]",
+    lexical_scope: LexicalScope,
+    key: TKey,
+    /,
 ) -> Callable[["Proxy[TKey]"], Evaluator]:
     """
-    Get a factory function from a mixin by key.
+    Get a factory function from a dependency graph by key.
 
-    .. todo:: Phase 8: 调用 ``mixin.jit_cache[key](mixin.dependency_graph)`` 获得第二层 callable
+    .. todo:: Phase 8: 调用 ``dependency_graph.jit_cache[key](dependency_graph)`` 获得第二层 callable
     """
-    resolved_function = mixin.jit_cache[key]
+    resolved_function = dependency_graph.jit_cache[key]
 
     def bind_proxy(proxy: "Proxy[TKey]") -> Evaluator:
-        inner_lexical_scope: LexicalScope = (*mixin.lexical_scope, proxy)
+        inner_lexical_scope: LexicalScope = (*lexical_scope, proxy)
         return resolved_function(inner_lexical_scope)
 
     return bind_proxy
@@ -1381,7 +1364,7 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
         winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_tuple))
 
         def generate_all_mixin_items() -> (
-            Iterator[tuple[StaticChildDependencyGraph[str], Mixin[str]]]
+            Iterator[tuple[StaticDependencyGraph[str], LexicalScope]]
         ):
             for proxy in proxies_tuple:
                 yield from proxy.mixins.items()
@@ -1937,17 +1920,13 @@ def mount(
         proxy_definition=namespace_definition,
         symbol_table=per_namespace_symbol_table,
     )
-    mixin = Mixin(
-        jit_cache=jit_cache,
-        lexical_scope=lexical_scope,
-    )
 
     root_dependency_graph = RootDependencyGraph[str](
         proxy_definition=namespace_definition,
         jit_cache=jit_cache,
     )
     return root_proxy_class(
-        mixins={root_dependency_graph: mixin},
+        mixins={root_dependency_graph: lexical_scope},
         dependency_graph=root_dependency_graph,
     )
 

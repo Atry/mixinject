@@ -690,9 +690,9 @@ class TestJitCacheSharing:
         inner1 = root.Outer(arg="v1").Inner
         inner2 = root.Outer(arg="v2").Inner
 
-        # Use the proxy's actual dependency_graph to look up the mixin
-        jit_cache1 = inner1.mixins[inner1.dependency_graph].jit_cache
-        jit_cache2 = inner2.mixins[inner2.dependency_graph].jit_cache
+        # Use the dependency_graph's jit_cache directly
+        jit_cache1 = inner1.dependency_graph.jit_cache
+        jit_cache2 = inner2.dependency_graph.jit_cache
 
         assert jit_cache1 is jit_cache2
 
@@ -717,11 +717,9 @@ class TestJitCacheSharing:
         instance_inner = root.Outer(arg="v1").Inner
         static_inner = root.Outer.Inner
 
-        # Use the proxies' actual dependency_graph to look up the mixin
-        instance_jit_cache = instance_inner.mixins[
-            instance_inner.dependency_graph
-        ].jit_cache
-        static_jit_cache = static_inner.mixins[static_inner.dependency_graph].jit_cache
+        # Use the dependency_graph's jit_cache directly
+        instance_jit_cache = instance_inner.dependency_graph.jit_cache
+        static_jit_cache = static_inner.dependency_graph.jit_cache
 
         assert instance_jit_cache is static_jit_cache
 
@@ -751,11 +749,9 @@ class TestJitCacheSharing:
         outer_inner = root.Outer(arg="v1").Inner
         object1_inner = root.object1(arg="v2").Inner
 
-        # Use the proxies' actual dependency_graph to look up the mixin
-        outer_jit_cache = outer_inner.mixins[outer_inner.dependency_graph].jit_cache
-        object1_jit_cache = object1_inner.mixins[
-            object1_inner.dependency_graph
-        ].jit_cache
+        # Use the dependency_graph's jit_cache directly
+        outer_jit_cache = outer_inner.dependency_graph.jit_cache
+        object1_jit_cache = object1_inner.dependency_graph.jit_cache
 
         assert outer_jit_cache is object1_jit_cache
         assert outer_jit_cache.proxy_definition is object1_jit_cache.proxy_definition
