@@ -703,7 +703,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         ```
         @dataclass
         class BuilderDefinition:
-            bind_lexical_scope: Callable[[LexicalScope, str], Callable[[Proxy, ResourceConfig], Merger | Patcher]]
+            bind_lexical_scope: Callable[[LexicalScope, str], Callable[[Proxy, ResourceConfig], Evaluator]]
             config: ResourceConfig
             '''
             默认的config由``inspect.signature``推断而来，可以由注解修改
@@ -759,7 +759,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
     """
 
     def __getitem__(self, key: TKey) -> "Node":
-        def generate_resource() -> Iterator[Merger | Patcher]:
+        def generate_resource() -> Iterator[Evaluator]:
             for mixin in self.mixins.values():
                 try:
                     factory_or_patch = mixin[key]
@@ -864,7 +864,7 @@ class InstanceProxy(Proxy[TKey | str], Generic[TKey]):
         if key in self.kwargs:
             value = self.kwargs[key]
 
-            def generate_resource() -> Iterator[Merger | Patcher]:
+            def generate_resource() -> Iterator[Evaluator]:
                 # Yield the kwargs value as a Merger
                 yield _EndofunctionMerger(base_value=cast(Resource, value))
                 # Also collect any Patchers from mixins
@@ -1001,6 +1001,13 @@ class Patcher(Iterable[TPatch_co], ABC):
     """
 
 
+Evaluator: TypeAlias = Merger | Patcher
+"""A Merger or Patcher that participates in resource evaluation."""
+
+EvaluatorGetter: TypeAlias = Callable[[LexicalScope], Evaluator]
+"""A callable that retrieves an Evaluator from a LexicalScope context."""
+
+
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class FunctionPatcher(Patcher[TPatch_co]):
     patch_generator: Callable[[], Iterator[TPatch_co]]
@@ -1037,16 +1044,17 @@ class _EndofunctionMerger(
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
 
 
-class Mixin(Mapping[TKey, Callable[["Proxy[TKey]"], Merger | Patcher]], Hashable, ABC):
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+class Mixin(Mapping[TKey, Callable[["Proxy[TKey]"], Evaluator]], Hashable):
     """
     Abstract base class for mixins.
     Mixins are mappings from resource names to factory functions.
     They must compare by identity to allow storage in sets.
 
-    .. todo:: 转换为 dataclass。
     .. todo:: 添加 ``dependency_graph: StaticChildDependencyGraph`` 字段。
     .. todo:: 添加 ``lexical_scope: LexicalScope`` 字段。
     .. todo:: ``jit_cache`` 改为 property，返回 ``self.dependency_graph.jit_cache``。
+    .. todo:: 添加 ``@final`` 装饰器，禁止子类化。
     """
 
     def __hash__(self) -> int:
@@ -1055,17 +1063,43 @@ class Mixin(Mapping[TKey, Callable[["Proxy[TKey]"], Merger | Patcher]], Hashable
     def __eq__(self, other: object) -> bool:
         return self is other
 
+    jit_cache: Final[_JitCache]
+    lexical_scope: Final[LexicalScope]
+
+    def __getitem__(self, key: TKey, /) -> Callable[[Proxy[TKey]], Evaluator]:
+        """
+        .. todo:: Phase 8: 调用 ``self.jit_cache[key](self.dependency_graph)`` 获得第二层 callable
+        """
+        resolved_function = self.jit_cache[key]
+
+        def bind_proxy(proxy: Proxy[TKey]) -> Evaluator:
+            inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
+            return resolved_function(inner_lexical_scope)
+
+        return bind_proxy
+
+    def __iter__(self) -> Iterator[TKey]:
+        return iter(self.jit_cache)
+
+    def __len__(self) -> int:
+        return len(self.jit_cache)
+
 
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
-class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
+class _JitCache(Mapping[TKey, Callable[[LexicalScope], Evaluator]], Generic[TKey]):
     """
     Mapping that caches resolve_symbols results for definitions in a namespace.
 
     .. todo:: Also compiles the proxy class into Python bytecode.
 
     .. todo:: Phase 8: 修改 Mapping 签名
-       - 改为 ``Mapping[str, Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]]``
+       - 改为 ``Mapping[str, Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]]``
        - ``__getitem__`` 缓存第一层 callable
+
+    .. todo:: 不要直接访问 ``underlying``
+       - 移除 ``underlying`` property
+       - ``__getitem__`` 不应使用 ``getattr(self.proxy_definition.underlying, key)``
+       - 改为通过 ``proxy_definition`` 的方法间接访问定义
 
     .. note:: _JitCache instances are shared among all mixins created from the same
         _ProxyDefinition (the Python class decorated with @scope()). For example::
@@ -1082,7 +1116,7 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
 
     proxy_definition: Final["_ProxyDefinition"]
     symbol_table: Final[SymbolTable]
-    cache: Final[dict[str, Callable[[LexicalScope], Merger | Patcher]]] = field(
+    cache: Final[dict[TKey, Callable[[LexicalScope], Evaluator]]] = field(
         default_factory=dict
     )
 
@@ -1090,7 +1124,7 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
     def underlying(self) -> object:
         return self.proxy_definition.underlying
 
-    def __getitem__(self, key: str) -> Callable[[LexicalScope], Merger | Patcher]:
+    def __getitem__(self, key: TKey) -> Callable[[LexicalScope], Evaluator]:
         """
         .. todo:: 目前使用 ``getattr`` 的做法是错的，因为无法支持 package。
                   Package 的子模块需要动态导入，不能通过 ``getattr`` 获取。
@@ -1105,14 +1139,14 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
             raise KeyError(key)
         outer = val.resolve_symbols(self.symbol_table, key)
 
-        def inner(lexical_scope: LexicalScope) -> Merger | Patcher:
+        def inner(lexical_scope: LexicalScope) -> Evaluator:
             dependency_graph = lexical_scope[-1].dependency_graph
             return outer(dependency_graph)(lexical_scope)
 
         self.cache[key] = inner
         return inner
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[TKey]:
         return self.proxy_definition.generate_keys()
 
     def __len__(self) -> int:
@@ -1120,42 +1154,24 @@ class _JitCache(Mapping[str, Callable[[LexicalScope], Merger | Patcher]]):
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class _NamespaceMixin(Mixin[str]):
-    """Mixin that lazily resolves definitions from a NamespaceDefinition.
+class _PackageMixin(Mixin):
+    """Mixin that lazily resolves definitions including submodules.
 
-    .. todo:: 删除 ``jit_cache`` 和 ``lexical_scope`` 字段，改为从基类 ``Mixin`` 继承。
+    .. todo:: 把 ``_PackageMixin`` 的主要功能移到 ``_PackageDefinition``，然后删掉 ``_PackageMixin``。
+
+              目前 ``_PackageMixin`` 负责：
+
+              - 动态导入子模块 (``importlib.import_module``)
+              - 创建子模块的 ``_NamespaceDefinition`` 或 ``_PackageDefinition``
+              - 调用 ``resolve_symbols`` 并绑定 proxy
+
+              这些逻辑应该在 ``_PackageDefinition`` 中处理，使 ``_PackageMixin`` 与 ``Mixin`` 统一。
     """
-
-    jit_cache: Final[_JitCache]
-    lexical_scope: Final[LexicalScope]
-
-    def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
-        """
-        .. todo:: Phase 8: 调用 ``self.jit_cache[key](self.dependency_graph)`` 获得第二层 callable
-        """
-        resolved_function = self.jit_cache[key]
-
-        def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
-            inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
-            return resolved_function(inner_lexical_scope)
-
-        return bind_proxy
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.jit_cache)
-
-    def __len__(self) -> int:
-        return len(self.jit_cache)
-
-
-@dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class _PackageMixin(_NamespaceMixin):
-    """Mixin that lazily resolves definitions including submodules."""
 
     get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]]
 
     @override
-    def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Merger | Patcher]:
+    def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Evaluator]:
         # 1. Try outer implementation (attributes that are Definition)
         try:
             return super(_PackageMixin, self).__getitem__(key)
@@ -1189,7 +1205,7 @@ class _PackageMixin(_NamespaceMixin):
             )
         outer = submod_definition.resolve_symbols(self.jit_cache.symbol_table, key)
 
-        def bind_proxy(proxy: Proxy[str]) -> Merger | Patcher:
+        def bind_proxy(proxy: Proxy[str]) -> Evaluator:
             inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
             dependency_graph = inner_lexical_scope[-1].dependency_graph
             return outer(dependency_graph)(inner_lexical_scope)
@@ -1198,7 +1214,7 @@ class _PackageMixin(_NamespaceMixin):
 
 
 def _evaluate_resource(
-    resource_generator: Callable[[], Iterator[Merger | Patcher]],
+    resource_generator: Callable[[], Iterator[Evaluator]],
 ) -> Node:
     """
     Evaluate a resource by selecting a Merger and applying Patches.
@@ -1264,7 +1280,7 @@ class Definition(ABC):
     @abstractmethod
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Merger | Patcher]]:
+    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]:
         """
         Resolve symbols in the definition and return a two-layer callable.
         First layer takes DependencyGraph, second layer takes LexicalScope.
@@ -1424,7 +1440,7 @@ class _MultiplePatchDefinition(PatcherDefinition[TPatch_co]):
 
 
 DefinitionMapping: TypeAlias = Mapping[
-    str, Callable[[LexicalScope], Callable[[Proxy], Merger | Patcher]]
+    str, Callable[[LexicalScope], Callable[[Proxy], Evaluator]]
 ]
 
 
@@ -1489,11 +1505,11 @@ def _resolve_resource_reference(
 
     .. todo:: 添加 ``_resolve_dependency_graph_reference`` 辅助函数，类似本函数，
               但参数为 ``dependency_graph: DependencyGraph`` 而非 ``lexical_scope: LexicalScope``，
-              返回类型为 ``Callable[[LexicalScope], Merger | Patcher]``
+              返回类型为 ``Callable[[LexicalScope], Evaluator]``
               （实际上是 ``StaticChildDependencyGraph``，它本质上是特殊的
-              ``Callable[[LexicalScope], Merger | Patcher]``）。
+              ``Callable[[LexicalScope], Evaluator]``）。
 
-              该函数用于在 dependency graph 中查找静态的 ``Callable[[LexicalScope], Merger | Patcher]``。
+              该函数用于在 dependency graph 中查找静态的 ``Callable[[LexicalScope], Evaluator]``。
               与 ``_resolve_resource_reference`` 的区别在于：
 
               - ``_resolve_resource_reference``: 运行时解析，遍历 lexical_scope 中的 Proxy 对象
@@ -1505,7 +1521,7 @@ def _resolve_resource_reference(
                   def _resolve_dependency_graph_reference(
                       reference: ResourceReference[TKey],
                       dependency_graph: DependencyGraph,
-                  ) -> Callable[[LexicalScope], Merger | Patcher]:
+                  ) -> Callable[[LexicalScope], Evaluator]:
                       ...
     """
     match reference:
@@ -1551,11 +1567,25 @@ def _resolve_resource_reference(
 class _ProxyDefinition(
     MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy], Generic[TKey]
 ):
+    """
+    Base class for proxy definitions that create Proxy instances from underlying objects.
+
+    .. todo:: 把 ``underlying`` 改为私有字段 ``_underlying``，禁止其他类直接访问。
+
+              目前 ``_JitCache`` 和 ``_PackageMixin`` 直接访问 ``proxy_definition.underlying``：
+
+              - ``_JitCache.underlying`` property 返回 ``self.proxy_definition.underlying``
+              - ``_PackageMixin.__getitem__`` 访问 ``self.jit_cache.underlying``
+
+              应该通过 ``_ProxyDefinition`` 提供的方法来访问底层对象，而不是直接暴露 ``underlying`` 字段。
+              这样可以在将来支持更复杂的底层对象类型（如惰性加载的模块）。
+    """
+
     proxy_class: type[StaticProxy]
     underlying: object
     extend: tuple["ResourceReference[TKey]", ...] = ()
 
-    def generate_keys(self) -> Iterator[str]:
+    def generate_keys(self) -> Iterator[TKey]:
         for name in dir(self.underlying):
             try:
                 val = getattr(self.underlying, name)
@@ -1627,7 +1657,7 @@ class _NamespaceDefinition(_ProxyDefinition):
     """
 
     def create_mixin(self, lexical_scope: LexicalScope, jit_cache: _JitCache) -> Mixin:
-        return _NamespaceMixin(
+        return Mixin(
             jit_cache=jit_cache,
             lexical_scope=lexical_scope,
         )
