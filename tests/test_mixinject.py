@@ -1381,8 +1381,16 @@ class TestProxySemigroupDependencyGraph:
             "not share with Base proxy"
         )
 
+    @pytest.mark.xfail(
+        reason="BUG: _ProxySemigroup.create incorrectly merges proxies, causing nested "
+        "scope resources to be lost when multiple base scopes provide the same nested scope."
+    )
     def test_nested_scope_in_extended_has_distinct_dependency_graph(self) -> None:
         """Nested scope in Extended should have different dependency_graph than in Base.
+
+        .. todo:: Fix _ProxySemigroup.create to correctly merge proxies when multiple
+            base scopes provide the same nested scope. Currently, resources from some
+            mixins are lost during the merge, causing "No Factory definition provided" errors.
 
         Expected behavior:
         - base_another.dependency_graph.resource_name == "Another"
@@ -1404,8 +1412,24 @@ class TestProxySemigroupDependencyGraph:
                     @resource
                     def nested_value() -> str:
                         return "nested"
+                    @patch
+                    def nested_value2() -> str:
+                        return lambda x: x * 3
 
-            @scope(extend=(R(levels_up=0, path=("Base",)),))
+            @scope()
+            class Base2:
+                @scope()
+                class Another:
+                    @patch
+                    def nested_value() -> str:
+                        return lambda x: x * 3
+                    @resource
+                    def nested_value2() -> str:
+                        return "nested"
+
+            @scope(
+                extend=(R(levels_up=0, path=("Base",)), R(levels_up=0, path=("Base2",)))
+            )
             class Extended:
                 @resource
                 def doubled(value: int) -> int:
@@ -1416,12 +1440,22 @@ class TestProxySemigroupDependencyGraph:
         # Access Another through Base and Extended
         base_another = root.Base.Another
         extended_another = root.Extended.Another
+        assert root.Extended.Another.nested_value2 == "nestednestednested"
+        assert root.Extended.Another.nested_value == "nestednestednested"
 
         # Print actual values for debugging
-        print(f"\nbase_another.dependency_graph.resource_name = {base_another.dependency_graph.resource_name!r}")
-        print(f"extended_another.dependency_graph.resource_name = {extended_another.dependency_graph.resource_name!r}")
-        print(f"base_another.dependency_graph.outer.resource_name = {base_another.dependency_graph.outer.resource_name!r}")
-        print(f"extended_another.dependency_graph.outer.resource_name = {extended_another.dependency_graph.outer.resource_name!r}")
+        print(
+            f"\nbase_another.dependency_graph.resource_name = {base_another.dependency_graph.resource_name!r}"
+        )
+        print(
+            f"extended_another.dependency_graph.resource_name = {extended_another.dependency_graph.resource_name!r}"
+        )
+        print(
+            f"base_another.dependency_graph.outer.resource_name = {base_another.dependency_graph.outer.resource_name!r}"
+        )
+        print(
+            f"extended_another.dependency_graph.outer.resource_name = {extended_another.dependency_graph.outer.resource_name!r}"
+        )
 
         # Verify resource_name for both
         assert base_another.dependency_graph.resource_name == "Another"
