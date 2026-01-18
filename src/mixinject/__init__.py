@@ -570,11 +570,6 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
               使 ``StaticChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
-    proxy_definition: Final["_ProxyDefinition"]
-    """
-    The definition that describes resources, patches, and nested scopes for this dependency graph.
-    """
-
     jit_cache: Final["_JitCache"]
     """
     The JIT cache for this dependency graph, providing cached symbol resolution.
@@ -598,6 +593,11 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
     .. todo:: 拆分为 ``jit_cache: _JitCache`` (单个) + ``base_jit_caches: ChainMap[StaticChildDependencyGraph, _JitCache]``，
               ``jit_caches`` 改为 ``cached_property`` 合并两者。
     """
+
+    @property
+    def proxy_definition(self) -> "_ProxyDefinition":
+        """The definition that describes resources, patches, and nested scopes for this dependency graph."""
+        return self.jit_cache.proxy_definition
 
 
 Evaluator: TypeAlias = "Merger | Patcher"
@@ -1552,7 +1552,6 @@ class _ProxyDefinition(
             if existing is not None:
                 return existing
             proxy_dependency_graph = StaticChildDependencyGraph(
-                proxy_definition=self,
                 outer=outer_dependency_graph,
                 jit_cache=jit_cache,
                 resource_name=resource_name,
@@ -1959,7 +1958,6 @@ def mount(
     )
 
     root_dependency_graph = RootDependencyGraph[str](
-        proxy_definition=namespace_definition,
         jit_cache=jit_cache,
     )
     return root_proxy_class(
