@@ -9,7 +9,7 @@ from mixinject import (
     _MergerDefinition,
     Merger,
     CachedProxy,
-    InstanceChildMixin,
+    InstanceMixin,
     InstanceProxy,
     _NestedMixinSymbol,
     _RootSymbol,
@@ -672,7 +672,7 @@ class TestInstanceProxyReversedPath:
         my_inner = my_instance.MyInner
 
         # The mixin should be InstanceChildMixin to distinguish from static path
-        assert isinstance(my_instance.mixin, InstanceChildMixin)
+        assert isinstance(my_instance.mixin, InstanceMixin)
 
         # Verify the resource works correctly
         assert my_inner.foo == "foo_42"

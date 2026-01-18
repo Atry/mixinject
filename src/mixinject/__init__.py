@@ -572,20 +572,20 @@ class StaticMixin(Mixin):
     """
     .. todo:: 实现 ``__getitem__`` 用于懒创建子依赖图。
     .. todo:: 实现 ``__call__(lexical_scope: LexicalScope) -> _ProxySemigroup``，
-              使 ``ChildMixin`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
+              使 ``NestedMixin`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
     symbol: Final["_MixinSymbol | SymbolSentinel"]
     """
     The symbol for this dependency graph, providing cached symbol resolution.
-    Subclasses (RootMixin, ChildMixin) must define this field.
+    Subclasses (RootMixin, NestedMixin) must define this field.
     """
 
-    _cached_instance_mixin: weakref.ReferenceType["InstanceChildMixin"] | None = field(
+    _cached_instance_mixin: weakref.ReferenceType["InstanceMixin"] | None = field(
         default=None, init=False
     )
     """
-    Cache for the corresponding InstanceChildMixin.
+    Cache for the corresponding InstanceMixin.
     """
 
     bases: Sequence["Mixin[Any]"] = field(default_factory=tuple)
@@ -593,7 +593,7 @@ class StaticMixin(Mixin):
     Mapping from dependency graph paths to their corresponding symbols.
     Corresponds one-to-one with Proxy.mixins keys.
 
-    .. todo:: 拆分为 ``symbol: _Symbol`` (单个) + ``base_symbols: ChainMap[ChildMixin, _Symbol]``，
+    .. todo:: 拆分为 ``symbol: _Symbol`` (单个) + ``base_symbols: ChainMap[NestedMixin, _Symbol]``，
               ``symbols`` 改为 ``cached_property`` 合并两者。
     """
 
@@ -621,7 +621,7 @@ class RootMixin(StaticMixin):
     Root of a dependency graph.
 
     Each RootMixin instance has its own intern pool for interning
-    ChildMixin nodes within that dependency graph.
+    NestedMixin nodes within that dependency graph.
 
     """
 
@@ -688,7 +688,7 @@ class NestedMixin(StaticMixin):
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class InstanceChildMixin(Mixin):
+class InstanceMixin(Mixin):
     """Non-empty dependency graph node for InstanceProxy.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -769,7 +769,7 @@ class Proxy(Mapping[Hashable, "Node"], ABC):
         """
         ...
 
-    mixin: "NestedMixin | InstanceChildMixin"
+    mixin: "NestedMixin | InstanceMixin"
     """The runtime access path from root to this proxy, in reverse order.
 
     This path reflects how the proxy was accessed at runtime, not where
@@ -837,13 +837,13 @@ class StaticProxy(Proxy, ABC):
         Create an InstanceProxy with the given kwargs.
 
         .. todo:: Phase 2: Pass ``symbol`` and ``base_symbols``
-                  when creating ``InstanceChildMixin``.
+                  when creating ``InstanceMixin``.
         """
-        # Get or create InstanceChildMixin (memoized via weak reference)
+        # Get or create InstanceMixin (memoized via weak reference)
         cached_ref = self.mixin._cached_instance_mixin
         instance_path = cached_ref() if cached_ref is not None else None
         if instance_path is None:
-            instance_path = InstanceChildMixin(prototype=self.mixin)
+            instance_path = InstanceMixin(prototype=self.mixin)
             self.mixin._cached_instance_mixin = weakref.ref(instance_path)
 
         return InstanceProxy(
@@ -866,7 +866,7 @@ class InstanceProxy(Proxy):
 
     base_proxy: Final[StaticProxy]
     kwargs: Final[Mapping[str, object]]
-    mixin: InstanceChildMixin  # type: ignore[misc]
+    mixin: InstanceMixin  # type: ignore[misc]
 
     @property
     @override
@@ -1667,7 +1667,7 @@ def _resolve_resource_reference(
     .. todo:: 添加 ``_resolve_mixin_reference`` 辅助函数，类似本函数，
               但参数为 ``mixin: Mixin`` 而非 ``lexical_scope: LexicalScope``，
               返回类型为 ``Callable[[LexicalScope], Evaluator]``
-              （实际上是 ``ChildMixin``，它本质上是特殊的
+              （实际上是 ``NestedMixin``，它本质上是特殊的
               ``Callable[[LexicalScope], Evaluator]``）。
 
               该函数用于在 dependency graph 中查找静态的 ``Callable[[LexicalScope], Evaluator]``。
@@ -1675,7 +1675,7 @@ def _resolve_resource_reference(
 
               - ``_resolve_resource_reference``: 运行时解析，遍历 lexical_scope 中的 Proxy 对象
               - ``_resolve_mixin_reference``: 编译时解析，遍历 mixin 中的
-                ``ChildMixin``，返回可被 JIT 缓存的 callable
+                ``NestedMixin``，返回可被 JIT 缓存的 callable
 
               签名示例::
 
@@ -1766,7 +1766,7 @@ class _MixinDefinition(
 
         Returns a _NestedMixinSymbol that implements ``Callable[[Mixin], NestedMixin]``.
 
-        .. todo:: Phase 2: Add ``base_symbols`` parameter to ``ChildMixin``
+        .. todo:: Phase 2: Add ``base_symbols`` parameter to ``NestedMixin``
                   for inherited symbols from extended scopes.
         """
         return _NestedMixinSymbol(
@@ -2122,7 +2122,7 @@ def evaluate(
         root = mount(MyNamespace)
 
     .. todo:: Phase 2: Pass ``symbol`` and ``base_symbols``
-              when creating ``ChildMixin``.
+              when creating ``NestedMixin``.
     """
     lexical_scope: LexicalScope = ()
     root_proxy_class: type[StaticProxy] = CachedProxy
