@@ -2000,7 +2000,7 @@ def mount(
     )
 
 
-def _make_jit_factory(name: str, index: int) -> Callable[[LexicalScope], "Node"]:
+def _make_jit_getter(name: str, index: int) -> Callable[[LexicalScope], "Node"]:
     """Create a factory that retrieves a resource from lexical scope using JIT-compiled attribute access."""
     # lambda lexical_scope: lexical_scope[index].{name}
     lambda_node = ast.Lambda(
@@ -2034,10 +2034,10 @@ def _extend_symbol_table_jit(
 ) -> SymbolTable:
     """Extend symbol table by adding a new layer that uses JIT-compiled attribute-based factories."""
     if outer is ChainMapSentinel.EMPTY:
-        return ChainMap({name: _make_jit_factory(name, 0) for name in names})
+        return ChainMap({name: _make_jit_getter(name, 0) for name in names})
     else:
-        index = len(outer.maps)
-        return outer.new_child({name: _make_jit_factory(name, index) for name in names})
+        depth = len(outer.maps)
+        return outer.new_child({name: _make_jit_getter(name, depth) for name in names})
 
 
 def _resolve_dependencies_jit(
