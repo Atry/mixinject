@@ -53,7 +53,7 @@ def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _MixinSymbol:
     )
 
 
-def _empty_mixin() -> NestedMixin[str]:
+def _empty_mixin() -> NestedMixin:
     """Create a minimal dependency graph for testing."""
     proxy_def = _empty_proxy_definition()
     symbol = _empty_symbol(proxy_def)
