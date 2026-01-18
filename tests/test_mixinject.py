@@ -16,7 +16,7 @@ from mixinject import (
     SymbolSentinel,
     LexicalScope,
     _PackageDefinition,
-    _NamespaceDefinition,
+    _MixinDefinition,
     Proxy,
     RelativeReference,
     StaticProxy,
@@ -40,18 +40,18 @@ R = RelativeReference
 FIXTURES_DIR = str(Path(__file__).parent / "fixtures")
 
 
-def _empty_definition() -> _NamespaceDefinition:
+def _empty_definition() -> _MixinDefinition:
     """Create a minimal empty proxy definition for testing."""
-    return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
+    return _MixinDefinition(proxy_class=CachedProxy, underlying=object())
 
 
-def _empty_root_symbol(definition: _NamespaceDefinition) -> _RootSymbol:
+def _empty_root_symbol(definition: _MixinDefinition) -> _RootSymbol:
     """Create a minimal root symbol for testing."""
     return _RootSymbol(definition=definition)
 
 
 def _empty_nested_symbol(
-    outer: "_RootSymbol", definition: _NamespaceDefinition
+    outer: "_RootSymbol", definition: _MixinDefinition
 ) -> _NestedMixinSymbol:
     """Create a minimal nested symbol for testing."""
     return _NestedMixinSymbol(
@@ -878,7 +878,7 @@ class TestModuleParsing:
                 regular_mod,
                 get_module_proxy_class=lambda _: CachedProxy,
             )
-            assert isinstance(scope_def, _NamespaceDefinition)
+            assert isinstance(scope_def, _MixinDefinition)
             assert not isinstance(scope_def, _PackageDefinition)
         finally:
             sys.path.remove(FIXTURES_DIR)

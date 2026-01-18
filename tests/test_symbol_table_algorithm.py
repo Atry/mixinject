@@ -8,7 +8,7 @@ from mixinject import (
     ChainMapSentinel,
     Node,
     CachedProxy,
-    _NamespaceDefinition,
+    _MixinDefinition,
     _NestedMixinSymbol,
     _RootSymbol,
     _Symbol,
@@ -16,18 +16,18 @@ from mixinject import (
 from mixinject import RootMixin, NestedMixin
 
 
-def _empty_definition() -> _NamespaceDefinition:
+def _empty_definition() -> _MixinDefinition:
     """Create a minimal empty proxy definition for testing."""
-    return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
+    return _MixinDefinition(proxy_class=CachedProxy, underlying=object())
 
 
-def _empty_root_symbol(definition: _NamespaceDefinition) -> _RootSymbol:
+def _empty_root_symbol(definition: _MixinDefinition) -> _RootSymbol:
     """Create a minimal root symbol for testing."""
     return _RootSymbol(definition=definition)
 
 
 def _empty_nested_symbol(
-    outer: "_RootSymbol", definition: _NamespaceDefinition
+    outer: "_RootSymbol", definition: _MixinDefinition
 ) -> _NestedMixinSymbol:
     """Create a minimal nested symbol for testing."""
     return _NestedMixinSymbol(
@@ -135,7 +135,7 @@ def test_symbol_table_extension_consistency():
         c = _make_mock_definition("c")
         a = _make_mock_definition("a")
 
-    mock_outer_def = _NamespaceDefinition(proxy_class=CachedProxy, underlying=_MockOuterNamespace())
+    mock_outer_def = _MixinDefinition(proxy_class=CachedProxy, underlying=_MockOuterNamespace())
     root_symbol = _RootSymbol(definition=mock_outer_def)
     st_jit = root_symbol.symbol_table
 
@@ -159,7 +159,7 @@ def test_symbol_table_extension_consistency():
         a = _make_mock_definition("a")
         b = _make_mock_definition("b")
 
-    mock_inner_def = _NamespaceDefinition(proxy_class=CachedProxy, underlying=_MockInnerNamespace())
+    mock_inner_def = _MixinDefinition(proxy_class=CachedProxy, underlying=_MockInnerNamespace())
     nested_symbol = _NestedMixinSymbol(
         outer=root_symbol,
         name="inner",
@@ -189,7 +189,7 @@ def test_jit_factory_invalid_identifier():
     class _MockNamespace:
         not_identifier = _make_mock_definition("not_identifier")
 
-    mock_def = _NamespaceDefinition(proxy_class=CachedProxy, underlying=_MockNamespace())
+    mock_def = _MixinDefinition(proxy_class=CachedProxy, underlying=_MockNamespace())
     root_symbol = _RootSymbol(definition=mock_def)
     symbol_table_jit = root_symbol.symbol_table
     assert symbol_table_jit["not_identifier"].getter(lexical_scope) == "value"
@@ -213,12 +213,12 @@ def test_symbol_interning_identity_equality():
         bar = _make_mock_definition("bar")
 
     class _MockOuterNamespace:
-        Inner = _NamespaceDefinition(
+        Inner = _MixinDefinition(
             proxy_class=CachedProxy, underlying=_MockInnerNamespace()
         )
         baz = _make_mock_definition("baz")
 
-    mock_outer_def = _NamespaceDefinition(
+    mock_outer_def = _MixinDefinition(
         proxy_class=CachedProxy, underlying=_MockOuterNamespace()
     )
     root_symbol = _RootSymbol(definition=mock_outer_def)
@@ -257,7 +257,7 @@ def test_symbol_hashability():
     class _MockNamespace:
         foo = _make_mock_definition("foo")
 
-    mock_def = _NamespaceDefinition(proxy_class=CachedProxy, underlying=_MockNamespace())
+    mock_def = _MixinDefinition(proxy_class=CachedProxy, underlying=_MockNamespace())
     root_symbol = _RootSymbol(definition=mock_def)
 
     # _MixinSymbol (root_symbol) should be hashable
@@ -270,7 +270,7 @@ def test_symbol_hashability():
     class _MockNestedNamespace:
         bar = _make_mock_definition("bar")
 
-    nested_def = _NamespaceDefinition(
+    nested_def = _MixinDefinition(
         proxy_class=CachedProxy, underlying=_MockNestedNamespace()
     )
     nested_symbol = _NestedMixinSymbol(

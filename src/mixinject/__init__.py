@@ -1513,9 +1513,7 @@ class _ResourceDefinition(
 
     function: Callable[..., TResult]
 
-    def resolve(
-        self, outer: "_MixinSymbol", name: str, /
-    ) -> _ResourceSymbol[TResult]:
+    def resolve(self, outer: "_MixinSymbol", name: str, /) -> _ResourceSymbol[TResult]:
         return _ResourceSymbol(
             definition=self,
             outer=outer,
@@ -1762,9 +1760,7 @@ class _MixinDefinition(
             raise KeyError(key)
         return val
 
-    def resolve(
-        self, outer: "_MixinSymbol", name: str, /
-    ) -> _NestedMixinSymbol:
+    def resolve(self, outer: "_MixinSymbol", name: str, /) -> _NestedMixinSymbol:
         """
         Resolve symbols for this definition given the symbol table and resource name.
 
@@ -1778,14 +1774,6 @@ class _MixinDefinition(
             name=name,
             definition=self,
         )
-
-
-@dataclass(frozen=True, kw_only=True)
-class _NamespaceDefinition(_MixinDefinition):
-    """
-    A definition that creates a Proxy from an object's attributes.
-    Implements lazy evaluation via resolve.
-    """
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1830,7 +1818,7 @@ class _PackageDefinition(_MixinDefinition):
                 get_module_proxy_class=self.get_module_proxy_class,
             )
         else:
-            return _NamespaceDefinition(
+            return _MixinDefinition(
                 underlying=submod,
                 proxy_class=self.get_module_proxy_class(submod),
             )
@@ -1840,7 +1828,7 @@ def scope(
     *,
     proxy_class: type[StaticProxy] = CachedProxy,
     extend: Iterable["ResourceReference[Hashable]"] = (),
-) -> Callable[[object], _NamespaceDefinition]:
+) -> Callable[[object], _MixinDefinition]:
     """
     Decorator that converts a class into a NamespaceDefinition.
     Nested classes MUST be decorated with @scope() to be included as sub-scopes.
@@ -1896,8 +1884,8 @@ def scope(
     """
     extend_tuple = tuple(extend)
 
-    def wrapper(c: object) -> _NamespaceDefinition:
-        return _NamespaceDefinition(
+    def wrapper(c: object) -> _MixinDefinition:
+        return _MixinDefinition(
             underlying=c,
             proxy_class=proxy_class,
             extend=extend_tuple,
@@ -1929,7 +1917,7 @@ def _parse_package(
             proxy_class=proxy_class,
             get_module_proxy_class=get_module_proxy_class,
         )
-    return _NamespaceDefinition(underlying=module, proxy_class=proxy_class)
+    return _MixinDefinition(underlying=module, proxy_class=proxy_class)
 
 
 Endofunction = Callable[[TResult], TResult]
@@ -2121,7 +2109,7 @@ def local(definition: TMergerDefinition) -> TMergerDefinition:
 
 
 def evaluate(
-    namespace: ModuleType | _NamespaceDefinition,
+    namespace: ModuleType | _MixinDefinition,
 ) -> StaticProxy:
     """
     Resolves a Proxy from the given object using the provided lexical scope.
@@ -2143,7 +2131,7 @@ def evaluate(
         return CachedProxy
 
     namespace_definition: _MixinDefinition
-    if isinstance(namespace, _NamespaceDefinition):
+    if isinstance(namespace, _MixinDefinition):
         namespace_definition = namespace
     elif isinstance(namespace, ModuleType):
         namespace_definition = _parse_package(
