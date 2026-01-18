@@ -1061,7 +1061,7 @@ def _mixin_getitem(
     second-level callable, passing the mixin's mixin (not the
     proxy's mixin from lexical_scope).
     """
-    first_level = mixin.symbol[key]
+    first_level = mixin.symbol.cached_resolve_symbols(key)
     resolved_function = first_level(mixin)
 
     def bind_proxy(proxy: Proxy) -> Evaluator:
@@ -1164,7 +1164,7 @@ class _MixinSymbol(
             return 0
         return len(self.symbol_table.maps)
 
-    def __getitem__(
+    def cached_resolve_symbols(
         self, key: Hashable
     ) -> Callable[[Mixin], Callable[[LexicalScope], Evaluator]]:
         if key in self.cache:
@@ -1179,6 +1179,9 @@ class _MixinSymbol(
 
     def __len__(self) -> int:
         return sum(1 for _ in self)
+    
+    def __getitem__(self, key: Hashable) -> Callable[[Mixin], Callable[[LexicalScope], Evaluator]]:
+        return self.cached_resolve_symbols(key)
 
 
 def _evaluate_resource(
