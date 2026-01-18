@@ -577,7 +577,7 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
               使 ``ChildDependencyGraph`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
-    jit_cache: Final["_JitCache"]
+    jit_cache: Final["_JitCache | JitCacheSentinel"]
     """
     The JIT cache for this dependency graph, providing cached symbol resolution.
     Subclasses (RootDependencyGraph, ChildDependencyGraph) must define this field.
