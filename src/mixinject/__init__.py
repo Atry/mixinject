@@ -602,6 +602,10 @@ class StaticDependencyGraph(DependencyGraph[TKey], Generic[TKey]):
     @property
     def proxy_definition(self) -> "_ProxyDefinition":
         """The definition that describes resources, patches, and nested scopes for this dependency graph."""
+        if isinstance(self.jit_cache, JitCacheSentinel):
+            raise ValueError(
+                f"proxy_definition is not available for merged dependency graphs (jit_cache={self.jit_cache})"
+            )
         return self.jit_cache.proxy_definition
 
 
@@ -677,7 +681,11 @@ class ChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
                 dependency_graph=self,
             )
 
-        return _ProxySemigroup(proxy_factory=proxy_factory)
+        return _ProxySemigroup(
+            proxy_factory=proxy_factory,
+            access_path_outer=self.outer,
+            resource_name=self.resource_name,
+        )
 
 
 @final
@@ -794,6 +802,9 @@ class Proxy(Mapping[TKey, "Node"], ABC):
     def __iter__(self) -> Iterator[TKey]:
         visited: set[TKey] = set()
         for dependency_graph in self.mixins.keys():
+            if isinstance(dependency_graph.jit_cache, JitCacheSentinel):
+                # Merged dependency graphs don't have their own keys
+                continue
             for key in dependency_graph.jit_cache.keys():
                 if key not in visited:
                     visited.add(key)
@@ -1067,7 +1078,11 @@ def _mixin_getitem(
 
     def bind_proxy(proxy: "Proxy[TKey]") -> Evaluator:
         inner_lexical_scope: LexicalScope = (*lexical_scope, proxy)
-        return resolved_function(inner_lexical_scope)
+        evaluator = resolved_function(inner_lexical_scope)
+        # If evaluator is a _ProxySemigroup, set access_path_outer to the proxy's dependency_graph
+        if isinstance(evaluator, _ProxySemigroup):
+            return replace(evaluator, access_path_outer=proxy.dependency_graph)
+        return evaluator
 
     return bind_proxy
 
@@ -1350,7 +1365,7 @@ DefinitionMapping: TypeAlias = Mapping[
 
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
+class _ProxySemigroup(Merger[StaticProxy, StaticProxy], Patcher[StaticProxy]):
     """
     Semigroup for merging Proxy instances from extended scopes.
 
@@ -1360,23 +1375,45 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
         方法中添加断言确保不会传入 ``InstanceProxy``。
     """
 
-    proxy_factory: Callable[[], Proxy]
+    proxy_factory: Final[Callable[[], StaticProxy]]
+    access_path_outer: Final["DependencyGraph[Any]"]
+    resource_name: Final[Hashable]
 
     @override
-    def create(self, patches: Iterator[Proxy]) -> Proxy:
+    def create(self, patches: Iterator[StaticProxy]) -> StaticProxy:
         """
         Create a merged Proxy from factory and patches.
 
         .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
-        .. todo:: 不应该使用 ``primary_proxy.dependency_graph`` 作为合并后的dependency_graph，这是错的。需要修复。
         """
 
-        def all_proxies() -> Iterator[Proxy]:
-            yield self.proxy_factory()
+        def all_proxies() -> Iterator[StaticProxy]:
+            yield from self
             return (yield from patches)
 
         proxies_tuple = tuple(all_proxies())
-        assert proxies_tuple, "Expected at least one proxy from factory"
+        match proxies_tuple:
+            case (single_proxy,) if (
+                isinstance(single_proxy.dependency_graph, ChildDependencyGraph)
+                and single_proxy.dependency_graph.outer == self.access_path_outer
+            ):
+                dependency_graph = single_proxy.dependency_graph
+            case ():
+                raise AssertionError(" at least one proxy expected")
+            case _:
+                # Get or create dependency_graph with correct outer from intern pool
+                existing = self.access_path_outer.intern_pool.get(self.resource_name)
+                if existing is not None:
+                    dependency_graph = existing
+                else:
+                    dependency_graph = ChildDependencyGraph(
+                        outer=self.access_path_outer,
+                        jit_cache=JitCacheSentinel.MERGED,
+                        resource_name=self.resource_name,
+                    )
+                    self.access_path_outer.intern_pool[self.resource_name] = (
+                        dependency_graph
+                    )
 
         winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_tuple))
 
@@ -1386,7 +1423,6 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
             for proxy in proxies_tuple:
                 yield from proxy.mixins.items()
 
-        primary_proxy = proxies_tuple[0]
         all_mixin_items = list(generate_all_mixin_items())
         merged_mixins = dict(all_mixin_items)
         _logger.debug(
@@ -1399,14 +1435,19 @@ class _ProxySemigroup(Merger[Proxy, Proxy], Patcher[Proxy]):
                 "unique_after_dict": len(merged_mixins),
             },
         )
+
         return winner_class(
             mixins=merged_mixins,
-            dependency_graph=primary_proxy.dependency_graph,
+            dependency_graph=dependency_graph,
         )
 
     @override
-    def __iter__(self) -> Iterator[Proxy]:
-        yield self.proxy_factory()
+    def __iter__(self) -> Iterator[StaticProxy]:
+        proxy = self.proxy_factory()
+        assert isinstance(
+            proxy, StaticProxy
+        ), f"proxy must be StaticProxy, got {type(proxy)}"
+        yield proxy
 
 
 def _resolve_resource_reference(
