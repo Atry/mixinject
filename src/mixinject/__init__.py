@@ -987,7 +987,7 @@ class ChainMapSentinel(Enum):
     """
 
 
-SymbolTable: TypeAlias = ChainMap[str, "_Symbol"] | Literal[ChainMapSentinel.EMPTY]
+SymbolTable: TypeAlias = ChainMap[Hashable, "_Symbol"] | Literal[ChainMapSentinel.EMPTY]
 """
 A mapping from resource names to symbols that provide getters for lexical scope lookups.
 
