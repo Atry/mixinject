@@ -59,8 +59,8 @@ class TestInterning:
         proxy_def = _empty_proxy_definition()
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache)
-        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
-        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
+        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache, resource_name="test1")
+        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache, resource_name="test2")
         # Without interning, these are different objects
         assert child1 is not child2
 
@@ -69,16 +69,16 @@ class TestInterning:
         jit_cache = _empty_jit_cache(proxy_def)
         root1 = RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache)
         root2 = RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache)
-        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root1, jit_cache=jit_cache)
-        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root2, jit_cache=jit_cache)
+        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root1, jit_cache=jit_cache, resource_name="test")
+        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root2, jit_cache=jit_cache, resource_name="test")
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         proxy_def = _empty_proxy_definition()
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache)
-        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
-        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=child1, jit_cache=jit_cache)
+        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache, resource_name="child1")
+        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=child1, jit_cache=jit_cache, resource_name="child2")
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -129,7 +129,7 @@ class TestWeakReference:
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache)
         # Add an entry manually to the pool
-        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
+        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache, resource_name="test")
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -161,5 +161,5 @@ class TestSubclass:
         proxy_def = _empty_proxy_definition()
         jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache)
-        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
+        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache, resource_name="test")
         assert isinstance(child, DependencyGraph)

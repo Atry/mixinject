@@ -59,6 +59,7 @@ def _empty_dependency_graph() -> StaticChildDependencyGraph[str]:
         proxy_definition=proxy_def,
         outer=RootDependencyGraph(proxy_definition=proxy_def, jit_cache=jit_cache),
         jit_cache=jit_cache,
+        resource_name="test",
     )
 
 
@@ -1340,3 +1341,95 @@ class TestParameter:
             assert False, "Expected NotImplementedError"
         except NotImplementedError:
             pass
+
+
+class TestProxySemigroupDependencyGraph:
+    """Test _ProxySemigroup.create correctly assigns dependency_graph."""
+
+    def test_extended_proxy_has_distinct_dependency_graph(self) -> None:
+        """Extended proxy should have its own dependency_graph, not primary's.
+
+        When scope B extends scope A via extend=, B.dependency_graph should be
+        distinct from A.dependency_graph because they represent different
+        positions in the topology (B is accessed as "B", not "A").
+        """
+
+        @scope()
+        class Root:
+            @scope()
+            class Base:
+                @resource
+                def value() -> int:
+                    return 10
+
+            @scope(extend=(R(levels_up=0, path=("Base",)),))
+            class Extended:
+                @resource
+                def doubled(value: int) -> int:
+                    return value * 2
+
+        root = mount(Root)
+
+        # The extended proxy should have its own unique dependency_graph
+        # that represents its access path ("Extended", "Root"), not Base's path
+        base_dependency_graph = root.Base.dependency_graph
+        extended_dependency_graph = root.Extended.dependency_graph
+
+        # This should pass - Extended has its own dependency_graph
+        assert extended_dependency_graph is not base_dependency_graph, (
+            "Extended proxy should have its own dependency_graph, "
+            "not share with Base proxy"
+        )
+
+    def test_nested_scope_in_extended_has_distinct_dependency_graph(self) -> None:
+        """Nested scope in Extended should have different dependency_graph than in Base.
+
+        Expected behavior:
+        - base_another.dependency_graph.resource_name == "Another"
+        - extended_another.dependency_graph.resource_name == "Another"
+        - base_another.dependency_graph.outer.resource_name == "Base"
+        - extended_another.dependency_graph.outer.resource_name == "Extended"
+        """
+
+        @scope()
+        class Root:
+            @scope()
+            class Base:
+                @resource
+                def value() -> int:
+                    return 10
+
+                @scope()
+                class Another:
+                    @resource
+                    def nested_value() -> str:
+                        return "nested"
+
+            @scope(extend=(R(levels_up=0, path=("Base",)),))
+            class Extended:
+                @resource
+                def doubled(value: int) -> int:
+                    return value * 2
+
+        root = mount(Root)
+
+        # Access Another through Base and Extended
+        base_another = root.Base.Another
+        extended_another = root.Extended.Another
+
+        # Print actual values for debugging
+        print(f"\nbase_another.dependency_graph.resource_name = {base_another.dependency_graph.resource_name!r}")
+        print(f"extended_another.dependency_graph.resource_name = {extended_another.dependency_graph.resource_name!r}")
+        print(f"base_another.dependency_graph.outer.resource_name = {base_another.dependency_graph.outer.resource_name!r}")
+        print(f"extended_another.dependency_graph.outer.resource_name = {extended_another.dependency_graph.outer.resource_name!r}")
+
+        # Verify resource_name for both
+        assert base_another.dependency_graph.resource_name == "Another"
+        assert extended_another.dependency_graph.resource_name == "Another"
+
+        # Verify outer.resource_name
+        assert base_another.dependency_graph.outer.resource_name == "Base"
+        assert extended_another.dependency_graph.outer.resource_name == "Extended"
+
+        # Verify the nested resource is still accessible
+        assert extended_another.nested_value == "nested"

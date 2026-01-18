@@ -629,6 +629,7 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     """
 
     outer: Final[DependencyGraph[Any]]
+    resource_name: Final[Hashable]
 
     def __call__(self, lexical_scope: LexicalScope) -> "_ProxySemigroup":
         """
@@ -1532,6 +1533,7 @@ class _ProxyDefinition(
                 proxy_definition=self,
                 outer=outer_dependency_graph,
                 jit_cache=jit_cache,
+                resource_name=resource_name,
             )
             intern_pool[resource_name] = proxy_dependency_graph
             return proxy_dependency_graph
