@@ -108,7 +108,7 @@ class DirectDefinition(Definition):
 
     @override
     def resolve_symbols(
-        self, symbol_table: SymbolTable, resource_name: str, /
+        self, symbol_table: SymbolTable, name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Merger | Patcher]]:
         return lambda _mixin: lambda _lexical_scope: self.item
 

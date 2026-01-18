@@ -577,7 +577,7 @@ class StaticMixin(Mixin[TKey], Generic[TKey]):
               使 ``ChildMixin`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
-    symbol: Final["_ProxySymbol | SymbolSentinel"]
+    symbol: Final["_MixinSymbol | SymbolSentinel"]
     """
     The symbol for this dependency graph, providing cached symbol resolution.
     Subclasses (RootMixin, ChildMixin) must define this field.
@@ -600,7 +600,7 @@ class StaticMixin(Mixin[TKey], Generic[TKey]):
     """
 
     @property
-    def proxy_definition(self) -> "_ProxyDefinition":
+    def proxy_definition(self) -> "_MixinDefinition":
         """The definition that describes resources, patches, and nested scopes for this dependency graph."""
         if isinstance(self.symbol, SymbolSentinel):
             raise ValueError(
@@ -640,7 +640,7 @@ class NestedMixin(StaticMixin[TKey], Generic[TKey]):
     """
 
     outer: Final[Mixin[Any]]
-    resource_name: Final[Hashable]
+    name: Final[Hashable]
 
     def __call__(self, lexical_scope: LexicalScope) -> "_ProxySemigroup":
         """
@@ -684,7 +684,7 @@ class NestedMixin(StaticMixin[TKey], Generic[TKey]):
         return _ProxySemigroup(
             proxy_factory=proxy_factory,
             access_path_outer=self.outer,
-            resource_name=self.resource_name,
+            name=self.name,
         )
 
 
@@ -989,11 +989,9 @@ class ChainMapSentinel(Enum):
     """
 
 
-SymbolTable: TypeAlias = (
-    ChainMap[str, Callable[[LexicalScope], "Node"]] | Literal[ChainMapSentinel.EMPTY]
-)
+SymbolTable: TypeAlias = ChainMap[str, "_Symbol"] | Literal[ChainMapSentinel.EMPTY]
 """
-A mapping from resource names to functions that take a lexical scope and return a Node.
+A mapping from resource names to symbols that provide getters for lexical scope lookups.
 
 .. note:: NEVER ever modify a SymbolTable in-place. Always create a new ChainMap layer to add new definitions.
 """
@@ -1079,34 +1077,95 @@ def _mixin_getitem(
     return bind_proxy
 
 
-@dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
-class _ProxySymbol(
+@dataclass(kw_only=True, slots=True, weakref_slot=True)
+class _Symbol(ABC):
+    @property
+    @abstractmethod
+    def depth(self) -> int:
+        """
+        The depth of the symbol in the scope hierarchy.
+        Used for resolving same-name dependencies.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def resource_name(self) -> str:
+        """
+        The resource name associated with this symbol.
+        """
+        ...
+
+    getter: Callable[[LexicalScope], "Node"] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.getter = _make_jit_getter(self.resource_name, self.depth)
+
+
+@dataclass(kw_only=True, slots=True, weakref_slot=True)
+class _SimpleSymbol(_Symbol):
+    """
+    Concrete implementation of _Symbol for individual resource entries in SymbolTable.
+    """
+
+    _depth: Final[int]
+    _resource_name: Final[str]
+
+    @property
+    @override
+    def depth(self) -> int:
+        return self._depth
+
+    @property
+    @override
+    def resource_name(self) -> str:
+        return self._resource_name
+
+
+@dataclass(kw_only=True, slots=True, weakref_slot=True)
+class _MixinSymbol(
+    _Symbol,
     Mapping[TKey, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]],
     Generic[TKey],
 ):
     """
     Mapping that caches resolve_symbols results for definitions in a namespace.
 
+    Implements _Symbol to provide depth and resource_name for the namespace itself.
+
     .. todo:: Also compiles the proxy class into Python bytecode.
 
-    .. note:: _Symbol instances are shared among all mixins created from the same
-        _ProxyDefinition (the Python class decorated with @scope()). For example::
+    .. note:: _MixinSymbol instances are shared among all mixins created from the same
+        _MixinDefinition (the Python class decorated with @scope()). For example::
 
             root.Outer(arg="v1").Inner.mixins[...].symbol
             root.Outer(arg="v2").Inner.mixins[...].symbol
             root.Outer.Inner.mixins[...].symbol
             root.object1(arg="v").Inner.mixins[...].symbol  # object1 extends Outer
 
-        All share the same _Symbol because they reference the same ``Inner`` class.
-        The _Symbol is created once in _ProxyDefinition.resolve_symbols and captured
+        All share the same _MixinSymbol because they reference the same ``Inner`` class.
+        The _MixinSymbol is created once in _MixinDefinition.resolve_symbols and captured
         in the closure, tied to the definition itself, not to the access path.
     """
 
-    proxy_definition: Final["_ProxyDefinition"]
+    name: Final[str]
+    proxy_definition: Final["_MixinDefinition"]
     symbol_table: Final[SymbolTable]
     cache: Final[dict[TKey, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]]] = (
         field(default_factory=dict)
     )
+
+    @property
+    @override
+    def resource_name(self) -> str:
+        return self.name
+
+    @property
+    @override
+    def depth(self) -> int:
+        if self.symbol_table is ChainMapSentinel.EMPTY:
+            return 0
+        return len(self.symbol_table.maps)
 
     def __getitem__(
         self, key: TKey
@@ -1191,7 +1250,7 @@ def _evaluate_resource(
 class Definition(ABC):
     @abstractmethod
     def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
+        self, symbol_table: "SymbolTable", name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Evaluator]]:
         """
         Resolve symbols in the definition and return a two-layer callable.
@@ -1207,7 +1266,7 @@ class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
 
     @abstractmethod
     def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
+        self, symbol_table: "SymbolTable", name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Merger]]:
         raise NotImplementedError()
 
@@ -1215,7 +1274,7 @@ class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
 class PatcherDefinition(Definition, Generic[TPatch_co]):
     @abstractmethod
     def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
+        self, symbol_table: "SymbolTable", name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Patcher]]:
         raise NotImplementedError()
 
@@ -1228,12 +1287,12 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
 
     @override
     def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
+        self, symbol_table: "SymbolTable", name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
-            resource_name=resource_name,
+            name=name,
         )
 
         def with_mixin(
@@ -1259,16 +1318,14 @@ class _ResourceDefinition(
     function: Callable[..., TResult]
 
     @override
-    def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[
+    def resolve_symbols(self, symbol_table: "SymbolTable", name: str, /) -> Callable[
         [Mixin],
         Callable[[LexicalScope], Merger[Callable[[TResult], TResult], TResult]],
     ]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
-            resource_name=resource_name,
+            name=name,
         )
 
         def with_mixin(
@@ -1293,12 +1350,12 @@ class _SinglePatchDefinition(PatcherDefinition[TPatch_co]):
 
     @override
     def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
+        self, symbol_table: "SymbolTable", name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Patcher[TPatch_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
-            resource_name=resource_name,
+            name=name,
         )
 
         def with_mixin(
@@ -1325,12 +1382,12 @@ class _MultiplePatchDefinition(PatcherDefinition[TPatch_co]):
 
     @override
     def resolve_symbols(
-        self, symbol_table: "SymbolTable", resource_name: str, /
+        self, symbol_table: "SymbolTable", name: str, /
     ) -> Callable[[Mixin], Callable[[LexicalScope], Patcher[TPatch_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
-            resource_name=resource_name,
+            name=name,
         )
 
         def with_mixin(
@@ -1367,7 +1424,7 @@ class _ProxySemigroup(Merger[StaticProxy, StaticProxy], Patcher[StaticProxy]):
 
     proxy_factory: Final[Callable[[], StaticProxy]]
     access_path_outer: Final["Mixin[Any]"]
-    resource_name: Final[Hashable]
+    name: Final[Hashable]
 
     @override
     def create(self, patches: Iterator[StaticProxy]) -> StaticProxy:
@@ -1392,16 +1449,16 @@ class _ProxySemigroup(Merger[StaticProxy, StaticProxy], Patcher[StaticProxy]):
                 raise AssertionError(" at least one proxy expected")
             case _:
                 # Get or create mixin with correct outer from intern pool
-                existing = self.access_path_outer.intern_pool.get(self.resource_name)
+                existing = self.access_path_outer.intern_pool.get(self.name)
                 if existing is not None:
                     mixin = existing
                 else:
                     mixin = NestedMixin(
                         outer=self.access_path_outer,
                         symbol=SymbolSentinel.SYNTHETIC,
-                        resource_name=self.resource_name,
+                        name=self.name,
                     )
-                    self.access_path_outer.intern_pool[self.resource_name] = mixin
+                    self.access_path_outer.intern_pool[self.name] = mixin
 
         winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_tuple))
 
@@ -1520,7 +1577,7 @@ def _resolve_resource_reference(
 
 
 @dataclass(frozen=True, kw_only=True)
-class _ProxyDefinition(
+class _MixinDefinition(
     MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy], Generic[TKey]
 ):
     """Base class for proxy definitions that create Proxy instances from underlying objects."""
@@ -1552,7 +1609,7 @@ class _ProxyDefinition(
         return val
 
     def resolve_symbols(
-        self, symbol_table: SymbolTable, resource_name: str, /
+        self, symbol_table: SymbolTable, name: str, /
     ) -> Callable[[Mixin], NestedMixin[Any]]:
         """
         Resolve symbols for this definition given the symbol table and resource name.
@@ -1566,7 +1623,8 @@ class _ProxyDefinition(
         inner_symbol_table: SymbolTable = _extend_symbol_table_jit(
             outer=symbol_table, names=self.generate_keys()
         )
-        symbol = _ProxySymbol(
+        symbol = _MixinSymbol(
+            name=name,
             proxy_definition=self,
             symbol_table=inner_symbol_table,
         )
@@ -1578,29 +1636,27 @@ class _ProxyDefinition(
             Create or retrieve a memoized ChildMixin for the given outer dependency graph.
 
             Memoization ensures that the same ChildMixin instance is reused
-            for the same (outer_mixin, resource_name) pair, enabling O(1) identity-based
+            for the same (outer_mixin, name) pair, enabling O(1) identity-based
             equality comparison.
             """
             intern_pool = outer_mixin.intern_pool
-            existing = intern_pool.get(resource_name)
+            existing = intern_pool.get(name)
             if existing is not None:
                 return existing
             proxy_mixin = NestedMixin(
                 outer=outer_mixin,
                 symbol=symbol,
-                resource_name=resource_name,
+                name=name,
             )
-            intern_pool[resource_name] = proxy_mixin
+            intern_pool[name] = proxy_mixin
             _logger.debug(
-                "resource_name=%(resource_name)r "
+                "name=%(name)r "
                 "underlying=%(underlying)r "
-                "outer_resource_name=%(outer_resource_name)r",
+                "outer_name=%(outer_name)r",
                 {
-                    "resource_name": resource_name,
+                    "name": name,
                     "underlying": self.underlying,
-                    "outer_resource_name": getattr(
-                        outer_mixin, "resource_name", "ROOT"
-                    ),
+                    "outer_name": getattr(outer_mixin, "name", "ROOT"),
                 },
             )
             return proxy_mixin
@@ -1609,7 +1665,7 @@ class _ProxyDefinition(
 
 
 @dataclass(frozen=True, kw_only=True)
-class _NamespaceDefinition(_ProxyDefinition):
+class _NamespaceDefinition(_MixinDefinition):
     """
     A definition that creates a Proxy from an object's attributes.
     Implements lazy evaluation via resolve_symbols.
@@ -1617,7 +1673,7 @@ class _NamespaceDefinition(_ProxyDefinition):
 
 
 @dataclass(frozen=True, kw_only=True)
-class _PackageDefinition(_ProxyDefinition):
+class _PackageDefinition(_MixinDefinition):
     """A definition for packages that discovers submodules via pkgutil."""
 
     get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]]
@@ -1737,7 +1793,7 @@ def scope(
 def _parse_package(
     module: ModuleType,
     get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]],
-) -> _ProxyDefinition:
+) -> _MixinDefinition:
     """
     Parses a module into a NamespaceDefinition.
 
@@ -1971,7 +2027,7 @@ def mount(
     def get_module_proxy_class(_module: ModuleType) -> type[StaticProxy[str]]:
         return CachedProxy
 
-    namespace_definition: _ProxyDefinition
+    namespace_definition: _MixinDefinition
     if isinstance(namespace, _NamespaceDefinition):
         namespace_definition = namespace
     elif isinstance(namespace, ModuleType):
@@ -1986,7 +2042,8 @@ def mount(
         outer=symbol_table,
         names=namespace_definition.generate_keys(),
     )
-    symbol = _ProxySymbol(
+    symbol = _MixinSymbol(
+        name="__root__",
         proxy_definition=namespace_definition,
         symbol_table=per_namespace_symbol_table,
     )
@@ -2000,7 +2057,7 @@ def mount(
     )
 
 
-def _make_jit_getter(name: str, index: int) -> Callable[[LexicalScope], "Node"]:
+def _make_jit_getter(name: str, depth: int) -> Callable[[LexicalScope], "Node"]:
     """Create a factory that retrieves a resource from lexical scope using JIT-compiled attribute access."""
     # lambda lexical_scope: lexical_scope[index].{name}
     lambda_node = ast.Lambda(
@@ -2014,7 +2071,7 @@ def _make_jit_getter(name: str, index: int) -> Callable[[LexicalScope], "Node"]:
         body=ast.Attribute(
             value=ast.Subscript(
                 value=ast.Name(id="lexical_scope", ctx=ast.Load()),
-                slice=ast.Constant(value=index),
+                slice=ast.Constant(value=depth),
                 ctx=ast.Load(),
             ),
             attr=name,
@@ -2032,18 +2089,24 @@ def _extend_symbol_table_jit(
     outer: SymbolTable,
     names: Iterable[str],
 ) -> SymbolTable:
-    """Extend symbol table by adding a new layer that uses JIT-compiled attribute-based factories."""
+    """Extend symbol table by adding a new layer that uses _SimpleSymbol instances."""
     if outer is ChainMapSentinel.EMPTY:
-        return ChainMap({name: _make_jit_getter(name, 0) for name in names})
+        new_symbols: dict[str, _Symbol] = {
+            name: _SimpleSymbol(_depth=0, _resource_name=name) for name in names
+        }
+        return ChainMap(new_symbols)
     else:
         depth = len(outer.maps)
-        return outer.new_child({name: _make_jit_getter(name, depth) for name in names})
+        new_symbols = {
+            name: _SimpleSymbol(_depth=depth, _resource_name=name) for name in names
+        }
+        return outer.new_child(new_symbols)
 
 
 def _resolve_dependencies_jit(
     symbol_table: SymbolTable,
     function: Callable[P, T],
-    resource_name: str,
+    name: str,
 ) -> Callable[[LexicalScope], T]:
     """
     Resolve dependencies for a function using JIT-compiled AST.
@@ -2051,12 +2114,12 @@ def _resolve_dependencies_jit(
     The first parameter of the function is treated as a :class:`Proxy` if it is
     positional-only. All other parameters are resolved from the symbol table.
 
-    Special case: when param_name == resource_name, uses outer symbol table to
+    Special case: when param_name == name, uses outer symbol table to
     avoid self-dependency, mimicking pytest fixture behavior.
 
     :param symbol_table: A mapping from resource names to their resolution functions.
     :param function: The function for which to resolve dependencies.
-    :param resource_name: The name of the resource being resolved.
+    :param name: The name of the resource being resolved.
     :return: A wrapper function that takes a lexical scope (where the last element
              is the current proxy) and returns the result of the original function.
     """
@@ -2080,20 +2143,25 @@ def _resolve_dependencies_jit(
         kw_params = params
 
     # Create keyword arguments for the call:
-    # For same-name parameters (param_name == resource_name), look up from outer symbol table
+    # For same-name parameters (param_name == name), look up from outer symbol table
     # to avoid self-dependency. For other parameters, resolve from symbol_table.
     keywords = []
     for p in kw_params:
-        if p.name == resource_name:
+        if p.name == name:
             # Same-name dependency: look up from outer symbol table
+            # Generates: symbol_table.parents[p.name].getter(lexical_scope)
             value_expr = ast.Call(
-                func=ast.Subscript(
-                    value=ast.Attribute(
-                        value=ast.Name(id="symbol_table", ctx=ast.Load()),
-                        attr="parents",
+                func=ast.Attribute(
+                    value=ast.Subscript(
+                        value=ast.Attribute(
+                            value=ast.Name(id="symbol_table", ctx=ast.Load()),
+                            attr="parents",
+                            ctx=ast.Load(),
+                        ),
+                        slice=ast.Constant(value=p.name),
                         ctx=ast.Load(),
                     ),
-                    slice=ast.Constant(value=p.name),
+                    attr="getter",
                     ctx=ast.Load(),
                 ),
                 args=[ast.Name(id="lexical_scope", ctx=ast.Load())],
@@ -2101,10 +2169,15 @@ def _resolve_dependencies_jit(
             )
         else:
             # Normal dependency: resolve from symbol_table
+            # Generates: symbol_table[p.name].getter(lexical_scope)
             value_expr = ast.Call(
-                func=ast.Subscript(
-                    value=ast.Name(id="symbol_table", ctx=ast.Load()),
-                    slice=ast.Constant(value=p.name),
+                func=ast.Attribute(
+                    value=ast.Subscript(
+                        value=ast.Name(id="symbol_table", ctx=ast.Load()),
+                        slice=ast.Constant(value=p.name),
+                        ctx=ast.Load(),
+                    ),
+                    attr="getter",
                     ctx=ast.Load(),
                 ),
                 args=[ast.Name(id="lexical_scope", ctx=ast.Load())],

@@ -10,7 +10,7 @@ from mixinject import (
     scope,
     CachedProxy,
     _NamespaceDefinition,
-    _ProxySymbol,
+    _MixinSymbol,
     ChainMapSentinel,
 )
 
@@ -20,9 +20,10 @@ def _empty_proxy_definition() -> _NamespaceDefinition:
     return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
 
 
-def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _ProxySymbol:
+def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _MixinSymbol:
     """Create a minimal symbol for testing."""
-    return _ProxySymbol(
+    return _MixinSymbol(
+        name="__test__",
         proxy_definition=proxy_definition,
         symbol_table=ChainMapSentinel.EMPTY,
     )
@@ -59,8 +60,8 @@ class TestInterning:
         proxy_def = _empty_proxy_definition()
         symbol = _empty_symbol(proxy_def)
         root = RootMixin(symbol=symbol)
-        child1 = NestedMixin(outer=root, symbol=symbol, resource_name="test1")
-        child2 = NestedMixin(outer=root, symbol=symbol, resource_name="test2")
+        child1 = NestedMixin(outer=root, symbol=symbol, name="test1")
+        child2 = NestedMixin(outer=root, symbol=symbol, name="test2")
         # Without interning, these are different objects
         assert child1 is not child2
 
@@ -69,16 +70,16 @@ class TestInterning:
         symbol = _empty_symbol(proxy_def)
         root1 = RootMixin(symbol=symbol)
         root2 = RootMixin(symbol=symbol)
-        child1 = NestedMixin(outer=root1, symbol=symbol, resource_name="test")
-        child2 = NestedMixin(outer=root2, symbol=symbol, resource_name="test")
+        child1 = NestedMixin(outer=root1, symbol=symbol, name="test")
+        child2 = NestedMixin(outer=root2, symbol=symbol, name="test")
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         proxy_def = _empty_proxy_definition()
         symbol = _empty_symbol(proxy_def)
         root = RootMixin(symbol=symbol)
-        child1 = NestedMixin(outer=root, symbol=symbol, resource_name="child1")
-        child2 = NestedMixin(outer=child1, symbol=symbol, resource_name="child2")
+        child1 = NestedMixin(outer=root, symbol=symbol, name="child1")
+        child2 = NestedMixin(outer=child1, symbol=symbol, name="child2")
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -129,7 +130,7 @@ class TestWeakReference:
         symbol = _empty_symbol(proxy_def)
         root = RootMixin(symbol=symbol)
         # Add an entry manually to the pool
-        child = NestedMixin(outer=root, symbol=symbol, resource_name="test")
+        child = NestedMixin(outer=root, symbol=symbol, name="test")
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -161,5 +162,5 @@ class TestSubclass:
         proxy_def = _empty_proxy_definition()
         symbol = _empty_symbol(proxy_def)
         root = RootMixin(symbol=symbol)
-        child = NestedMixin(outer=root, symbol=symbol, resource_name="test")
+        child = NestedMixin(outer=root, symbol=symbol, name="test")
         assert isinstance(child, Mixin)

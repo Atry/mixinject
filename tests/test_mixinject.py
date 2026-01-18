@@ -11,7 +11,7 @@ from mixinject import (
     CachedProxy,
     InstanceChildMixin,
     InstanceProxy,
-    _ProxySymbol,
+    _MixinSymbol,
     SymbolSentinel,
     LexicalScope,
     _PackageDefinition,
@@ -44,9 +44,10 @@ def _empty_proxy_definition() -> _NamespaceDefinition:
     return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
 
 
-def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _ProxySymbol:
+def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _MixinSymbol:
     """Create a minimal symbol for testing."""
-    return _ProxySymbol(
+    return _MixinSymbol(
+        name="__test__",
         proxy_definition=proxy_definition,
         symbol_table=ChainMapSentinel.EMPTY,
     )
@@ -59,7 +60,7 @@ def _empty_mixin() -> NestedMixin[str]:
     return NestedMixin(
         outer=RootMixin(symbol=symbol),
         symbol=symbol,
-        resource_name="test",
+        name="test",
     )
 
 
@@ -668,7 +669,7 @@ class TestInstanceProxyReversedPath:
 
 
 class TestSymbolSharing:
-    """Test that _Symbol instances are shared among mixins from the same _ProxyDefinition."""
+    """Test that _Symbol instances are shared among mixins from the same _MixinDefinition."""
 
     def test_symbol_shared_across_different_instance_args(self) -> None:
         """_Symbol should be shared when accessing Inner through different Outer instances."""
@@ -1063,7 +1064,7 @@ class TestProxyDir:
         result = dir(root)
         assert isinstance(result, list)
 
-    def test_dir_includes_resource_names(self) -> None:
+    def test_dir_includes_names(self) -> None:
         """Test that __dir__ includes all resource names."""
 
         @scope()
@@ -1423,10 +1424,10 @@ class TestProxySemigroupMixin:
         """Nested scope in Extended should have different mixin than in Base.
 
         Expected behavior:
-        - base_another.mixin.resource_name == "Another"
-        - extended_another.mixin.resource_name == "Another"
-        - base_another.mixin.outer.resource_name == "Base"
-        - extended_another.mixin.outer.resource_name == "Extended"
+        - base_another.mixin.name == "Another"
+        - extended_another.mixin.name == "Another"
+        - base_another.mixin.outer.name == "Base"
+        - extended_another.mixin.outer.name == "Extended"
         """
 
         @scope()
@@ -1477,25 +1478,25 @@ class TestProxySemigroupMixin:
 
         # Print actual values for debugging
         print(
-            f"\nbase_another.mixin.resource_name = {base_another.mixin.resource_name!r}"
+            f"\nbase_another.mixin.name = {base_another.mixin.name!r}"
         )
         print(
-            f"extended_another.mixin.resource_name = {extended_another.mixin.resource_name!r}"
+            f"extended_another.mixin.name = {extended_another.mixin.name!r}"
         )
         print(
-            f"base_another.mixin.outer.resource_name = {base_another.mixin.outer.resource_name!r}"
+            f"base_another.mixin.outer.name = {base_another.mixin.outer.name!r}"
         )
         print(
-            f"extended_another.mixin.outer.resource_name = {extended_another.mixin.outer.resource_name!r}"
+            f"extended_another.mixin.outer.name = {extended_another.mixin.outer.name!r}"
         )
 
-        # Verify resource_name for both
-        assert base_another.mixin.resource_name == "Another"
-        assert extended_another.mixin.resource_name == "Another"
+        # Verify name for both
+        assert base_another.mixin.name == "Another"
+        assert extended_another.mixin.name == "Another"
 
-        # Verify outer.resource_name
-        assert base_another.mixin.outer.resource_name == "Base"
-        assert extended_another.mixin.outer.resource_name == "Extended"
+        # Verify outer.name
+        assert base_another.mixin.outer.name == "Base"
+        assert extended_another.mixin.outer.name == "Extended"
 
         # Verify the nested resource is still accessible (with patch applied)
         assert extended_another.nested_value == "nestednestednested"

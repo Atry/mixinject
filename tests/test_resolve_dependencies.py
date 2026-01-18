@@ -1,6 +1,7 @@
 from collections import ChainMap
+from dataclasses import dataclass
 from inspect import signature
-from typing import Any, Callable, Iterator, ParamSpec, TypeVar
+from typing import Any, Callable, Final, Iterator, ParamSpec, TypeVar
 from unittest.mock import Mock
 
 import pytest
@@ -9,16 +10,46 @@ from mixinject import (
     Proxy,
     SymbolTable,
     _resolve_dependencies_jit,
+    _Symbol,
 )
 
 P = ParamSpec("P")
 T = TypeVar("T")
 
 
+@dataclass(kw_only=True, slots=True, weakref_slot=True)
+class _MockSymbol(_Symbol):
+    """Mock symbol for testing that wraps a getter function."""
+
+    _getter_func: Final[Callable[[LexicalScope], Any]]
+    _depth: Final[int] = 0
+    _resource_name: Final[str] = ""
+
+    def __post_init__(self) -> None:
+        # Override the getter with our custom function instead of using the parent's JIT getter
+        object.__setattr__(self, "getter", self._getter_func)
+
+    @property
+    def depth(self) -> int:
+        return self._depth
+
+    @property
+    def resource_name(self) -> str:
+        return self._resource_name
+
+
+def _make_mock_symbol_table(mapping: dict[str, Callable[[LexicalScope], Any]]) -> SymbolTable:
+    """Create a symbol table from a dict of name -> getter function."""
+    symbols: dict[str, _Symbol] = {
+        name: _MockSymbol(_getter_func=getter) for name, getter in mapping.items()
+    }
+    return ChainMap(symbols)
+
+
 def _resolve_dependencies_kwargs(
     symbol_table: SymbolTable,
     function: Callable[P, T],
-    resource_name: str,
+    name: str,
 ) -> Callable[[LexicalScope], T]:
     """
     Resolve dependencies for a function using standard keyword arguments.
@@ -43,9 +74,9 @@ def _resolve_dependencies_kwargs(
     def resolved_function(lexical_scope: LexicalScope) -> T:
         kwargs = {
             param.name: (
-                symbol_table.parents[param.name](lexical_scope)
-                if param.name == resource_name
-                else symbol_table[param.name](lexical_scope)
+                symbol_table.parents[param.name].getter(lexical_scope)
+                if param.name == name
+                else symbol_table[param.name].getter(lexical_scope)
             )
             for param in kw_params
         }
@@ -64,7 +95,7 @@ def test_resolve_dependencies_consistency():
     mock_proxy = Mock(spec=Proxy)
 
     # Mock symbol table
-    symbol_table = ChainMap(
+    symbol_table = _make_mock_symbol_table(
         {
             "a": lambda ls: 1,
             "b": lambda ls: 2,
@@ -107,7 +138,7 @@ def test_resolve_dependencies_complex_signatures():
     lexical_scope: LexicalScope = ()
 
     mock_proxy = Mock(spec=Proxy)
-    symbol_table = ChainMap({"a": lambda ls: 10, "b": lambda ls: 20})
+    symbol_table = _make_mock_symbol_table({"a": lambda ls: 10, "b": lambda ls: 20})
 
     # Positional only argument named 'a' which is in symbol table
     # Since it is positional only, it should be treated as proxy.
@@ -137,11 +168,15 @@ def test_resolve_dependencies_same_name():
     mock_proxy = Mock(spec=Proxy)
 
     # Layered symbol table
-    inner_table = {"a": lambda ls: "inner_a"}
-    outer_table = {"a": lambda ls: "outer_a"}
-    symbol_table = ChainMap(inner_table, outer_table)
+    inner_symbols: dict[str, _Symbol] = {
+        "a": _MockSymbol(_getter_func=lambda ls: "inner_a")
+    }
+    outer_symbols: dict[str, _Symbol] = {
+        "a": _MockSymbol(_getter_func=lambda ls: "outer_a")
+    }
+    symbol_table: SymbolTable = ChainMap(inner_symbols, outer_symbols)
 
-    # When param name is 'a', and resource_name is also 'a'
+    # When param name is 'a', and name is also 'a'
     # It should look up 'a' in symbol_table.parents (outer_table)
     def func(a):
         return a
@@ -154,7 +189,7 @@ def test_resolve_dependencies_same_name():
     res_jit = _resolve_dependencies_jit(symbol_table, func, "a")
     assert res_jit((mock_proxy, *lexical_scope)) == "outer_a"
 
-    # When resource_name is different, it should use inner_table
+    # When name is different, it should use inner_table
     res_kwargs_diff = _resolve_dependencies_kwargs(symbol_table, func, "other")
     assert res_kwargs_diff((mock_proxy, *lexical_scope)) == "inner_a"
 
