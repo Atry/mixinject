@@ -5,7 +5,7 @@ from mixinject import (
     Mixin,
     Proxy,
     RootMixin,
-    mount,
+    evaluate,
     resource,
     scope,
     CachedProxy,
@@ -103,8 +103,8 @@ class TestInterning:
             def foo() -> int:
                 return 42
 
-        root1 = mount(Root)
-        root2 = mount(Root)
+        root1 = evaluate(Root)
+        root2 = evaluate(Root)
 
         # Different mount calls create different proxies
         assert root1 is not root2
@@ -120,7 +120,7 @@ class TestInterning:
                 def foo() -> int:
                     return 42
 
-        root = mount(Root)
+        root = evaluate(Root)
         inner1 = root.Inner
         inner2 = root.Inner
 

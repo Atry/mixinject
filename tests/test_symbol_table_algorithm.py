@@ -197,3 +197,94 @@ def test_jit_factory_invalid_identifier():
     # If we use a name that is not a valid identifier (contains space)
     # This cannot be tested directly as Python attributes cannot have spaces
     # The JIT uses attribute access, so non-identifier names are not supported
+
+
+def test_symbol_interning_identity_equality():
+    """Test that symbols are interned and can be compared by identity.
+
+    Symbols returned by _MixinSymbol.__getitem__ should be interned:
+    - Same key returns the same instance (reference equality)
+    - Different keys return different instances
+    - This enables O(1) path equality checks using 'is' instead of '=='
+    """
+    # Create a namespace with nested definitions
+    class _MockInnerNamespace:
+        foo = _make_mock_definition("foo")
+        bar = _make_mock_definition("bar")
+
+    class _MockOuterNamespace:
+        Inner = _NamespaceDefinition(
+            proxy_class=CachedProxy, underlying=_MockInnerNamespace()
+        )
+        baz = _make_mock_definition("baz")
+
+    mock_outer_def = _NamespaceDefinition(
+        proxy_class=CachedProxy, underlying=_MockOuterNamespace()
+    )
+    root_symbol = _RootSymbol(definition=mock_outer_def)
+
+    # Test 1: Same key returns the same instance (identity equality)
+    inner1 = root_symbol["Inner"]
+    inner2 = root_symbol["Inner"]
+    assert inner1 is inner2, "Same key should return identical instance"
+
+    # Test 2: Nested access also returns identical instances
+    foo1 = root_symbol["Inner"]["foo"]
+    foo2 = root_symbol["Inner"]["foo"]
+    assert foo1 is foo2, "Nested same key should return identical instance"
+
+    # Test 3: Different keys return different instances
+    baz = root_symbol["baz"]
+    assert inner1 is not baz, "Different keys should return different instances"
+
+    # Test 4: _MixinSymbol uses identity equality, not content equality
+    # This is important because Mapping defines __eq__ based on content
+    another_root = _RootSymbol(definition=mock_outer_def)
+    another_inner = another_root["Inner"]
+
+    # Even though both have the same "content", they should not be equal
+    # because we use identity-based equality
+    assert inner1 is not another_inner, "Different root symbols should produce different nested symbols"
+    assert inner1 != another_inner, "_MixinSymbol should use identity equality, not Mapping content equality"
+
+
+def test_symbol_hashability():
+    """Test that _MixinSymbol instances are hashable for use as dict keys.
+
+    Since _MixinSymbol inherits from Mapping (which sets __hash__ = None),
+    we need to explicitly define __hash__ to make instances hashable.
+    """
+    class _MockNamespace:
+        foo = _make_mock_definition("foo")
+
+    mock_def = _NamespaceDefinition(proxy_class=CachedProxy, underlying=_MockNamespace())
+    root_symbol = _RootSymbol(definition=mock_def)
+
+    # _MixinSymbol (root_symbol) should be hashable
+    try:
+        hash(root_symbol)
+    except TypeError:
+        pytest.fail("_RootSymbol should be hashable")
+
+    # _NestedMixinSymbol should also be hashable
+    class _MockNestedNamespace:
+        bar = _make_mock_definition("bar")
+
+    nested_def = _NamespaceDefinition(
+        proxy_class=CachedProxy, underlying=_MockNestedNamespace()
+    )
+    nested_symbol = _NestedMixinSymbol(
+        outer=root_symbol,
+        name="nested",
+        definition=nested_def,
+    )
+
+    try:
+        hash(nested_symbol)
+    except TypeError:
+        pytest.fail("_NestedMixinSymbol should be hashable")
+
+    # Should be usable as dict keys
+    symbol_dict = {root_symbol: "root", nested_symbol: "nested"}
+    assert symbol_dict[root_symbol] == "root"
+    assert symbol_dict[nested_symbol] == "nested"

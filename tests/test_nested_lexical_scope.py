@@ -12,7 +12,7 @@ from mixinject import (
     resource,
     extern,
     patch,
-    mount,
+    evaluate,
     scope,
     Definition,
     Mixin,
@@ -117,7 +117,7 @@ class _DirectSymbol:
 class DirectDefinition(Definition):
     item: Any
 
-    def resolve_symbols(  # type: ignore[override]
+    def resolve(  # type: ignore[override]
         self, outer: Any, name: str, /
     ) -> "_DirectSymbol":
         return _DirectSymbol(item=self.item)
@@ -143,7 +143,7 @@ class TestNestedLexicalScope:
                     # This depends on 'outer_val' which is in Outer scope.
                     return Result(f"inner-{outer_val.value}")
 
-        root = mount(Outer)
+        root = evaluate(Outer)
         assert root.Inner.inner_val == Result("inner-outer")
 
     def test_evaluate_resource_dual_role_single(self, proxy_class: type[Proxy]) -> None:
@@ -153,7 +153,7 @@ class TestNestedLexicalScope:
         class Namespace:
             target = DirectDefinition(Dual("A"))
 
-        root = mount(Namespace)
+        root = evaluate(Namespace)
         assert root.target == Result("merger-A-")
 
     def test_evaluate_resource_dual_and_patch(self, proxy_class: type[Proxy]) -> None:
@@ -176,7 +176,7 @@ class TestNestedLexicalScope:
             class Combined:
                 pass
 
-        root = mount(Root)
+        root = evaluate(Root)
         value = root.Combined.target
         # Either merger-A-patch-B or merger-B-patch-A
         assert value == Result("merger-A-patch-B") or value == Result("merger-B-patch-A")
@@ -203,7 +203,7 @@ class TestNestedLexicalScope:
             class Combined:
                 pass
 
-        root = mount(Root)
+        root = evaluate(Root)
         # Pure P is merger. Dual D is patch.
         assert root.Combined.target == Result("pure-P-patch-D")
 
@@ -229,7 +229,7 @@ class TestNestedLexicalScope:
             class Combined:
                 pass
 
-        root = mount(Root)
+        root = evaluate(Root)
         with pytest.raises(ValueError, match="Multiple Factory definitions provided"):
             _ = root.Combined.target
 
@@ -248,7 +248,7 @@ class TestNestedLexicalScope:
         class N1:
             target = DirectDefinition(PurePatch("A"))
 
-        root = mount(N1)
+        root = evaluate(N1)
         with pytest.raises(NotImplementedError, match="No Factory definition provided"):
             _ = root.target
 
@@ -289,7 +289,7 @@ class TestNestedLexicalScope:
             class Combined:
                 pass
 
-        root = mount(Root)
+        root = evaluate(Root)
         assert root.Combined.extended_val == Result("base-extended")
         assert root.Combined.extra == Result("extra")
 
@@ -321,7 +321,7 @@ class TestNestedLexicalScope:
             class Combined:
                 pass
 
-        root = mount(Root)
+        root = evaluate(Root)
         # Combined's proxy_class (CustomProxy) is used
         assert isinstance(root.Combined, CustomProxy)
         assert not isinstance(root.Combined, WeakCachedScope)
@@ -351,7 +351,7 @@ class TestNestedLexicalScope:
             class Combined:
                 pass
 
-        root = mount(Root)
+        root = evaluate(Root)
         # Combined uses its own proxy_class (CachedProxy), not Base's WeakCachedScope
         assert isinstance(root.Combined, CachedProxy)
         # Resources from both Base and Extension are accessible

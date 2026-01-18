@@ -1127,7 +1127,7 @@ class _MixinSymbol(
     _Symbol,
 ):
     """
-    Mapping that caches resolve_symbols results for definitions in a namespace.
+    Mapping that caches resolve results for definitions in a namespace.
 
     Implements _Symbol to provide depth and resource_name for the namespace itself.
 
@@ -1142,12 +1142,12 @@ class _MixinSymbol(
             root.object1(arg="v").Inner.mixins[...].symbol  # object1 extends Outer
 
         All share the same _MixinSymbol because they reference the same ``Inner`` class.
-        The _MixinSymbol is created once in _MixinDefinition.resolve_symbols and captured
+        The _MixinSymbol is created once in _MixinDefinition.resolve and captured
         in the closure, tied to the definition itself, not to the access path.
     """
 
     definition: Final["_MixinDefinition"]  # type: ignore[misc]  # Narrowed from base class
-    cache: Final[WeakValueDictionary[Hashable, "_NestedSymbol"]] = field(
+    _intern_pool: Final[WeakValueDictionary[Hashable, "_NestedSymbol"]] = field(
         default_factory=WeakValueDictionary
     )
 
@@ -1158,11 +1158,21 @@ class _MixinSymbol(
         ...
 
     def __getitem__(self, key: Hashable) -> "_NestedSymbol":
-        if key in self.cache:
-            return self.cache[key]
+        """
+        Get or create a nested symbol for the given key.
+
+        Symbols are interned: the same key always returns the same symbol instance
+        within this ``_MixinSymbol``. This enables O(1) path equality checks using
+        reference equality (``symbol1 is symbol2``) instead of structural comparison.
+
+        For example, ``root_symbol["Inner"]["foo"] is root_symbol["Inner"]["foo"]``
+        is always ``True``.
+        """
+        if key in self._intern_pool:
+            return self._intern_pool[key]
         val = self.definition.__getitem__(key)
-        resolved = val.resolve_symbols(self, cast(str, key))
-        self.cache[key] = resolved
+        resolved = val.resolve(self, cast(str, key))
+        self._intern_pool[key] = resolved
         return resolved
 
     def __iter__(self) -> Iterator[Hashable]:
@@ -1170,6 +1180,14 @@ class _MixinSymbol(
 
     def __len__(self) -> int:
         return sum(1 for _ in self)
+
+    def __eq__(self, other: object) -> bool:
+        """Identity-based equality, overriding Mapping's content-based equality."""
+        return self is other
+
+    def __hash__(self) -> int:
+        """Identity-based hash, overriding Mapping's __hash__ = None."""
+        return id(self)
 
 
 @dataclass(kw_only=True, eq=False)
@@ -1436,10 +1454,20 @@ def _evaluate_resource(
 
 class Definition(ABC):
     @abstractmethod
-    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
+    def resolve(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
         """
         Resolve symbols in the definition and return a compiled symbol.
         Call .compile(mixin) on the result to get a LexicalScope resolver.
+
+        .. warning::
+
+            This method creates a **new** symbol instance on each call. Do not call
+            it directly for symbol lookup. Instead, use ``_MixinSymbol.__getitem__``,
+            which triggers this method internally and caches the result in
+            ``_MixinSymbol._intern_pool`` for interning.
+
+            Interning ensures that the same (outer, name) pair always returns the
+            same symbol instance, enabling O(1) identity-based equality checks.
         """
         raise NotImplementedError()
 
@@ -1450,13 +1478,13 @@ class MergerDefinition(Definition, Generic[TPatch_contra, TResult_co]):
     is_local: bool = False
 
     @abstractmethod
-    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
+    def resolve(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
         raise NotImplementedError()
 
 
 class PatcherDefinition(Definition, Generic[TPatch_co]):
     @abstractmethod
-    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
+    def resolve(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
         raise NotImplementedError()
 
 
@@ -1464,7 +1492,7 @@ class MixinDefinition(Definition):
     """Base class for definitions that resolve to nested mixin symbols."""
 
     @abstractmethod
-    def resolve_symbols(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
+    def resolve(self, outer: "_MixinSymbol", name: str, /) -> _NestedSymbol:
         raise NotImplementedError()
 
 
@@ -1474,7 +1502,7 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
 
     function: Callable[..., Callable[[Iterator[TPatch_contra]], TResult_co]]
 
-    def resolve_symbols(
+    def resolve(
         self, outer: "_MixinSymbol", name: str, /
     ) -> _MergerSymbol[TPatch_contra, TResult_co]:
         return _MergerSymbol(
@@ -1493,7 +1521,7 @@ class _ResourceDefinition(
 
     function: Callable[..., TResult]
 
-    def resolve_symbols(
+    def resolve(
         self, outer: "_MixinSymbol", name: str, /
     ) -> _ResourceSymbol[TResult]:
         return _ResourceSymbol(
@@ -1510,7 +1538,7 @@ class _SinglePatchDefinition(PatcherDefinition[TPatch_co]):
 
     function: Callable[..., TPatch_co]
 
-    def resolve_symbols(
+    def resolve(
         self, outer: "_MixinSymbol", name: str, /
     ) -> _SinglePatchSymbol[TPatch_co]:
         return _SinglePatchSymbol(
@@ -1527,7 +1555,7 @@ class _MultiplePatchDefinition(PatcherDefinition[TPatch_co]):
 
     function: Callable[..., Iterable[TPatch_co]]
 
-    def resolve_symbols(
+    def resolve(
         self, outer: "_MixinSymbol", name: str, /
     ) -> _MultiplePatchSymbol[TPatch_co]:
         return _MultiplePatchSymbol(
@@ -1742,7 +1770,7 @@ class _MixinDefinition(
             raise KeyError(key)
         return val
 
-    def resolve_symbols(
+    def resolve(
         self, outer: "_MixinSymbol", name: str, /
     ) -> _NestedMixinSymbol:
         """
@@ -1764,7 +1792,7 @@ class _MixinDefinition(
 class _NamespaceDefinition(_MixinDefinition):
     """
     A definition that creates a Proxy from an object's attributes.
-    Implements lazy evaluation via resolve_symbols.
+    Implements lazy evaluation via resolve.
     """
 
 
@@ -2100,7 +2128,7 @@ def local(definition: TMergerDefinition) -> TMergerDefinition:
     return replace(definition, is_local=True)
 
 
-def mount(
+def evaluate(
     namespace: ModuleType | _NamespaceDefinition,
 ) -> StaticProxy:
     """
