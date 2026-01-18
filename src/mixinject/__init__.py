@@ -564,6 +564,9 @@ class DependencyGraph(ABC, Generic[TKey]):
 
 class JitCacheSentinel(Enum):
     MERGED = auto()
+    """
+    Sentinel indicating that the JIT cache does not exist because the dependency graph is merged from multiple bases, without its own definition.
+    """
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
