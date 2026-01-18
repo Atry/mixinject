@@ -20,6 +20,7 @@ from mixinject import (
     StaticProxy,
     _ResourceDefinition,
     _SinglePatchDefinition,
+    SymbolTableSentinel,
     merge,
     extern,
     patch,
@@ -42,12 +43,22 @@ def _empty_proxy_definition() -> _NamespaceDefinition:
     return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
 
 
+def _empty_jit_cache(proxy_definition: _NamespaceDefinition) -> _JitCache:
+    """Create a minimal JIT cache for testing."""
+    return _JitCache(
+        proxy_definition=proxy_definition,
+        symbol_table=SymbolTableSentinel.ROOT,
+    )
+
+
 def _empty_dependency_graph() -> StaticChildDependencyGraph[str]:
     """Create a minimal dependency graph for testing."""
     proxy_def = _empty_proxy_definition()
+    jit_cache = _empty_jit_cache(proxy_def)
     return StaticChildDependencyGraph(
         proxy_definition=proxy_def,
         outer=RootDependencyGraph(proxy_definition=proxy_def),
+        jit_cache=jit_cache,
     )
 
 

@@ -611,9 +611,59 @@ class StaticChildDependencyGraph(StaticDependencyGraph[TKey], Generic[TKey]):
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
     This works because interned graphs within the same outer are the same object.
 
+    Implements ``Callable[[LexicalScope], _ProxySemigroup]`` to resolve resources
+    from a lexical scope into a proxy semigroup.
     """
 
     outer: Final[DependencyGraph[Any]]
+    jit_cache: Final["_JitCache"]
+
+    def __call__(self, lexical_scope: LexicalScope) -> "_ProxySemigroup":
+        """
+        Resolve resources from the given lexical scope into a _ProxySemigroup.
+
+        This method creates a proxy factory that:
+        1. Creates a mixin from this definition's proxy_definition
+        2. Includes mixins from any extended proxies (via extend references)
+        3. Returns a _ProxySemigroup that can merge with other proxies
+
+        .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
+        """
+
+        def proxy_factory() -> Proxy[str]:
+            assert (
+                lexical_scope
+            ), "lexical_scope must not be empty when resolving resources"
+
+            def generate_all_mixin_items() -> (
+                Iterator[tuple["StaticChildDependencyGraph[Any]", Mixin[Any]]]
+            ):
+                """
+                Generate all mixin items for the proxy, including:
+                - Mixin from this definition, keyed by proxy's path
+                - Mixins from extended proxies, preserving their original keys
+                """
+                yield (
+                    self,
+                    self.proxy_definition.create_mixin(
+                        lexical_scope=lexical_scope,
+                        jit_cache=self.jit_cache,
+                    ),
+                )
+                for reference in self.proxy_definition.extend:
+                    extended_proxy = _resolve_resource_reference(
+                        reference=reference,
+                        lexical_scope=lexical_scope,
+                        forbid_instance_proxy=True,
+                    )
+                    yield from extended_proxy.mixins.items()
+
+            return self.proxy_definition.proxy_class(
+                mixins=dict(generate_all_mixin_items()),
+                dependency_graph=self,
+            )
+
+        return _ProxySemigroup(proxy_factory=proxy_factory)
 
 
 @final
@@ -1508,9 +1558,15 @@ class _ProxyDefinition(
 
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
-    ) -> Callable[[DependencyGraph], Callable[[LexicalScope], _ProxySemigroup]]:
+    ) -> Callable[[DependencyGraph], StaticChildDependencyGraph[Any]]:
         """
         Resolve symbols for this definition given the symbol table and resource name.
+
+        Returns a function that takes an outer DependencyGraph and returns a
+        StaticChildDependencyGraph that implements ``Callable[[LexicalScope], _ProxySemigroup]``.
+
+        .. todo:: Phase 2: Add ``base_jit_caches`` parameter to ``StaticChildDependencyGraph``
+                  for inherited JIT caches from extended scopes.
         """
         inner_symbol_table: SymbolTable = _extend_symbol_table_jit(
             outer=symbol_table, names=self.generate_keys()
@@ -1521,59 +1577,26 @@ class _ProxyDefinition(
         )
 
         def with_dependency_graph(
-            outer_dependency_graph: DependencyGraph,
-        ) -> Callable[[LexicalScope], _ProxySemigroup]:
-            # Memoization: check if StaticChildDependencyGraph already exists
-            # .. todo:: Phase 2: Pass ``jit_cache`` and ``base_jit_caches``
-            #           when creating ``StaticChildDependencyGraph``.
+            outer_dependency_graph: DependencyGraph[Any],
+        ) -> StaticChildDependencyGraph[Any]:
+            """
+            Create or retrieve a memoized StaticChildDependencyGraph for the given outer dependency graph.
+
+            Memoization ensures that the same StaticChildDependencyGraph instance is reused
+            for the same (outer_dependency_graph, resource_name) pair, enabling O(1) identity-based
+            equality comparison.
+            """
             intern_pool = outer_dependency_graph.intern_pool
             existing = intern_pool.get(resource_name)
             if existing is not None:
-                proxy_dependency_graph = existing
-            else:
-                proxy_dependency_graph = StaticChildDependencyGraph(
-                    proxy_definition=self,
-                    outer=outer_dependency_graph,
-                )
-                intern_pool[resource_name] = proxy_dependency_graph
-
-            def resolve_lexical_scope(
-                lexical_scope: LexicalScope,
-            ) -> _ProxySemigroup:
-                def proxy_factory() -> Proxy[str]:
-                    assert (
-                        lexical_scope
-                    ), "lexical_scope must not be empty when resolving resources"
-
-                    # .. todo:: Phase 9: 用 ``ChainMap`` 替代 ``generate_all_mixin_items``。
-                    def generate_all_mixin_items() -> (
-                        Iterator[tuple[StaticChildDependencyGraph[str], Mixin[str]]]
-                    ):
-                        # Include mixin from this definition, keyed by proxy's path
-                        yield (
-                            proxy_dependency_graph,
-                            self.create_mixin(
-                                lexical_scope=lexical_scope,
-                                jit_cache=jit_cache,
-                            ),
-                        )
-                        # Include mixins from extended proxies, preserving their original keys
-                        for reference in self.extend:
-                            extended_proxy = _resolve_resource_reference(
-                                reference=reference,
-                                lexical_scope=lexical_scope,
-                                forbid_instance_proxy=True,
-                            )
-                            yield from extended_proxy.mixins.items()
-
-                    return self.proxy_class(
-                        mixins=dict(generate_all_mixin_items()),
-                        dependency_graph=proxy_dependency_graph,
-                    )
-
-                return _ProxySemigroup(proxy_factory=proxy_factory)
-
-            return resolve_lexical_scope
+                return existing
+            proxy_dependency_graph = StaticChildDependencyGraph(
+                proxy_definition=self,
+                outer=outer_dependency_graph,
+                jit_cache=jit_cache,
+            )
+            intern_pool[resource_name] = proxy_dependency_graph
+            return proxy_dependency_graph
 
         return with_dependency_graph
 

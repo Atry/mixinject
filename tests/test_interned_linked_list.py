@@ -10,12 +10,22 @@ from mixinject import (
     scope,
     CachedProxy,
     _NamespaceDefinition,
+    _JitCache,
+    SymbolTableSentinel,
 )
 
 
 def _empty_proxy_definition() -> _NamespaceDefinition:
     """Create a minimal empty proxy definition for testing."""
     return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
+
+
+def _empty_jit_cache(proxy_definition: _NamespaceDefinition) -> _JitCache:
+    """Create a minimal JIT cache for testing."""
+    return _JitCache(
+        proxy_definition=proxy_definition,
+        symbol_table=SymbolTableSentinel.ROOT,
+    )
 
 
 class TestRoot:
@@ -41,25 +51,28 @@ class TestInterning:
     def test_direct_instantiation_creates_new_objects(self) -> None:
         """Direct instantiation without going through proxy_factory creates new objects."""
         proxy_def = _empty_proxy_definition()
+        jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def)
-        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root)
-        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root)
+        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
+        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
         # Without interning, these are different objects
         assert child1 is not child2
 
     def test_different_parent_different_object(self) -> None:
         proxy_def = _empty_proxy_definition()
+        jit_cache = _empty_jit_cache(proxy_def)
         root1 = RootDependencyGraph(proxy_definition=proxy_def)
         root2 = RootDependencyGraph(proxy_definition=proxy_def)
-        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root1)
-        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root2)
+        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root1, jit_cache=jit_cache)
+        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root2, jit_cache=jit_cache)
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         proxy_def = _empty_proxy_definition()
+        jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def)
-        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root)
-        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=child1)
+        child1 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
+        child2 = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=child1, jit_cache=jit_cache)
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -107,9 +120,10 @@ class TestWeakReference:
     def test_intern_pool_supports_weak_references(self) -> None:
         """The intern pool is a WeakValueDictionary."""
         proxy_def = _empty_proxy_definition()
+        jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def)
         # Add an entry manually to the pool
-        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root)
+        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -137,6 +151,7 @@ class TestSubclass:
 
     def test_child_instance_is_instance_of_dependency_graph(self) -> None:
         proxy_def = _empty_proxy_definition()
+        jit_cache = _empty_jit_cache(proxy_def)
         root = RootDependencyGraph(proxy_definition=proxy_def)
-        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root)
+        child = StaticChildDependencyGraph(proxy_definition=proxy_def, outer=root, jit_cache=jit_cache)
         assert isinstance(child, DependencyGraph)
