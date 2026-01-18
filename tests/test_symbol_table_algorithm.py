@@ -9,9 +9,9 @@ from mixinject import (
     CachedProxy,
     _extend_symbol_table_jit,
     _NamespaceDefinition,
-    _Symbol,
+    _ProxySymbol,
 )
-from mixinject import RootMixin, ChildMixin
+from mixinject import RootMixin, NestedMixin
 
 
 def _empty_proxy_definition() -> _NamespaceDefinition:
@@ -19,19 +19,19 @@ def _empty_proxy_definition() -> _NamespaceDefinition:
     return _NamespaceDefinition(proxy_class=CachedProxy, underlying=object())
 
 
-def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _Symbol:
+def _empty_symbol(proxy_definition: _NamespaceDefinition) -> _ProxySymbol:
     """Create a minimal symbol for testing."""
-    return _Symbol(
+    return _ProxySymbol(
         proxy_definition=proxy_definition,
         symbol_table=ChainMapSentinel.EMPTY,
     )
 
 
-def _empty_mixin() -> ChildMixin[str]:
+def _empty_mixin() -> NestedMixin[str]:
     """Create a minimal dependency graph for testing."""
     proxy_def = _empty_proxy_definition()
     symbol = _empty_symbol(proxy_def)
-    return ChildMixin(
+    return NestedMixin(
         outer=RootMixin(symbol=symbol),
         symbol=symbol,
         resource_name="test",

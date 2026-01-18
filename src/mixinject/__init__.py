@@ -557,9 +557,9 @@ class Mixin(ABC, Generic[TKey]):
     .. todo:: 继承 ``Mapping[TKey, EvaluatorGetter]``。
     """
 
-    intern_pool: Final[
-        weakref.WeakValueDictionary[TKey, "ChildMixin[Any]"]
-    ] = field(default_factory=weakref.WeakValueDictionary)
+    intern_pool: Final[weakref.WeakValueDictionary[TKey, "NestedMixin[Any]"]] = field(
+        default_factory=weakref.WeakValueDictionary
+    )
 
 
 class SymbolSentinel(Enum):
@@ -577,15 +577,15 @@ class StaticMixin(Mixin[TKey], Generic[TKey]):
               使 ``ChildMixin`` 成为 ``Callable[[LexicalScope], _ProxySemigroup]``。
     """
 
-    symbol: Final["_Symbol | SymbolSentinel"]
+    symbol: Final["_ProxySymbol | SymbolSentinel"]
     """
     The symbol for this dependency graph, providing cached symbol resolution.
     Subclasses (RootMixin, ChildMixin) must define this field.
     """
 
-    _cached_instance_mixin: (
-        weakref.ReferenceType[InstanceChildMixin[TKey]] | None
-    ) = field(default=None, init=False)
+    _cached_instance_mixin: weakref.ReferenceType[InstanceChildMixin[TKey]] | None = (
+        field(default=None, init=False)
+    )
     """
     Cache for the corresponding InstanceChildMixin.
     """
@@ -629,7 +629,7 @@ class RootMixin(StaticMixin[T]):
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class ChildMixin(StaticMixin[TKey], Generic[TKey]):
+class NestedMixin(StaticMixin[TKey], Generic[TKey]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -771,7 +771,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         """
         ...
 
-    mixin: "ChildMixin[TKey]"
+    mixin: "NestedMixin[TKey]"
     """The runtime access path from root to this proxy, in reverse order.
 
     This path reflects how the proxy was accessed at runtime, not where
@@ -784,9 +784,7 @@ class Proxy(Mapping[TKey, "Node"], ABC):
         def generate_resource() -> Iterator[Evaluator]:
             for mixin, lexical_scope in self.mixins.items():
                 try:
-                    factory_or_patch = _mixin_getitem(
-                        mixin, lexical_scope, key
-                    )
+                    factory_or_patch = _mixin_getitem(mixin, lexical_scope, key)
                 except KeyError:
                     continue
                 yield factory_or_patch(self)
@@ -847,12 +845,8 @@ class StaticProxy(Proxy[TKey], ABC):
         cached_ref = self.mixin._cached_instance_mixin
         instance_path = cached_ref() if cached_ref is not None else None
         if instance_path is None:
-            instance_path = InstanceChildMixin[Any](
-                prototype=self.mixin
-            )
-            self.mixin._cached_instance_mixin = weakref.ref(
-                instance_path
-            )
+            instance_path = InstanceChildMixin[Any](prototype=self.mixin)
+            self.mixin._cached_instance_mixin = weakref.ref(instance_path)
 
         return InstanceProxy(
             base_proxy=self,  # type: ignore[arg-type]
@@ -894,9 +888,7 @@ class InstanceProxy(Proxy[TKey | str], Generic[TKey]):
                 # Also collect any Patchers from mixins
                 for mixin, lexical_scope in self.mixins.items():
                     try:
-                        factory_or_patch = _mixin_getitem(
-                            mixin, lexical_scope, key
-                        )
+                        factory_or_patch = _mixin_getitem(mixin, lexical_scope, key)
                     except KeyError:
                         continue
                     yield factory_or_patch(self)
@@ -1088,7 +1080,7 @@ def _mixin_getitem(
 
 
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True)
-class _Symbol(
+class _ProxySymbol(
     Mapping[TKey, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]],
     Generic[TKey],
 ):
@@ -1112,9 +1104,9 @@ class _Symbol(
 
     proxy_definition: Final["_ProxyDefinition"]
     symbol_table: Final[SymbolTable]
-    cache: Final[
-        dict[TKey, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]]
-    ] = field(default_factory=dict)
+    cache: Final[dict[TKey, Callable[[Mixin], Callable[[LexicalScope], Evaluator]]]] = (
+        field(default_factory=dict)
+    )
 
     def __getitem__(
         self, key: TKey
@@ -1237,9 +1229,7 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
     @override
     def resolve_symbols(
         self, symbol_table: "SymbolTable", resource_name: str, /
-    ) -> Callable[
-        [Mixin], Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]
-    ]:
+    ) -> Callable[[Mixin], Callable[[LexicalScope], Merger[TPatch_contra, TResult_co]]]:
         jit_compiled_function = _resolve_dependencies_jit(
             symbol_table=symbol_table,
             function=self.function,
@@ -1394,7 +1384,7 @@ class _ProxySemigroup(Merger[StaticProxy, StaticProxy], Patcher[StaticProxy]):
         proxies_tuple = tuple(all_proxies())
         match proxies_tuple:
             case (single_proxy,) if (
-                isinstance(single_proxy.mixin, ChildMixin)
+                isinstance(single_proxy.mixin, NestedMixin)
                 and single_proxy.mixin.outer == self.access_path_outer
             ):
                 mixin = single_proxy.mixin
@@ -1406,14 +1396,12 @@ class _ProxySemigroup(Merger[StaticProxy, StaticProxy], Patcher[StaticProxy]):
                 if existing is not None:
                     mixin = existing
                 else:
-                    mixin = ChildMixin(
+                    mixin = NestedMixin(
                         outer=self.access_path_outer,
                         symbol=SymbolSentinel.SYNTHETIC,
                         resource_name=self.resource_name,
                     )
-                    self.access_path_outer.intern_pool[self.resource_name] = (
-                        mixin
-                    )
+                    self.access_path_outer.intern_pool[self.resource_name] = mixin
 
         winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_tuple))
 
@@ -1565,7 +1553,7 @@ class _ProxyDefinition(
 
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
-    ) -> Callable[[Mixin], ChildMixin[Any]]:
+    ) -> Callable[[Mixin], NestedMixin[Any]]:
         """
         Resolve symbols for this definition given the symbol table and resource name.
 
@@ -1578,14 +1566,14 @@ class _ProxyDefinition(
         inner_symbol_table: SymbolTable = _extend_symbol_table_jit(
             outer=symbol_table, names=self.generate_keys()
         )
-        symbol = _Symbol(
+        symbol = _ProxySymbol(
             proxy_definition=self,
             symbol_table=inner_symbol_table,
         )
 
         def with_mixin(
             outer_mixin: Mixin[Any],
-        ) -> ChildMixin[Any]:
+        ) -> NestedMixin[Any]:
             """
             Create or retrieve a memoized ChildMixin for the given outer dependency graph.
 
@@ -1597,7 +1585,7 @@ class _ProxyDefinition(
             existing = intern_pool.get(resource_name)
             if existing is not None:
                 return existing
-            proxy_mixin = ChildMixin(
+            proxy_mixin = NestedMixin(
                 outer=outer_mixin,
                 symbol=symbol,
                 resource_name=resource_name,
@@ -1998,7 +1986,7 @@ def mount(
         outer=symbol_table,
         names=namespace_definition.generate_keys(),
     )
-    symbol = _Symbol(
+    symbol = _ProxySymbol(
         proxy_definition=namespace_definition,
         symbol_table=per_namespace_symbol_table,
     )
