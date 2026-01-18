@@ -1096,11 +1096,6 @@ class _JitCache(Mapping[TKey, Callable[[LexicalScope], Evaluator]], Generic[TKey
        - 改为 ``Mapping[str, Callable[[DependencyGraph], Callable[[LexicalScope], Evaluator]]]``
        - ``__getitem__`` 缓存第一层 callable
 
-    .. todo:: 不要直接访问 ``underlying``
-       - 移除 ``underlying`` property
-       - ``__getitem__`` 不应使用 ``getattr(self.proxy_definition.underlying, key)``
-       - 改为通过 ``proxy_definition`` 的方法间接访问定义
-
     .. note:: _JitCache instances are shared among all mixins created from the same
         _ProxyDefinition (the Python class decorated with @scope()). For example::
 
@@ -1120,23 +1115,10 @@ class _JitCache(Mapping[TKey, Callable[[LexicalScope], Evaluator]], Generic[TKey
         default_factory=dict
     )
 
-    @property
-    def underlying(self) -> object:
-        return self.proxy_definition.underlying
-
     def __getitem__(self, key: TKey) -> Callable[[LexicalScope], Evaluator]:
-        """
-        .. todo:: 目前使用 ``getattr`` 的做法是错的，因为无法支持 package。
-                  Package 的子模块需要动态导入，不能通过 ``getattr`` 获取。
-        """
         if key in self.cache:
             return self.cache[key]
-        try:
-            val = getattr(self.proxy_definition.underlying, key)
-        except AttributeError as e:
-            raise KeyError(key) from e
-        if not isinstance(val, Definition):
-            raise KeyError(key)
+        val = self.proxy_definition.get_definition(key)
         outer = val.resolve_symbols(self.symbol_table, key)
 
         def inner(lexical_scope: LexicalScope) -> Evaluator:
@@ -1151,66 +1133,6 @@ class _JitCache(Mapping[TKey, Callable[[LexicalScope], Evaluator]], Generic[TKey
 
     def __len__(self) -> int:
         return sum(1 for _ in self)
-
-
-@dataclass(frozen=True, kw_only=True, slots=True, eq=False)
-class _PackageMixin(Mixin):
-    """Mixin that lazily resolves definitions including submodules.
-
-    .. todo:: 把 ``_PackageMixin`` 的主要功能移到 ``_PackageDefinition``，然后删掉 ``_PackageMixin``。
-
-              目前 ``_PackageMixin`` 负责：
-
-              - 动态导入子模块 (``importlib.import_module``)
-              - 创建子模块的 ``_NamespaceDefinition`` 或 ``_PackageDefinition``
-              - 调用 ``resolve_symbols`` 并绑定 proxy
-
-              这些逻辑应该在 ``_PackageDefinition`` 中处理，使 ``_PackageMixin`` 与 ``Mixin`` 统一。
-    """
-
-    get_module_proxy_class: Callable[[ModuleType], type[StaticProxy]]
-
-    @override
-    def __getitem__(self, key: str, /) -> Callable[[Proxy[str]], Evaluator]:
-        # 1. Try outer implementation (attributes that are Definition)
-        try:
-            return super(_PackageMixin, self).__getitem__(key)
-        except KeyError:
-            pass
-
-        # 2. Try submodule
-        underlying = self.jit_cache.underlying
-        full_name = f"{underlying.__name__}.{key}"  # type: ignore[union-attr]
-        try:
-            spec = importlib.util.find_spec(full_name)
-        except ImportError as e:
-            raise KeyError(key) from e
-
-        if spec is None:
-            raise KeyError(key)
-
-        submod = importlib.import_module(full_name)
-        # Create definition for submodule (lazy)
-        submod_definition: "_ProxyDefinition"
-        if hasattr(submod, "__path__"):
-            submod_definition = _PackageDefinition(
-                underlying=submod,
-                proxy_class=self.get_module_proxy_class(submod),
-                get_module_proxy_class=self.get_module_proxy_class,
-            )
-        else:
-            submod_definition = _NamespaceDefinition(
-                underlying=submod,
-                proxy_class=self.get_module_proxy_class(submod),
-            )
-        outer = submod_definition.resolve_symbols(self.jit_cache.symbol_table, key)
-
-        def bind_proxy(proxy: Proxy[str]) -> Evaluator:
-            inner_lexical_scope: LexicalScope = (*self.lexical_scope, proxy)
-            dependency_graph = inner_lexical_scope[-1].dependency_graph
-            return outer(dependency_graph)(inner_lexical_scope)
-
-        return bind_proxy
 
 
 def _evaluate_resource(
@@ -1567,19 +1489,7 @@ def _resolve_resource_reference(
 class _ProxyDefinition(
     MergerDefinition[Proxy, Proxy], PatcherDefinition[Proxy], Generic[TKey]
 ):
-    """
-    Base class for proxy definitions that create Proxy instances from underlying objects.
-
-    .. todo:: 把 ``underlying`` 改为私有字段 ``_underlying``，禁止其他类直接访问。
-
-              目前 ``_JitCache`` 和 ``_PackageMixin`` 直接访问 ``proxy_definition.underlying``：
-
-              - ``_JitCache.underlying`` property 返回 ``self.proxy_definition.underlying``
-              - ``_PackageMixin.__getitem__`` 访问 ``self.jit_cache.underlying``
-
-              应该通过 ``_ProxyDefinition`` 提供的方法来访问底层对象，而不是直接暴露 ``underlying`` 字段。
-              这样可以在将来支持更复杂的底层对象类型（如惰性加载的模块）。
-    """
+    """Base class for proxy definitions that create Proxy instances from underlying objects."""
 
     proxy_class: type[StaticProxy]
     underlying: object
@@ -1594,15 +1504,29 @@ class _ProxyDefinition(
             if isinstance(val, Definition):
                 yield name
 
-    @abstractmethod
+    def get_definition(self, key: TKey) -> Definition:
+        """Get a Definition by key name.
+
+        Raises KeyError if the key does not exist or the value is not a Definition.
+        """
+        try:
+            val = getattr(self.underlying, key)
+        except AttributeError as error:
+            raise KeyError(key) from error
+        if not isinstance(val, Definition):
+            raise KeyError(key)
+        return val
+
     def create_mixin(self, lexical_scope: LexicalScope, jit_cache: _JitCache) -> Mixin:
         """
         Create a Mixin for this ProxyDefinition given the lexical scope and JIT cache.
-        Must be implemented by subclasses.
 
         .. todo:: 签名从 ``(lexical_scope, jit_cache)`` 改为 ``(dependency_graph, lexical_scope)``。
         """
-        raise NotImplementedError()
+        return Mixin(
+            jit_cache=jit_cache,
+            lexical_scope=lexical_scope,
+        )
 
     def resolve_symbols(
         self, symbol_table: SymbolTable, resource_name: str, /
@@ -1656,12 +1580,6 @@ class _NamespaceDefinition(_ProxyDefinition):
     Implements lazy evaluation via resolve_symbols.
     """
 
-    def create_mixin(self, lexical_scope: LexicalScope, jit_cache: _JitCache) -> Mixin:
-        return Mixin(
-            jit_cache=jit_cache,
-            lexical_scope=lexical_scope,
-        )
-
 
 @dataclass(frozen=True, kw_only=True)
 class _PackageDefinition(_ProxyDefinition):
@@ -1676,12 +1594,39 @@ class _PackageDefinition(_ProxyDefinition):
         for mod_info in pkgutil.iter_modules(self.underlying.__path__):
             yield mod_info.name
 
-    def create_mixin(self, lexical_scope: LexicalScope, jit_cache: _JitCache) -> Mixin:
-        return _PackageMixin(
-            jit_cache=jit_cache,
-            lexical_scope=lexical_scope,
-            get_module_proxy_class=self.get_module_proxy_class,
-        )
+    @override
+    def get_definition(self, key: str) -> Definition:
+        """Get a Definition by key name, including lazily imported submodules."""
+        # 1. Try parent (attributes that are Definition)
+        try:
+            return super(_PackageDefinition, self).get_definition(key)
+        except KeyError:
+            pass
+
+        # 2. Import submodule
+        full_name = f"{self.underlying.__name__}.{key}"
+        try:
+            spec = importlib.util.find_spec(full_name)
+        except ImportError as error:
+            raise KeyError(key) from error
+
+        if spec is None:
+            raise KeyError(key)
+
+        submod = importlib.import_module(full_name)
+
+        # Create and return definition
+        if hasattr(submod, "__path__"):
+            return _PackageDefinition(
+                underlying=submod,
+                proxy_class=self.get_module_proxy_class(submod),
+                get_module_proxy_class=self.get_module_proxy_class,
+            )
+        else:
+            return _NamespaceDefinition(
+                underlying=submod,
+                proxy_class=self.get_module_proxy_class(submod),
+            )
 
 
 def scope(
