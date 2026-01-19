@@ -1122,6 +1122,34 @@ class NestedMixin(Mixin, EvaluatorGetter["Merger | Patcher"]):
             evaluator = nested_mixin.get_evaluator(captured_scopes)  # Merger
         elif isinstance(nested_mixin, PatcherMixin):
             evaluator = nested_mixin.get_evaluator(captured_scopes)  # Patcher
+
+    .. todo:: Add ``depth`` and ``getter`` properties for mixin-based dependency resolution.
+
+        Use mixin instead of symbol_table for dependency resolution, because
+        ``MixinMapping.__getitem__`` already handles extends via ``_compile_synthetic``
+        and ``generate_strict_super()``.
+
+        Add these properties to ``NestedMixin``::
+
+            @cached_property
+            def depth(self) -> int:
+                \"\"\"Compute depth by traversing outer chain.\"\"\"
+                depth = 1
+                current = self.outer
+                while isinstance(current, NestedMixinMapping):
+                    depth += 1
+                    current = current.outer
+                return depth
+
+            @cached_property
+            def getter(self) -> Callable[[CapturedScopes], "Node"]:
+                \"\"\"Create getter function for accessing this resource.\"\"\"
+                index = self.depth - 1
+                if isinstance(self.key, str):
+                    return _make_jit_getter(self.key, index)
+                return lambda captured_scopes: captured_scopes[index][self.key]
+
+        This works for both ``_DefinedMixin`` and ``_SyntheticMixin`` - no special handling needed.
     """
 
     base_indices: Final[Mapping["NestedMixin", int]]
@@ -1206,6 +1234,20 @@ class _NestedResourceMixin(
     """NestedMixin for _ResourceSymbol.
 
     Returns ``Merger[Endofunction[T], T]`` which accepts endofunction patches.
+
+    .. todo:: (Optional) Move JIT compilation from Symbol to Mixin.
+
+        Add ``jit_compiled_function`` property::
+
+            @cached_property
+            def jit_compiled_function(self) -> Callable[[CapturedScopes], T]:
+                return _resolve_dependencies_jit_using_mixin(
+                    self.outer,
+                    self.symbol.function,
+                    self.key,
+                )
+
+        Update ``get_evaluator`` to use mixin's JIT instead of symbol's JIT.
     """
 
     @override
@@ -3274,6 +3316,23 @@ def _resolve_dependencies_jit(
     :param name: The name of the resource being resolved.
     :return: A wrapper function that takes a lexical scope (where the last element
              is the current scope) and returns the result of the original function.
+
+    .. todo:: Create ``_resolve_dependencies_jit_using_mixin`` function.
+
+        Use mixin instead of symbol_table for dependency resolution::
+
+            def _resolve_dependencies_jit_using_mixin(
+                outer_mixin: MixinMapping,
+                function: Callable[P, T],
+                name: str,
+            ) -> Callable[[CapturedScopes], T]:
+                \"\"\"
+                Resolve dependencies using mixin instead of symbol_table.
+
+                For each parameter p:
+                1. param_mixin = outer_mixin[p.name]  # MixinMapping.__getitem__ handles extends!
+                2. Use param_mixin.getter for JIT code generation
+                \"\"\"
     """
     sig = signature(function)
     params = tuple(sig.parameters.values())
@@ -3411,6 +3470,24 @@ ResourceReference: TypeAlias = AbsoluteReference[T] | RelativeReference[T]
 A reference to a resource in the lexical scope.
 
 This is a union type of AbsoluteReference and RelativeReference.
+
+.. todo:: (Optional) Add ``LexicalReference`` type.
+
+    Add a third reference type that automatically finds the innermost scope containing the key::
+
+        @final
+        @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+        class LexicalReference(Generic[T]):
+            \"\"\"
+            A lexical reference that automatically finds the innermost scope containing the key.
+
+            Unlike RelativeReference which requires explicit levels_up,
+            LexicalReference searches upward from the current scope until it finds
+            a scope that contains the first element of the path.
+            \"\"\"
+            path: Final[tuple[T, ...]]
+
+    Update ``_resolve_mixin_reference`` to support ``LexicalReference``.
 """
 
 
