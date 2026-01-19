@@ -9,9 +9,9 @@ from mixinject import (
     _MergerDefinition,
     Merger,
     CachedScope,
-    InstanceMixinMapping,
+    InstanceSymbolMapping,
     InstanceScope,
-    _DefinedMixin,
+    _DefinedSymbol,
     CapturedScopes,
     _PackageDefinitionMapping,
     _DefinitionMapping,
@@ -30,7 +30,7 @@ from mixinject import (
     _parse_package,
     WeakCachedScope,
 )
-from mixinject import RootMixinMapping, DefinedMixinMapping
+from mixinject import RootSymbolMapping, DefinedSymbolMapping
 
 R = RelativeReference
 
@@ -42,13 +42,13 @@ def _empty_definition() -> _DefinitionMapping:
     return _DefinitionMapping(scope_class=CachedScope, underlying=object())
 
 
-def _empty_mixin() -> DefinedMixinMapping:
+def _empty_symbol() -> DefinedSymbolMapping:
     """Create a minimal dependency graph for testing."""
     scope_def = _empty_definition()
     nested_def = _empty_definition()
-    root_mixin = RootMixinMapping(definition=scope_def)
-    return DefinedMixinMapping(
-        outer=root_mixin,
+    root_symbol = RootSymbolMapping(definition=scope_def)
+    return DefinedSymbolMapping(
+        outer=root_symbol,
         definition=nested_def,
         key="test",
     )
@@ -221,13 +221,13 @@ class TestInstanceScope:
     """Test InstanceScope created via StaticScope.__call__."""
 
     def test_instance_scope_single_value(self) -> None:
-        base_scope = CachedScope(mixins={}, mixin=_empty_mixin())
+        base_scope = CachedScope(symbols={}, symbol=_empty_symbol())
         scope = base_scope(foo="bar")
         assert isinstance(scope, InstanceScope)
         assert scope.foo == "bar"
 
     def test_instance_scope_multiple_values(self) -> None:
-        base_scope = CachedScope(mixins={}, mixin=_empty_mixin())
+        base_scope = CachedScope(symbols={}, symbol=_empty_symbol())
         scope = base_scope(foo="bar", count=42, flag=True)
         assert isinstance(scope, InstanceScope)
         assert scope.foo == "bar"
@@ -531,7 +531,7 @@ class TestExtendNameResolution:
         to declare them with @extern.
 
         This works because mixin-based dependency resolution (via
-        _resolve_dependencies_jit_using_mixin) uses MixinMapping.__getitem__
+        _resolve_dependencies_jit_using_symbol) uses SymbolMapping.__getitem__
         which handles extends via _compile_synthetic and generate_strict_super().
         """
 
@@ -576,7 +576,7 @@ class TestScalaStylePathDependentTypes:
     object MyObjectA extends object1.MyInner with object2.MyInner { ... }
     ```
 
-    MixinMappingject takes a different trade-off:
+    SymbolMappingject takes a different trade-off:
     - Forbids extend through InstanceScope (val-like) entirely
     - But allows composing MULTIPLE scopes via static @scope with lexical scoping
 
@@ -584,7 +584,7 @@ class TestScalaStylePathDependentTypes:
     Result: 100 + (10 + 1 + 2) = 113
     """
 
-    def test_path_dependent_mixin_linearization(self) -> None:
+    def test_path_dependent_symbol_linearization(self) -> None:
         """Test composing multiple path-dependent scopes that share underlying definitions.
 
         Uses mixinject's features:
@@ -646,23 +646,23 @@ class TestScalaStylePathDependentTypes:
         root = evaluate(Root)
 
         # mixin is the runtime access path:
-        #   root.object1.MyInner.mixin == ("MyInner", "object1", "root")
-        #   root.object2.MyInner.mixin == ("MyInner", "object2", "root")
+        #   root.object1.MyInner.symbol == ("MyInner", "object1", "root")
+        #   root.object2.MyInner.symbol == ("MyInner", "object2", "root")
         object1_inner = root.object1.MyInner
         object2_inner = root.object2.MyInner
-        assert object1_inner.mixin != object2_inner.mixin
+        assert object1_inner.symbol != object2_inner.symbol
 
         # foo = 10 (Base) + 1 (object1.MyInner) + 2 (object2.MyInner) + 100 (MyObjectA) = 113
         assert root.MyObjectA.foo == 113
 
 
 class TestInstanceScopeReversedPath:
-    """Test that InstanceScope has correct mixin with InstanceChildMixinMapping."""
+    """Test that InstanceScope has correct mixin with InstanceChildSymbolMapping."""
 
-    def test_instance_scope_nested_access_has_instance_mixin_in_path(
+    def test_instance_scope_nested_access_has_instance_symbol_in_path(
         self,
     ) -> None:
-        """When accessing nested scope through InstanceScope, path should use InstanceChildMixinMapping."""
+        """When accessing nested scope through InstanceScope, path should use InstanceChildSymbolMapping."""
 
         @scope()
         class Root:
@@ -687,33 +687,33 @@ class TestInstanceScopeReversedPath:
         my_instance = root.my_instance
         my_inner = my_instance.MyInner
 
-        # The mixin should be InstanceChildMixinMapping to distinguish from static path
-        assert isinstance(my_instance.mixin, InstanceMixinMapping)
+        # The mixin should be InstanceChildSymbolMapping to distinguish from static path
+        assert isinstance(my_instance.symbol, InstanceSymbolMapping)
 
         # Verify the resource works correctly
         assert my_inner.foo == "foo_42"
 
 
-class TestInstanceMixinMappingDepth:
-    """Test depth calculation through InstanceMixinMapping chains."""
+class TestInstanceSymbolMappingDepth:
+    """Test depth calculation through InstanceSymbolMapping chains."""
 
     @pytest.mark.xfail(
-        reason="BUG: InstanceMixinMapping.__getitem__ delegates to prototype[key], "
+        reason="BUG: InstanceSymbolMapping.__getitem__ delegates to prototype[key], "
         "returning a mixin with outer=prototype instead of outer=self. "
-        "This causes depth to be computed incorrectly and _find_param_in_mixin_chain "
-        "to fail when traversing through InstanceMixinMapping."
+        "This causes depth to be computed incorrectly and _find_param_in_symbol_chain "
+        "to fail when traversing through InstanceSymbolMapping."
     )
-    def test_nested_mixin_outer_should_be_instance_mixin_mapping(self) -> None:
-        """When accessing nested scope through InstanceScope, mixin's outer should be InstanceMixinMapping.
+    def test_nested_symbol_outer_should_be_instance_symbol_mapping(self) -> None:
+        """When accessing nested scope through InstanceScope, mixin's outer should be InstanceSymbolMapping.
 
-        Current bug: InstanceMixinMapping.__getitem__ does:
+        Current bug: InstanceSymbolMapping.__getitem__ does:
             return self.prototype[key]  # Returns mixin with outer=prototype
 
-        Expected: Should return a mixin with outer=self (the InstanceMixinMapping).
+        Expected: Should return a mixin with outer=self (the InstanceSymbolMapping).
 
         This test verifies the mixin chain is correct when accessing through instance scopes.
         """
-        from mixinject import InstanceMixinMapping
+        from mixinject import InstanceSymbolMapping
 
         @scope()
         class Root:
@@ -734,10 +734,10 @@ class TestInstanceMixinMappingDepth:
         # Access Inner through the instance
         inner = instance.Inner
 
-        # The inner scope's mixin should have outer=InstanceMixinMapping
-        # Currently it has outer=Outer's NestedMixinMapping (from prototype)
-        assert isinstance(inner.mixin.outer, InstanceMixinMapping), (
-            f"Expected outer to be InstanceMixinMapping, got {type(inner.mixin.outer)}"
+        # The inner scope's mixin should have outer=InstanceSymbolMapping
+        # Currently it has outer=Outer's NestedSymbolMapping (from prototype)
+        assert isinstance(inner.symbol.outer, InstanceSymbolMapping), (
+            f"Expected outer to be InstanceSymbolMapping, got {type(inner.symbol.outer)}"
         )
 
 
@@ -766,8 +766,8 @@ class TestDefinitionSharing:
         inner2 = root.Outer(arg="v2").Inner
 
         # Use the mixin's definition directly
-        definition1 = inner1.mixin.definition
-        definition2 = inner2.mixin.definition
+        definition1 = inner1.symbol.definition
+        definition2 = inner2.symbol.definition
 
         assert definition1 is definition2
 
@@ -793,14 +793,14 @@ class TestDefinitionSharing:
         static_inner = root.Outer.Inner
 
         # Use the mixin's definition directly
-        instance_definition = instance_inner.mixin.definition
-        static_definition = static_inner.mixin.definition
+        instance_definition = instance_inner.symbol.definition
+        static_definition = static_inner.symbol.definition
 
         assert instance_definition is static_definition
 
     @pytest.mark.xfail(
         reason="BUG: Same issue as test_definition_shared_between_instance_and_static_access. "
-        "InstanceChildMixinMapping has separate intern_pool from ChildMixinMapping, "
+        "InstanceChildSymbolMapping has separate intern_pool from ChildSymbolMapping, "
         "causing different definition values for the same underlying scope definition."
     )
     def test_definition_shared_when_scope_extends_another(self) -> None:
@@ -810,7 +810,7 @@ class TestDefinitionSharing:
 
             When object1 extends Outer, accessing Inner through both paths should yield
             the same definition since they refer to the same Python class definition
-            (Root.Outer.Inner). Both mixins should be _DefinedMixin instances with the
+            (Root.Outer.Inner). Both mixins should be _DefinedSymbol instances with the
             same definition.
 
             The fix should ensure that all access paths to the same scope definition
@@ -840,19 +840,19 @@ class TestDefinitionSharing:
         outer_inner = root.Outer(arg="v1").Inner
         object1_inner = root.object1(arg="v2").Inner
 
-        # Both mixins should be _DefinedMixin (not synthetic)
-        assert isinstance(outer_inner.mixin, _DefinedMixin)
-        assert isinstance(object1_inner.mixin, _DefinedMixin)
+        # Both mixins should be _DefinedSymbol (not synthetic)
+        assert isinstance(outer_inner.symbol, _DefinedSymbol)
+        assert isinstance(object1_inner.symbol, _DefinedSymbol)
 
         # Both should share the same definition since they access the same Inner definition
-        assert outer_inner.mixin.definition is object1_inner.mixin.definition
+        assert outer_inner.symbol.definition is object1_inner.symbol.definition
 
 
 class TestScopeAsSymlink:
     """Test Scope return values acting as symlinks."""
 
     def test_scope_symlink(self) -> None:
-        base_scope = CachedScope(mixins={}, mixin=_empty_mixin())
+        base_scope = CachedScope(symbols={}, symbol=_empty_symbol())
         inner_scope = base_scope(inner_value="inner")
 
         @scope()
@@ -1030,13 +1030,13 @@ class TestScopeCallable:
         v1 = Value()
 
         # CachedScope.__call__ should return InstanceScope
-        cached = CachedScope(mixins={}, mixin=_empty_mixin())
+        cached = CachedScope(symbols={}, symbol=_empty_symbol())
         instance1 = cached(x=v1)
         assert isinstance(instance1, InstanceScope)
         assert instance1.x is v1
 
         # WeakCachedScope.__call__ should also return InstanceScope
-        weak = WeakCachedScope(mixins={}, mixin=_empty_mixin())
+        weak = WeakCachedScope(symbols={}, symbol=_empty_symbol())
         weak_instance = weak(x=v1)
         assert isinstance(weak_instance, InstanceScope)
         assert weak_instance.x is v1
@@ -1094,7 +1094,7 @@ class TestScopeDir:
         result = dir(root)
         assert "__class__" in result
         assert "__getitem__" in result
-        assert "mixins" in result
+        assert "symbols" in result
 
     def test_dir_is_sorted(self) -> None:
         """Test that __dir__ returns a sorted list."""
@@ -1117,7 +1117,7 @@ class TestScopeDir:
         result = dir(root)
         assert result == sorted(result)
 
-    def test_dir_with_multiple_mixins(self) -> None:
+    def test_dir_with_multiple_symbols(self) -> None:
         """Test __dir__ with multiple mixins providing different resources."""
 
         @scope()
@@ -1227,7 +1227,7 @@ class TestScopeDir:
 class TestParameter:
     """Test parameter decorator as syntactic sugar for empty patches."""
 
-    def test_parameter_with_keyword_argument_mixin(self) -> None:
+    def test_parameter_with_keyword_argument_symbol(self) -> None:
         """Test that @extern registers a resource name and accepts injected values."""
 
         @scope()
@@ -1376,14 +1376,14 @@ class TestParameter:
             pass
 
 
-class TestScopeSemigroupMixinMapping:
+class TestScopeSemigroupSymbolMapping:
     """Test _ScopeSemigroup.create correctly assigns mixin."""
 
-    def test_extended_scope_has_distinct_mixin(self) -> None:
+    def test_extended_scope_has_distinct_symbol(self) -> None:
         """Extended scope should have its own mixin, not primary's.
 
-        When scope B extends scope A via extend=, B.mixin should be
-        distinct from A.mixin because they represent different
+        When scope B extends scope A via extend=, B.symbol should be
+        distinct from A.symbol because they represent different
         positions in the topology (B is accessed as "B", not "A").
         """
 
@@ -1405,23 +1405,23 @@ class TestScopeSemigroupMixinMapping:
 
         # The extended scope should have its own unique mixin
         # that represents its access path ("Extended", "Root"), not Base's path
-        base_mixin = root.Base.mixin
-        extended_mixin = root.Extended.mixin
+        base_symbol = root.Base.symbol
+        extended_symbol = root.Extended.symbol
 
         # This should pass - Extended has its own mixin
-        assert extended_mixin is not base_mixin, (
+        assert extended_symbol is not base_symbol, (
             "Extended scope should have its own mixin, "
             "not share with Base scope"
         )
 
-    def test_nested_scope_in_extended_has_distinct_mixin(self) -> None:
+    def test_nested_scope_in_extended_has_distinct_symbol(self) -> None:
         """Nested scope in Extended should have different mixin than in Base.
 
         Expected behavior:
-        - base_another.mixin.key == "Another"
-        - extended_another.mixin.key == "Another"
-        - base_another.mixin.outer.key == "Base"
-        - extended_another.mixin.outer.key == "Extended"
+        - base_another.symbol.key == "Another"
+        - extended_another.symbol.key == "Another"
+        - base_another.symbol.outer.key == "Base"
+        - extended_another.symbol.outer.key == "Extended"
         """
 
         @scope()
@@ -1472,25 +1472,25 @@ class TestScopeSemigroupMixinMapping:
 
         # Print actual values for debugging
         print(
-            f"\nbase_another.mixin.key = {base_another.mixin.key!r}"
+            f"\nbase_another.symbol.key = {base_another.symbol.key!r}"
         )
         print(
-            f"extended_another.mixin.key = {extended_another.mixin.key!r}"
+            f"extended_another.symbol.key = {extended_another.symbol.key!r}"
         )
         print(
-            f"base_another.mixin.outer.key = {base_another.mixin.outer.key!r}"
+            f"base_another.symbol.outer.key = {base_another.symbol.outer.key!r}"
         )
         print(
-            f"extended_another.mixin.outer.key = {extended_another.mixin.outer.key!r}"
+            f"extended_another.symbol.outer.key = {extended_another.symbol.outer.key!r}"
         )
 
         # Verify key for both
-        assert base_another.mixin.key == "Another"
-        assert extended_another.mixin.key == "Another"
+        assert base_another.symbol.key == "Another"
+        assert extended_another.symbol.key == "Another"
 
         # Verify outer.key
-        assert base_another.mixin.outer.key == "Base"
-        assert extended_another.mixin.outer.key == "Extended"
+        assert base_another.symbol.outer.key == "Base"
+        assert extended_another.symbol.outer.key == "Extended"
 
         # Verify the nested resource is still accessible (with patch applied)
         assert extended_another.nested_value == "nestednestednested"

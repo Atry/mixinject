@@ -1,10 +1,10 @@
 import gc
 
 from mixinject import (
-    DefinedMixinMapping,
-    MixinMapping,
+    DefinedSymbolMapping,
+    SymbolMapping,
     Scope,
-    RootMixinMapping,
+    RootSymbolMapping,
     evaluate,
     resource,
     scope,
@@ -23,14 +23,14 @@ class TestRoot:
 
     def test_root_hasintern_pool(self) -> None:
         scope_def = _empty_definition()
-        root = RootMixinMapping(definition=scope_def)
+        root = RootSymbolMapping(definition=scope_def)
         assert root.intern_pool is not None
 
     def test_different_roots_have_different_pools(self) -> None:
         scope_def1 = _empty_definition()
         scope_def2 = _empty_definition()
-        root1 = RootMixinMapping(definition=scope_def1)
-        root2 = RootMixinMapping(definition=scope_def2)
+        root1 = RootSymbolMapping(definition=scope_def1)
+        root2 = RootSymbolMapping(definition=scope_def2)
         assert root1.intern_pool is not root2.intern_pool
 
 
@@ -45,27 +45,27 @@ class TestInterning:
         """Direct instantiation without going through scope_factory creates new objects."""
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootMixinMapping(definition=scope_def)
-        child1 = DefinedMixinMapping(outer=root, definition=nested_def, key="test1")
-        child2 = DefinedMixinMapping(outer=root, definition=nested_def, key="test2")
+        root = RootSymbolMapping(definition=scope_def)
+        child1 = DefinedSymbolMapping(outer=root, definition=nested_def, key="test1")
+        child2 = DefinedSymbolMapping(outer=root, definition=nested_def, key="test2")
         # Without interning, these are different objects
         assert child1 is not child2
 
     def test_different_parent_different_object(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root1 = RootMixinMapping(definition=scope_def)
-        root2 = RootMixinMapping(definition=scope_def)
-        child1 = DefinedMixinMapping(outer=root1, definition=nested_def, key="test")
-        child2 = DefinedMixinMapping(outer=root2, definition=nested_def, key="test")
+        root1 = RootSymbolMapping(definition=scope_def)
+        root2 = RootSymbolMapping(definition=scope_def)
+        child1 = DefinedSymbolMapping(outer=root1, definition=nested_def, key="test")
+        child2 = DefinedSymbolMapping(outer=root2, definition=nested_def, key="test")
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootMixinMapping(definition=scope_def)
-        child1 = DefinedMixinMapping(outer=root, definition=nested_def, key="child1")
-        child2 = DefinedMixinMapping(outer=child1, definition=nested_def, key="child2")
+        root = RootSymbolMapping(definition=scope_def)
+        child1 = DefinedSymbolMapping(outer=root, definition=nested_def, key="child1")
+        child2 = DefinedSymbolMapping(outer=child1, definition=nested_def, key="child2")
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -104,7 +104,7 @@ class TestInterning:
         # Therefore same mixin
         assert isinstance(inner1, Scope)
         assert isinstance(inner2, Scope)
-        assert inner1.mixin is inner2.mixin
+        assert inner1.symbol is inner2.symbol
 
 
 class TestWeakReference:
@@ -114,9 +114,9 @@ class TestWeakReference:
         """The intern pool is a WeakValueDictionary."""
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootMixinMapping(definition=scope_def)
+        root = RootSymbolMapping(definition=scope_def)
         # Add an entry manually to the pool
-        child = DefinedMixinMapping(outer=root, definition=nested_def, key="test")
+        child = DefinedSymbolMapping(outer=root, definition=nested_def, key="test")
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -132,20 +132,20 @@ class TestWeakReference:
 class TestSubclass:
     """Test isinstance/issubclass behavior."""
 
-    def test_root_is_subclass_of_mixin(self) -> None:
-        assert issubclass(RootMixinMapping, MixinMapping)
+    def test_root_is_subclass_of_symbol(self) -> None:
+        assert issubclass(RootSymbolMapping, SymbolMapping)
 
-    def test_child_is_subclass_of_mixin(self) -> None:
-        assert issubclass(DefinedMixinMapping, MixinMapping)
+    def test_child_is_subclass_of_symbol(self) -> None:
+        assert issubclass(DefinedSymbolMapping, SymbolMapping)
 
-    def test_root_instance_is_instance_of_mixin(self) -> None:
+    def test_root_instance_is_instance_of_symbol(self) -> None:
         scope_def = _empty_definition()
-        root = RootMixinMapping(definition=scope_def)
-        assert isinstance(root, MixinMapping)
+        root = RootSymbolMapping(definition=scope_def)
+        assert isinstance(root, SymbolMapping)
 
-    def test_child_instance_is_instance_of_mixin(self) -> None:
+    def test_child_instance_is_instance_of_symbol(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootMixinMapping(definition=scope_def)
-        child = DefinedMixinMapping(outer=root, definition=nested_def, key="test")
-        assert isinstance(child, MixinMapping)
+        root = RootSymbolMapping(definition=scope_def)
+        child = DefinedSymbolMapping(outer=root, definition=nested_def, key="test")
+        assert isinstance(child, SymbolMapping)

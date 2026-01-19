@@ -17,7 +17,7 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=False, eq=False)
-class MixinMapping(ABC, Generic[T]):
+class SymbolMapping(ABC, Generic[T]):
     """Base class for dependency graphs supporting O(1) equality comparison.
 
     Equal graphs are interned to the same object instance within the same root,
@@ -27,9 +27,9 @@ class MixinMapping(ABC, Generic[T]):
 
     Example::
 
-        >>> root = RootMixinMapping()
-        >>> graph1 = ChildMixinMapping(head=1, outer=root)
-        >>> graph2 = ChildMixinMapping(head=1, outer=root)
+        >>> root = RootSymbolMapping()
+        >>> graph1 = ChildSymbolMapping(head=1, outer=root)
+        >>> graph2 = ChildSymbolMapping(head=1, outer=root)
         >>> graph1 is graph2  # Same object due to interning within same root
         True
 
@@ -43,25 +43,25 @@ class MixinMapping(ABC, Generic[T]):
         'cached_value'
     """
 
-    intern_pool: Final[weakref.WeakValueDictionary[T, "ChildMixinMapping[T]"]] = (
+    intern_pool: Final[weakref.WeakValueDictionary[T, "ChildSymbolMapping[T]"]] = (
         field(default_factory=weakref.WeakValueDictionary)
     )
 
 
 @final
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=False, eq=False)
-class RootMixinMapping(MixinMapping[T]):
+class RootSymbolMapping(SymbolMapping[T]):
     """
     Root of a dependency graph, representing an empty dependency chain.
 
-    Each RootMixinMapping instance has its own intern pool for interning
-    ChildMixinMapping nodes within that dependency graph.
+    Each RootSymbolMapping instance has its own intern pool for interning
+    ChildSymbolMapping nodes within that dependency graph.
     """
 
 
 @final
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True, eq=False)
-class ChildMixinMapping(MixinMapping[T]):
+class ChildSymbolMapping(SymbolMapping[T]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -73,7 +73,7 @@ class ChildMixinMapping(MixinMapping[T]):
     """
     .. todo:: Remove this field. It's legacy and useless now.
     """
-    outer: Final[MixinMapping[T]]
+    outer: Final[SymbolMapping[T]]
     """
     .. todo:: Remove this todo since this field has been renamed to ``outer``.
     """
@@ -83,7 +83,7 @@ def _replace_init():
     """
     Replace dataclass-generated ``__init__`` with a custom ``__new__`` for interning.
 
-    This function patches :class:`ChildMixinMapping` to support the
+    This function patches :class:`ChildSymbolMapping` to support the
     flyweight/interning pattern with a frozen dataclass.
 
     Why delete ``__init__``?
@@ -122,26 +122,26 @@ def _replace_init():
 
     This ensures ``__init__`` is only called once per unique instance.
     """
-    original_init = ChildMixinMapping.__init__
-    ChildMixinMapping.__init__ = lambda self, *args, **kwargs: None
+    original_init = ChildSymbolMapping.__init__
+    ChildSymbolMapping.__init__ = lambda self, *args, **kwargs: None
 
     def __new__(
-        cls: Type[ChildMixinMapping[T]],
+        cls: Type[ChildSymbolMapping[T]],
         *,
         head: T,
-        outer: MixinMapping[T],
-    ) -> ChildMixinMapping[T]:
+        outer: SymbolMapping[T],
+    ) -> ChildSymbolMapping[T]:
         intern_pool = outer.intern_pool
         existing = intern_pool.get(head)
         if existing is not None:
             return existing
         else:
-            instance = super(ChildMixinMapping, cls).__new__(cls)
+            instance = super(ChildSymbolMapping, cls).__new__(cls)
             original_init(instance, head=head, outer=outer)
             intern_pool[head] = instance
             return instance
 
-    ChildMixinMapping.__new__ = __new__
+    ChildSymbolMapping.__new__ = __new__
 
 
 _replace_init()

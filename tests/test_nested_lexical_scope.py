@@ -15,8 +15,8 @@ from mixinject import (
     evaluate,
     scope,
     Definition,
-    MixinMapping,
-    NestedMixin,
+    SymbolMapping,
+    NestedSymbol,
     CapturedScopes,
     RelativeReference as R,
 )
@@ -103,18 +103,18 @@ class PureMerger(Merger[Any, Any]):
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class _DirectNestedMixin(NestedMixin):
+class _DirectNestedSymbol(NestedSymbol):
     """
-    NestedMixin that directly returns an item without any dependency resolution.
+    NestedSymbol that directly returns an item without any dependency resolution.
 
-    This test helper implements ``get_evaluator`` to return a pre-configured
-    Evaluator (Merger or Patcher) for testing purposes.
+    This test helper implements ``bind`` to return a pre-configured
+    Mixin (Merger or Patcher) for testing purposes.
     """
 
     item: Any
 
     @override
-    def get_evaluator(
+    def bind(
         self, captured_scopes: CapturedScopes, /
     ) -> Merger[Any, Any] | Patcher[Any]:
         return self.item
@@ -123,19 +123,19 @@ class _DirectNestedMixin(NestedMixin):
 @dataclass
 class DirectDefinition(Definition):
     """
-    Definition that directly returns a _DirectNestedMixin.
+    Definition that directly returns a _DirectNestedSymbol.
 
-    This test helper's ``compile()`` creates a _DirectNestedMixin instance
-    with the pre-configured Evaluator.
+    This test helper's ``compile()`` creates a _DirectNestedSymbol instance
+    with the pre-configured Mixin.
     """
 
     item: Any
 
     @override
     def compile(
-        self, outer: MixinMapping, key: str, /
-    ) -> _DirectNestedMixin:
-        return _DirectNestedMixin(
+        self, outer: SymbolMapping, key: str, /
+    ) -> _DirectNestedSymbol:
+        return _DirectNestedSymbol(
             key=key,
             outer=outer,
             item=self.item,
