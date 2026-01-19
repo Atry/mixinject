@@ -1378,6 +1378,13 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
         .. todo::
 
             Add typed index properties as filtered views of this property.
+
+        .. todo::
+
+            Exclude ``_SyntheticMixin`` from this mapping. Synthetic mixins are placeholders
+            for leaf resources that have no definition in the current scope (only inherited
+            from base classes). They should not appear in the linearized base indices because
+            they don't contribute any actual behavior.
         """
         return {
             **(
