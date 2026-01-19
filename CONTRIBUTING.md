@@ -111,6 +111,97 @@ class Config:
 - If you need a mutable field, ask the user first and explain why
 - This rule applies to ALL dataclass fields, including those with `field(default_factory=...)`
 
+### `@final` and `slots` Requirements for Dataclasses
+
+**Rule 1: Never instantiate non-`@final` dataclasses.**
+
+Non-`@final` dataclasses are abstract base classes meant for inheritance only. Direct instantiation is prohibited.
+
+```python
+# ✗ BAD - instantiating a non-@final dataclass
+@dataclass(kw_only=True, eq=False)
+class _BaseNode(ABC):
+    name: Final[str]
+
+node = _BaseNode(name="test")  # FORBIDDEN: _BaseNode is not @final
+
+# ✓ GOOD - only instantiate @final dataclasses
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+class LeafNode(_BaseNode):
+    value: Final[int]
+
+node = LeafNode(name="test", value=42)  # OK: LeafNode is @final
+```
+
+**Rule 2: All `@final` dataclasses MUST have `slots=True` and `weakref_slot=True`.**
+
+```python
+# ✗ BAD - @final dataclass without slots
+@final
+@dataclass(kw_only=True, frozen=True)
+class Config:
+    name: Final[str]
+
+# ✓ GOOD - @final dataclass with slots=True and weakref_slot=True
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class Config:
+    name: Final[str]
+```
+
+**Rule 3: All non-`@final` dataclasses MUST NOT have `slots=True` or `weakref_slot=True`.**
+
+This is because Python's `__slots__` does not support multiple inheritance when both parent classes have non-empty slots. Non-`@final` dataclasses are meant to be inherited, and adding slots would cause `TypeError: multiple bases have instance lay-out conflict`.
+
+```python
+# ✗ BAD - non-@final dataclass with slots (will break multiple inheritance)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+class _BaseMapping(ABC):
+    data: Final[dict[str, Any]]
+
+# ✓ GOOD - non-@final dataclass without slots
+@dataclass(kw_only=True, eq=False)
+class _BaseMapping(ABC):
+    data: Final[dict[str, Any]]
+```
+
+**Using `@cached_property` with slots:**
+
+When a `@final` dataclass needs `@cached_property`, inherit from `HasDict`:
+
+```python
+# ✓ GOOD - @final dataclass with @cached_property inherits HasDict
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+class ComputedNode(HasDict, _BaseNode):
+    raw_value: Final[int]
+
+    @cached_property
+    def computed_value(self) -> int:
+        return self.raw_value * 2
+```
+
+For non-`@final` dataclasses that need `@cached_property` and will be combined with other classes via multiple inheritance, inherit from `HasDict` but omit `slots=True`:
+
+```python
+# ✓ GOOD - non-@final dataclass with @cached_property
+@dataclass(kw_only=True, eq=False)
+class _CachingBase(HasDict, ABC):
+    source: Final[str]
+
+    @cached_property
+    def cached_result(self) -> bytes:
+        return self.source.encode()
+```
+
+**Summary table:**
+
+| Dataclass type | `@final` | `slots=True, weakref_slot=True` | Can instantiate? |
+|----------------|----------|--------------------------------|------------------|
+| Concrete leaf  | Yes      | Required                       | Yes              |
+| Abstract base  | No       | Forbidden                      | No               |
+
 
 ### Avoid `__all__` and Re-exports
 

@@ -561,7 +561,7 @@ class HasDict:
     __slots__ = ("__dict__",)
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class Mixin(ABC):
     """
     Base class for nodes in the dependency graph.
@@ -691,7 +691,7 @@ class Mixin(ABC):
         """
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
     """Base class for dependency graphs supporting O(1) equality comparison.
 
@@ -872,7 +872,7 @@ class _SyntheticMixin(ABC):
     """
 
 
-@dataclass(kw_only=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class _DefinedMixin(ABC):
     """
     Marker base class for defined mixins (has local definition in current scope).
@@ -893,7 +893,7 @@ class _DefinedMixin(ABC):
     symbol: Final["_Symbol"]
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class StaticMixinMapping(MixinMapping):
     """
     .. todo:: Implement ``__getitem__`` for lazy creation of child dependency graphs.
@@ -940,7 +940,7 @@ class EvaluatorGetter(Generic[TEvaluator_co], ABC):
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class RootMixinMapping(_DefinedMixin, StaticMixinMapping):
     """
     Root of a dependency graph.
@@ -1104,7 +1104,7 @@ class NestedMixinIndex:
     secondary_index: Final[SecondaryMixinIndex]
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class NestedMixin(Mixin, EvaluatorGetter["Merger | Patcher"]):
     """
     Leaf Mixin corresponding to non-Mapping resource definitions.
@@ -1140,7 +1140,7 @@ class NestedMixin(Mixin, EvaluatorGetter["Merger | Patcher"]):
         """Retrieve the Evaluator for the given captured scopes."""
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class MergerMixin(NestedMixin, Generic[TPatch_contra, TResult_co]):
     """
     Intermediate base class for NestedMixin subclasses that return Merger.
@@ -1162,7 +1162,7 @@ class MergerMixin(NestedMixin, Generic[TPatch_contra, TResult_co]):
         """Retrieve the Merger for the given captured scopes."""
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class PatcherMixin(NestedMixin, Generic[TPatch_co]):
     """
     Intermediate base class for NestedMixin subclasses that return Patcher.
@@ -1185,7 +1185,7 @@ TResult = TypeVar("TResult")
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _NestedMergerMixin(
     _DefinedMixin, MergerMixin[TPatch_contra, TResult_co], Generic[TPatch_contra, TResult_co]
 ):
@@ -1201,7 +1201,7 @@ class _NestedMergerMixin(
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _NestedResourceMixin(
     _DefinedMixin, MergerMixin["Endofunction[TResult]", TResult], Generic[TResult]
 ):
@@ -1220,7 +1220,7 @@ class _NestedResourceMixin(
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _NestedSinglePatchMixin(_DefinedMixin, PatcherMixin[TPatch_co], Generic[TPatch_co]):
     """NestedMixin for _SinglePatchSymbol."""
 
@@ -1235,7 +1235,7 @@ class _NestedSinglePatchMixin(_DefinedMixin, PatcherMixin[TPatch_co], Generic[TP
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _NestedMultiplePatchMixin(_DefinedMixin, PatcherMixin[TPatch_co], Generic[TPatch_co]):
     """NestedMixin for _MultiplePatchSymbol."""
 
@@ -1250,7 +1250,7 @@ class _NestedMultiplePatchMixin(_DefinedMixin, PatcherMixin[TPatch_co], Generic[
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _SyntheticResourceMixin(_SyntheticMixin, PatcherMixin[Never]):
     """NestedMixin for inherited-only leaf resources (no local definition).
 
@@ -1280,7 +1280,7 @@ class SemigroupMixin(ABC):
     """
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
     """
     Non-empty dependency graph node corresponding to nested Scope definitions.
@@ -1501,7 +1501,7 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class SyntheticMixinMapping(_SyntheticMixin, NestedMixinMapping):
     """
     NestedMixinMapping for synthetic symbols (no local definition).
@@ -1536,7 +1536,7 @@ class SyntheticMixinMapping(_SyntheticMixin, NestedMixinMapping):
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class DefinedMixinMapping(_DefinedMixin, NestedMixinMapping):
     """
     NestedMixinMapping for defined symbols (has local definition with extend references).
@@ -1644,7 +1644,7 @@ class DefinedMixinMapping(_DefinedMixin, NestedMixinMapping):
 
 
 @final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class InstanceMixinMapping(MixinMapping):
     """Non-empty dependency graph node for InstanceScope.
 
@@ -1843,7 +1843,7 @@ class StaticScope(Scope, ABC):
         instance_path = cached_ref() if cached_ref is not None else None
         if instance_path is None:
             instance_path = InstanceMixinMapping(prototype=self.mixin)
-            self.mixin._cached_instance_mixin = weakref.ref(instance_path)
+            object.__setattr__(self.mixin, "_cached_instance_mixin", weakref.ref(instance_path))
 
         return InstanceScope(
             base_scope=self,
@@ -1852,6 +1852,7 @@ class StaticScope(Scope, ABC):
         )
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class InstanceScope(Scope):
     """
@@ -1927,6 +1928,7 @@ class CachedScope(StaticScope):
             return self._cache[key]
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class WeakCachedScope(CachedScope):
     """A CachedScope with weak reference caching."""
@@ -2000,6 +2002,7 @@ class Patcher(Iterable[TPatch_co], ABC):
     """
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class FunctionPatcher(Patcher[TPatch_co]):
     patch_generator: Callable[[], Iterator[TPatch_co]]
@@ -2008,6 +2011,7 @@ class FunctionPatcher(Patcher[TPatch_co]):
         return self.patch_generator()
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class FunctionMerger(Merger[TPatch_contra, TResult_co]):
     """Merger that applies custom aggregation function to patches."""
@@ -2022,6 +2026,7 @@ class FunctionMerger(Merger[TPatch_contra, TResult_co]):
 TScope = TypeVar("TScope", bound=StaticScope)
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _EndofunctionMerger(
     Generic[TResult], Merger[Callable[[TResult], TResult], TResult]
@@ -2077,8 +2082,8 @@ class _Symbol(ABC):
         """
 
 
-@dataclass(kw_only=True, eq=False)
-class _NestedSymbol(_Compilable, _Symbol):
+@dataclass(kw_only=True, frozen=True, eq=False)
+class _NestedSymbol(HasDict, _Compilable, _Symbol):
     """Nested symbol with a definition."""
 
     definition: Final["Definition"]  # type: ignore[misc]  # Redeclare for dataclass field
@@ -2133,7 +2138,7 @@ class _NestedSymbol(_Compilable, _Symbol):
         return lambda captured_scopes: captured_scopes[index][resource_name]
 
 
-@dataclass(kw_only=True, eq=False)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class _SymbolMapping(
     Mapping[Hashable, "_NestedSymbol"],
     _Symbol,
@@ -2202,7 +2207,8 @@ class _SymbolMapping(
         return id(self)
 
 
-@dataclass(kw_only=True, eq=False)
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _NestedSymbolMapping(_SymbolMapping, _NestedSymbol):
 
     @property
@@ -2264,8 +2270,9 @@ class _NestedSymbolMapping(_SymbolMapping, _NestedSymbol):
         return nested_mixin_mapping
 
 
-@dataclass(kw_only=True, eq=False)
-class _RootSymbol(_SymbolMapping):
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
+class _RootSymbol(HasDict, _SymbolMapping):
 
     @property
     def depth(self) -> int:
@@ -2283,7 +2290,8 @@ class _RootSymbol(_SymbolMapping):
         return self._cached_symbol_table
 
 
-@dataclass(kw_only=True, eq=False)
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _MergerSymbol(_NestedSymbol, Generic[TPatch_contra, TResult_co]):
     """Symbol for resolved merger definitions."""
 
@@ -2315,7 +2323,8 @@ class _MergerSymbol(_NestedSymbol, Generic[TPatch_contra, TResult_co]):
         )
 
 
-@dataclass(kw_only=True, eq=False)
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _ResourceSymbol(_NestedSymbol, Generic[TResult]):
     """Symbol for resolved resource definitions."""
 
@@ -2345,7 +2354,8 @@ class _ResourceSymbol(_NestedSymbol, Generic[TResult]):
         )
 
 
-@dataclass(kw_only=True, eq=False)
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _SinglePatchSymbol(_NestedSymbol, Generic[TPatch_co]):
     """Symbol for resolved single patch definitions."""
 
@@ -2375,7 +2385,8 @@ class _SinglePatchSymbol(_NestedSymbol, Generic[TPatch_co]):
         )
 
 
-@dataclass(kw_only=True, eq=False)
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _MultiplePatchSymbol(_NestedSymbol, Generic[TPatch_co]):
     """Symbol for resolved multiple patch definitions."""
 
@@ -2504,6 +2515,7 @@ class PatcherDefinition(Definition, Generic[TPatch_co]):
         raise NotImplementedError()
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
     """Definition for merge decorator."""
@@ -2521,6 +2533,7 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
         )
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _ResourceDefinition(
     Generic[TResult], MergerDefinition[Callable[[TResult], TResult], TResult]
@@ -2540,6 +2553,7 @@ class _ResourceDefinition(
         )
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _SinglePatchDefinition(PatcherDefinition[TPatch_co]):
     """Definition for patch decorator (single patch)."""
@@ -2557,6 +2571,7 @@ class _SinglePatchDefinition(PatcherDefinition[TPatch_co]):
         )
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _MultiplePatchDefinition(PatcherDefinition[TPatch_co]):
     """Definition for patches decorator (multiple patches)."""
@@ -2579,6 +2594,7 @@ DefinitionMapping: TypeAlias = Mapping[
 ]
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _ScopeSemigroup(Merger[StaticScope, StaticScope], Patcher[StaticScope]):
     """
@@ -2789,7 +2805,7 @@ def _resolve_resource_reference(
     return current
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _DefinitionMapping(
     Mapping[Hashable, Definition],
     Definition,
@@ -2841,7 +2857,8 @@ class _DefinitionMapping(
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@final
+@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _PackageDefinitionMapping(_DefinitionMapping):
     """A definition for packages that discovers submodules via pkgutil."""
 
@@ -3371,6 +3388,7 @@ def _resolve_dependencies_jit(
     )
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class AbsoluteReference(Generic[T]):
     """
@@ -3380,6 +3398,7 @@ class AbsoluteReference(Generic[T]):
     path: Final[tuple[T, ...]]
 
 
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class RelativeReference(Generic[T]):
     """

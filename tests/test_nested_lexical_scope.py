@@ -102,7 +102,7 @@ class PureMerger(Merger[Any, Any]):
         )
 
 
-@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
 class _DirectNestedMixin(NestedMixin):
     """
     NestedMixin that directly returns an item without any dependency resolution.
