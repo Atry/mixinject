@@ -11,8 +11,6 @@ from mixinject import (
     CachedScope,
     InstanceMixinMapping,
     InstanceScope,
-    _NestedSymbolMapping,
-    _RootSymbol,
     _DefinedMixin,
     CapturedScopes,
     _PackageDefinitionMapping,
@@ -22,7 +20,6 @@ from mixinject import (
     StaticScope,
     _ResourceDefinition,
     _SinglePatchDefinition,
-    ChainMapSentinel,
     merge,
     extern,
     patch,
@@ -45,31 +42,14 @@ def _empty_definition() -> _DefinitionMapping:
     return _DefinitionMapping(scope_class=CachedScope, underlying=object())
 
 
-def _empty_root_symbol(definition: _DefinitionMapping) -> _RootSymbol:
-    """Create a minimal root symbol for testing."""
-    return _RootSymbol(definition=definition)
-
-
-def _empty_nested_symbol(
-    outer: "_RootSymbol", definition: _DefinitionMapping
-) -> _NestedSymbolMapping:
-    """Create a minimal nested symbol for testing."""
-    return _NestedSymbolMapping(
-        outer=outer,
-        name="__test__",
-        definition=definition,
-    )
-
-
 def _empty_mixin() -> DefinedMixinMapping:
     """Create a minimal dependency graph for testing."""
     scope_def = _empty_definition()
-    root_symbol = _empty_root_symbol(scope_def)
-    nested_symbol = _empty_nested_symbol(root_symbol, scope_def)
-    root_mixin = RootMixinMapping(symbol=root_symbol)
+    nested_def = _empty_definition()
+    root_mixin = RootMixinMapping(definition=scope_def)
     return DefinedMixinMapping(
         outer=root_mixin,
-        symbol=nested_symbol,
+        definition=nested_def,
         key="test",
     )
 
@@ -761,11 +741,11 @@ class TestInstanceMixinMappingDepth:
         )
 
 
-class TestSymbolSharing:
-    """Test that _Symbol instances are shared among mixins from the same _DefinitionMapping."""
+class TestDefinitionSharing:
+    """Test that Definition instances are shared among mixins from the same _DefinitionMapping."""
 
-    def test_symbol_shared_across_different_instance_args(self) -> None:
-        """_Symbol should be shared when accessing Inner through different Outer instances."""
+    def test_definition_shared_across_different_instance_args(self) -> None:
+        """Definition should be shared when accessing Inner through different Outer instances."""
 
         @scope()
         class Root:
@@ -785,14 +765,14 @@ class TestSymbolSharing:
         inner1 = root.Outer(arg="v1").Inner
         inner2 = root.Outer(arg="v2").Inner
 
-        # Use the mixin's symbol directly
-        symbol1 = inner1.mixin.symbol
-        symbol2 = inner2.mixin.symbol
+        # Use the mixin's definition directly
+        definition1 = inner1.mixin.definition
+        definition2 = inner2.mixin.definition
 
-        assert symbol1 is symbol2
+        assert definition1 is definition2
 
-    def test_symbol_shared_between_instance_and_static_access(self) -> None:
-        """_Symbol should be shared between InstanceScope and StaticScope access paths."""
+    def test_definition_shared_between_instance_and_static_access(self) -> None:
+        """Definition should be shared between InstanceScope and StaticScope access paths."""
 
         @scope()
         class Root:
@@ -812,29 +792,29 @@ class TestSymbolSharing:
         instance_inner = root.Outer(arg="v1").Inner
         static_inner = root.Outer.Inner
 
-        # Use the mixin's symbol directly
-        instance_symbol = instance_inner.mixin.symbol
-        static_symbol = static_inner.mixin.symbol
+        # Use the mixin's definition directly
+        instance_definition = instance_inner.mixin.definition
+        static_definition = static_inner.mixin.definition
 
-        assert instance_symbol is static_symbol
+        assert instance_definition is static_definition
 
     @pytest.mark.xfail(
-        reason="BUG: Same issue as test_symbol_shared_between_instance_and_static_access. "
+        reason="BUG: Same issue as test_definition_shared_between_instance_and_static_access. "
         "InstanceChildMixinMapping has separate intern_pool from ChildMixinMapping, "
-        "causing different symbol values for the same underlying scope definition."
+        "causing different definition values for the same underlying scope definition."
     )
-    def test_symbol_shared_when_scope_extends_another(self) -> None:
-        """_Symbol should be shared when accessing Inner through extending scopes.
+    def test_definition_shared_when_scope_extends_another(self) -> None:
+        """Definition should be shared when accessing Inner through extending scopes.
 
-        .. todo:: Fix _ScopeSemigroup.create to share symbol across extending scopes.
+        .. todo:: Fix _ScopeSemigroup.create to share definition across extending scopes.
 
             When object1 extends Outer, accessing Inner through both paths should yield
-            the same symbol since they refer to the same Python class definition
+            the same definition since they refer to the same Python class definition
             (Root.Outer.Inner). Both mixins should be _DefinedMixin instances with the
-            same symbol.
+            same definition.
 
             The fix should ensure that all access paths to the same scope definition
-            share the same _Symbol instance.
+            share the same Definition instance.
         """
 
         @scope()
@@ -864,8 +844,8 @@ class TestSymbolSharing:
         assert isinstance(outer_inner.mixin, _DefinedMixin)
         assert isinstance(object1_inner.mixin, _DefinedMixin)
 
-        # Both should share the same symbol since they access the same Inner definition
-        assert outer_inner.mixin.symbol is object1_inner.mixin.symbol
+        # Both should share the same definition since they access the same Inner definition
+        assert outer_inner.mixin.definition is object1_inner.mixin.definition
 
 
 class TestScopeAsSymlink:

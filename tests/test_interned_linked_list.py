@@ -10,9 +10,6 @@ from mixinject import (
     scope,
     CachedScope,
     _DefinitionMapping,
-    _NestedSymbolMapping,
-    _RootSymbol,
-    ChainMapSentinel,
 )
 
 
@@ -21,38 +18,19 @@ def _empty_definition() -> _DefinitionMapping:
     return _DefinitionMapping(scope_class=CachedScope, underlying=object())
 
 
-def _empty_root_symbol(definition: _DefinitionMapping) -> _RootSymbol:
-    """Create a minimal root symbol for testing."""
-    return _RootSymbol(definition=definition)
-
-
-def _empty_nested_symbol(
-    outer: "_RootSymbol", definition: _DefinitionMapping
-) -> _NestedSymbolMapping:
-    """Create a minimal nested symbol for testing."""
-    return _NestedSymbolMapping(
-        outer=outer,
-        name="__test__",
-        definition=definition,
-    )
-
-
 class TestRoot:
     """Test root dependency graph behavior."""
 
     def test_root_hasintern_pool(self) -> None:
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        root = RootMixinMapping(symbol=root_symbol)
+        root = RootMixinMapping(definition=scope_def)
         assert root.intern_pool is not None
 
     def test_different_roots_have_different_pools(self) -> None:
         scope_def1 = _empty_definition()
-        root_symbol1 = _empty_root_symbol(scope_def1)
         scope_def2 = _empty_definition()
-        root_symbol2 = _empty_root_symbol(scope_def2)
-        root1 = RootMixinMapping(symbol=root_symbol1)
-        root2 = RootMixinMapping(symbol=root_symbol2)
+        root1 = RootMixinMapping(definition=scope_def1)
+        root2 = RootMixinMapping(definition=scope_def2)
         assert root1.intern_pool is not root2.intern_pool
 
 
@@ -66,31 +44,28 @@ class TestInterning:
     def test_direct_instantiation_creates_new_objects(self) -> None:
         """Direct instantiation without going through scope_factory creates new objects."""
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        nested_symbol = _empty_nested_symbol(root_symbol, scope_def)
-        root = RootMixinMapping(symbol=root_symbol)
-        child1 = DefinedMixinMapping(outer=root, symbol=nested_symbol, key="test1")
-        child2 = DefinedMixinMapping(outer=root, symbol=nested_symbol, key="test2")
+        nested_def = _empty_definition()
+        root = RootMixinMapping(definition=scope_def)
+        child1 = DefinedMixinMapping(outer=root, definition=nested_def, key="test1")
+        child2 = DefinedMixinMapping(outer=root, definition=nested_def, key="test2")
         # Without interning, these are different objects
         assert child1 is not child2
 
     def test_different_parent_different_object(self) -> None:
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        nested_symbol = _empty_nested_symbol(root_symbol, scope_def)
-        root1 = RootMixinMapping(symbol=root_symbol)
-        root2 = RootMixinMapping(symbol=root_symbol)
-        child1 = DefinedMixinMapping(outer=root1, symbol=nested_symbol, key="test")
-        child2 = DefinedMixinMapping(outer=root2, symbol=nested_symbol, key="test")
+        nested_def = _empty_definition()
+        root1 = RootMixinMapping(definition=scope_def)
+        root2 = RootMixinMapping(definition=scope_def)
+        child1 = DefinedMixinMapping(outer=root1, definition=nested_def, key="test")
+        child2 = DefinedMixinMapping(outer=root2, definition=nested_def, key="test")
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        nested_symbol = _empty_nested_symbol(root_symbol, scope_def)
-        root = RootMixinMapping(symbol=root_symbol)
-        child1 = DefinedMixinMapping(outer=root, symbol=nested_symbol, key="child1")
-        child2 = DefinedMixinMapping(outer=child1, symbol=nested_symbol, key="child2")
+        nested_def = _empty_definition()
+        root = RootMixinMapping(definition=scope_def)
+        child1 = DefinedMixinMapping(outer=root, definition=nested_def, key="child1")
+        child2 = DefinedMixinMapping(outer=child1, definition=nested_def, key="child2")
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -138,11 +113,10 @@ class TestWeakReference:
     def test_intern_pool_supports_weak_references(self) -> None:
         """The intern pool is a WeakValueDictionary."""
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        nested_symbol = _empty_nested_symbol(root_symbol, scope_def)
-        root = RootMixinMapping(symbol=root_symbol)
+        nested_def = _empty_definition()
+        root = RootMixinMapping(definition=scope_def)
         # Add an entry manually to the pool
-        child = DefinedMixinMapping(outer=root, symbol=nested_symbol, key="test")
+        child = DefinedMixinMapping(outer=root, definition=nested_def, key="test")
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -166,14 +140,12 @@ class TestSubclass:
 
     def test_root_instance_is_instance_of_mixin(self) -> None:
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        root = RootMixinMapping(symbol=root_symbol)
+        root = RootMixinMapping(definition=scope_def)
         assert isinstance(root, MixinMapping)
 
     def test_child_instance_is_instance_of_mixin(self) -> None:
         scope_def = _empty_definition()
-        root_symbol = _empty_root_symbol(scope_def)
-        nested_symbol = _empty_nested_symbol(root_symbol, scope_def)
-        root = RootMixinMapping(symbol=root_symbol)
-        child = DefinedMixinMapping(outer=root, symbol=nested_symbol, key="test")
+        nested_def = _empty_definition()
+        root = RootMixinMapping(definition=scope_def)
+        child = DefinedMixinMapping(outer=root, definition=nested_def, key="test")
         assert isinstance(child, MixinMapping)

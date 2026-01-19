@@ -121,9 +121,9 @@ class _DirectNestedMixin(NestedMixin):
 
 
 @dataclass
-class _DirectSymbol:
+class DirectDefinition(Definition):
     """
-    Symbol that directly returns a _DirectNestedMixin.
+    Definition that directly returns a _DirectNestedMixin.
 
     This test helper's ``compile()`` creates a _DirectNestedMixin instance
     with the pre-configured Evaluator.
@@ -131,25 +131,15 @@ class _DirectSymbol:
 
     item: Any
 
+    @override
     def compile(
-        self, outer_mixin: MixinMapping, /
+        self, outer: MixinMapping, key: str, /
     ) -> _DirectNestedMixin:
         return _DirectNestedMixin(
-            key="test",
-            outer=outer_mixin,
-            base_indices={},
+            key=key,
+            outer=outer,
             item=self.item,
         )
-
-
-@dataclass
-class DirectDefinition(Definition):
-    item: Any
-
-    def resolve(  # type: ignore[override]
-        self, outer: Any, name: str, /
-    ) -> "_DirectSymbol":
-        return _DirectSymbol(item=self.item)
 
 
 @pytest.mark.parametrize("scope_class", [CachedScope, WeakCachedScope])
