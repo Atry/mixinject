@@ -1396,28 +1396,28 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
         This includes:
         1. Direct base classes from ``self.base_indices``
         2. Inherited base classes from each direct base class's ``generate_linearized_bases()``
+
+        Uses ``ChainMap`` to avoid dictionary unpacking. Direct base classes take
+        precedence over inherited ones (first map in ChainMap wins on key collision).
         """
-        return {
-            **(
-                {
-                    base: NestedMixinIndex(
-                        primary_index=primary_index,
-                        secondary_index=MixinIndexSentinel.SELF,
-                    )
-                    for base, primary_index in self.base_indices.items()
-                }
-            ),
-            **{
-                cast("NestedMixinMapping", linearized_base): NestedMixinIndex(
-                    primary_index=primary_index,
-                    secondary_index=secondary_index,
-                )
-                for base, primary_index in self.base_indices.items()
-                for secondary_index, linearized_base in enumerate(
-                    base.generate_linearized_bases()
-                )
-            },
+        direct_base_indices: dict["NestedMixinMapping", NestedMixinIndex] = {
+            base: NestedMixinIndex(
+                primary_index=primary_index,
+                secondary_index=MixinIndexSentinel.SELF,
+            )
+            for base, primary_index in self.base_indices.items()
         }
+        inherited_base_indices: dict["NestedMixinMapping", NestedMixinIndex] = {
+            cast("NestedMixinMapping", linearized_base): NestedMixinIndex(
+                primary_index=primary_index,
+                secondary_index=secondary_index,
+            )
+            for base, primary_index in self.base_indices.items()
+            for secondary_index, linearized_base in enumerate(
+                base.generate_linearized_bases()
+            )
+        }
+        return ChainMap(direct_base_indices, inherited_base_indices)
 
     @cached_property
     def linearized_base_indices(self) -> Mapping["NestedMixinMapping", NestedMixinIndex]:
@@ -1517,21 +1517,25 @@ class DefinedMixinMapping(_DefinedMixin, NestedMixinMapping):
            ``primary_index`` is ``MixinIndexSentinel.SELF``
 
         3. **Inherited base classes**: From each direct base class's ``generate_linearized_bases()``
+
+        Uses ``ChainMap`` to avoid dictionary unpacking. Extension references take
+        precedence over inherited ones (first map in ChainMap wins on key collision).
         """
-        return {
-            **self._inherited_base_indices,
-            **{
-                _resolve_mixin_reference(
-                    reference, self.outer, NestedMixinMapping
-                ): NestedMixinIndex(
-                    primary_index=MixinIndexSentinel.SELF,
-                    secondary_index=secondary_index,
-                )
-                for secondary_index, reference in enumerate(
-                    self.symbol.definition.bases
-                )
-            },
+        extension_base_indices: dict[NestedMixinMapping, NestedMixinIndex] = {
+            _resolve_mixin_reference(
+                reference, self.outer, NestedMixinMapping
+            ): NestedMixinIndex(
+                primary_index=MixinIndexSentinel.SELF,
+                secondary_index=secondary_index,
+            )
+            for secondary_index, reference in enumerate(
+                self.symbol.definition.bases
+            )
         }
+        return ChainMap(
+            extension_base_indices,
+            cast(dict[NestedMixinMapping, NestedMixinIndex], self._inherited_base_indices),
+        )
 
     @override
     def get_evaluator(self, captured_scopes: CapturedScopes, /) -> "_ScopeSemigroup":
