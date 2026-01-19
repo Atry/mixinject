@@ -708,26 +708,8 @@ class TestSymbolSharing:
 
         assert symbol1 is symbol2
 
-    @pytest.mark.xfail(
-        reason="BUG: InstanceChildMixinMapping and ChildMixinMapping have separate intern_pools, "
-        "causing instance path to create new ChildMixinMapping with SymbolSentinel.MERGED "
-        "instead of reusing the one created via static path."
-    )
     def test_symbol_shared_between_instance_and_static_access(self) -> None:
-        """_Symbol should be shared between InstanceProxy and StaticProxy access paths.
-
-        .. todo:: Fix _ProxySemigroup.create to share symbol between instance and static paths.
-
-            Currently when accessing Inner via instance path (root.Outer(arg="v1").Inner),
-            the access_path_outer is an InstanceChildMixinMapping which has its own
-            intern_pool. When _ProxySemigroup.create checks this intern_pool, it doesn't
-            find the existing ChildMixinMapping (created via resolve for static
-            path), so it creates a new one with symbol=SymbolSentinel.MERGED.
-
-            The fix should ensure that InstanceChildMixinMapping delegates to its
-            prototype's intern_pool, or that _ProxySemigroup.create uses the prototype's
-            intern_pool when access_path_outer is an InstanceChildMixinMapping.
-        """
+        """_Symbol should be shared between InstanceProxy and StaticProxy access paths."""
 
         @scope()
         class Root:

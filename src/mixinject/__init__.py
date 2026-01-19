@@ -542,6 +542,18 @@ T_co = TypeVar("T_co", covariant=True)
 P = ParamSpec("P")
 
 
+class HasDict:
+    """
+    Mixin class that adds ``__dict__`` slot for classes that need ``@cached_property``.
+
+    When using ``@dataclass(slots=True)``, instances don't have ``__dict__``,
+    which prevents ``@cached_property`` from working. Inheriting from this class
+    adds a ``__dict__`` slot, allowing ``@cached_property`` to function properly.
+    """
+
+    __slots__ = ("__dict__",)
+
+
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class Mixin(ABC):
     """
@@ -571,9 +583,9 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
     .. todo:: 继承 ``Mapping[Hashable, EvaluatorGetter]``。
     """
 
-    intern_pool: Final[weakref.WeakValueDictionary[Hashable, "NestedMixinMapping"]] = (
-        field(default_factory=weakref.WeakValueDictionary)
-    )
+    intern_pool: Final[
+        weakref.WeakValueDictionary[Hashable, "NestedMixinMapping | NestedMixin"]
+    ] = field(default_factory=weakref.WeakValueDictionary)
 
     def __hash__(self) -> int:
         return id(self)
@@ -618,13 +630,13 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
             )
             if (item_mixin := base.get(key)) is not None
         }
-        if not item_mixins and item_symbol == SymbolSentinel.SYNTHETIC:
-            raise KeyError
 
-        def generate_is_mixin_mapping():
+        def generate_is_mixin_mapping() -> Iterator[bool]:
             if item_symbol != SymbolSentinel.SYNTHETIC:
-                yield item_symbol
-            yield from item_mixins
+                yield isinstance(item_symbol, _SymbolMapping)
+
+            for mixin in item_mixins:
+                yield isinstance(mixin, MixinMapping)
 
         def assert_equal(a: T, b: T) -> T:
             if a != b:
@@ -633,25 +645,28 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
                 )
             return a
 
-        is_mixin_mapping = reduce(
-            assert_equal,
-            (isinstance(mixin, MixinMapping) for mixin in generate_is_mixin_mapping()),
-        )
+        try:
+            is_mixin_mapping = reduce(assert_equal, generate_is_mixin_mapping())
+        except TypeError as e:
+            raise KeyError from e
         if is_mixin_mapping:
-            return NestedMixinMapping(
+            nested_mixin_mapping = NestedMixinMapping(
                 name=key,
                 outer=self,
                 symbol=cast(_SymbolMapping | SymbolSentinel, item_symbol),
                 base_indices=cast(Mapping[NestedMixinMapping, int], item_mixins),
             )
+            self.intern_pool[key] = nested_mixin_mapping
+            return nested_mixin_mapping
         else:
-
-            return NestedMixin(
+            nested_mixin = NestedMixin(
                 name=key,
                 outer=self,
                 symbol=cast(_Symbol | SymbolSentinel, item_symbol),
                 base_indices=cast(Mapping[NestedMixin, int], item_mixins),
             )
+            self.intern_pool[key] = nested_mixin
+            return nested_mixin
 
 
 class SymbolSentinel(Enum):
@@ -754,7 +769,7 @@ class NestedMixin(Mixin):
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class NestedMixinMapping(StaticMixinMapping):
+class NestedMixinMapping(HasDict, StaticMixinMapping):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -762,6 +777,9 @@ class NestedMixinMapping(StaticMixinMapping):
 
     Implements ``Callable[[LexicalScope], _ProxySemigroup]`` to resolve resources
     from a lexical scope into a proxy semigroup.
+
+    Inherits from ``HasDict`` to enable ``@cached_property`` (which requires
+    ``__dict__``) in a slots-based dataclass.
     """
 
     def generate_linearized_bases(self):
@@ -1277,9 +1295,8 @@ class _NestedSymbol(_Symbol):
     outer: Final["_SymbolMapping"]
 
     @abstractmethod
-    def compile(self, mixin: "MixinMapping", /) -> Any:
+    def compile(self, outer_mixin: "MixinMapping", /) -> Any:
         """Compile this symbol for a given mixin."""
-        ...
 
     @property
     def depth(self) -> int:
@@ -1412,17 +1429,22 @@ class _NestedSymbolMapping(_SymbolMapping, _NestedSymbol):
         Memoization ensures that the same NestedMixinMapping instance is reused
         for the same (outer_mixin, name) pair, enabling O(1) identity-based
         equality comparison.
+
+        Note: This method creates NestedMixinMapping with symbol=self, which is
+        different from MixinMapping.__getitem__ that looks up symbols by key.
+        This distinction is necessary because compile() binds a specific symbol
+        to a mixin, while __getitem__ navigates the mixin hierarchy.
         """
-        intern_pool = outer_mixin.intern_pool
-        existing = intern_pool.get(self.name)
+        existing = outer_mixin.intern_pool.get(self.name)
         if existing is not None:
+            assert isinstance(existing, NestedMixinMapping)
             return existing
-        proxy_mixin = NestedMixinMapping(
+        nested_mixin_mapping = NestedMixinMapping(
             outer=outer_mixin,
             symbol=self,
             name=self.name,
         )
-        intern_pool[self.name] = proxy_mixin
+        outer_mixin.intern_pool[self.name] = nested_mixin_mapping
         _logger.debug(
             "name=%(name)r " "underlying=%(underlying)r " "outer_name=%(outer_name)r",
             {
@@ -1431,7 +1453,7 @@ class _NestedSymbolMapping(_SymbolMapping, _NestedSymbol):
                 "outer_name": getattr(outer_mixin, "name", "ROOT"),
             },
         )
-        return proxy_mixin
+        return nested_mixin_mapping
 
 
 @dataclass(kw_only=True, eq=False)
@@ -1794,17 +1816,13 @@ class _ProxySemigroup(Merger[StaticProxy, StaticProxy], Patcher[StaticProxy]):
             case ():
                 raise AssertionError(" at least one proxy expected")
             case _:
-                # Get or create mixin with correct outer from intern pool
-                existing = self.access_path_outer.intern_pool.get(self.name)
-                if existing is not None:
-                    mixin = existing
-                else:
-                    mixin = NestedMixinMapping(
-                        outer=self.access_path_outer,
-                        symbol=SymbolSentinel.SYNTHETIC,
-                        name=self.name,
-                    )
-                    self.access_path_outer.intern_pool[self.name] = mixin
+                # Get mixin via __getitem__. The mixin should always exist because
+                # _ProxySemigroup is created by NestedMixinMapping.__call__ which
+                # passes access_path_outer=self.outer and name=self.name. That
+                # NestedMixinMapping is stored in self.outer.intern_pool[self.name],
+                # so __getitem__ will find it via intern_pool lookup.
+                mixin = self.access_path_outer[self.name]
+                assert isinstance(mixin, NestedMixinMapping)
 
         winner_class = _calculate_most_derived_class(*(type(p) for p in proxies_tuple))
 
