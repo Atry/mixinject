@@ -545,7 +545,13 @@ P = ParamSpec("P")
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class Mixin(ABC):
-    pass
+    """
+    .. todo:: 继承 ``EvaluatorGetter``。
+    """
+
+    @abstractmethod
+    def generate_bases(self) -> Iterator[Mixin]:
+        """Generate the base mixins that this mixin extends."""
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
@@ -618,10 +624,45 @@ class RootMixinMapping(StaticMixinMapping):
 
     Each RootMixinMapping instance has its own intern pool for interning
     NestedMixinMapping nodes within that dependency graph.
-
     """
 
+    def generate_bases(self) -> Iterator[Mixin]:
+        """
+        Root mixin cannot extend any other mixins.
+        """
+        return iter(())
 
+
+class MixinIndexSentinel(Enum):
+    SELF = auto()
+
+
+MixinIndex: TypeAlias = int | MixinIndexSentinel
+"""
+The index of a symbol from its outer mixin mapping.
+
+- If an integer, it represents the index in the outer's ``bases``
+- If ``MixinIndexSentinel.SELF``, it represents the outer mixin mapping itself.
+"""
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class NestedMixinIndex:
+    """
+    The indices of a ``NestedMixinMapping`` within its outer mixin mapping.
+
+    For example,
+     - ``NestedMixinIndex(primary_index=5, secondary_index=2)`` means a mixin comes ``tuple(tuple(self.outer.generate_bases())[5].symbol[self.name].compile(self.outer).generate_bases())[2]``.
+     - ``NestedMixinIndex(primary_index=MixinIndexSentinel.SELF, secondary_index=3)`` means a mixin comes ``tuple(self.outer.symbol[self.name].compile(self.outer).generate_bases())[3]``.
+     - ``NestedMixinIndex(primary_index=14, secondary_index=MixinIndexSentinel.SELF)`` means a mixin comes ``tuple(self.outer.generate_bases())[14].symbol[self.name].compile(self.outer)``.
+    """
+
+    primary_index: Final[MixinIndex]
+    secondary_index: Final[MixinIndex]
+
+
+@final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class NestedMixinMapping(StaticMixinMapping):
     """Non-empty dependency graph node.
@@ -631,6 +672,17 @@ class NestedMixinMapping(StaticMixinMapping):
 
     Implements ``Callable[[LexicalScope], _ProxySemigroup]`` to resolve resources
     from a lexical scope into a proxy semigroup.
+    """
+
+    def generate_bases(self) -> Iterator[Mixin]:
+        """Generate the base mixins that this mixin extends."""
+        return iter(self.base_indices.keys())
+
+    base_indices: Final[Mapping[NestedMixinMapping, NestedMixinIndex]] = field(
+        default_factory=dict
+    )
+    """
+    .. todo:: remove the ``default_factory`` once we have migrated all usages.
     """
 
     outer: Final[MixinMapping]
@@ -696,6 +748,12 @@ class InstanceMixinMapping(MixinMapping):
     """
     The static dependency graph that this instance is based on.
     """
+
+    def generate_bases(self) -> Iterator[Mixin]:
+        """
+        Instance mixin cannot merge with other mixins.
+        """
+        return iter(())
 
 
 Resource = NewType("Resource", object)
