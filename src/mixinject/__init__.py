@@ -544,7 +544,12 @@ P = ParamSpec("P")
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class MixinMapping(ABC):
+class Mixin(ABC):
+    pass
+
+
+@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+class MixinMapping(Mixin):
     """Base class for dependency graphs supporting O(1) equality comparison.
 
     Equal graphs are interned to the same object instance within the same root,
