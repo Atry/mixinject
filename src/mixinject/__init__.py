@@ -1905,14 +1905,6 @@ class InstanceScope(Scope):
     def __len__(self) -> int:
         return sum(1 for _ in self)
 
-    def __call__(self, **kwargs: object) -> "InstanceScope":
-        merged_kwargs: Mapping[str, object] = {**self.kwargs, **kwargs}
-        return InstanceScope(
-            base_scope=self.base_scope,
-            kwargs=merged_kwargs,
-            mixin=self.mixin,
-        )
-
 
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class CachedScope(StaticScope):

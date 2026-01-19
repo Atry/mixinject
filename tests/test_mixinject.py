@@ -973,41 +973,6 @@ class TestModuleParsing:
 class TestScopeCallable:
     """Test Scope as Callable - dynamic mixin injection."""
 
-    def test_scope_call_single_kwarg(self) -> None:
-        """Test calling Scope to inject a single new value."""
-        base_scope = CachedScope(mixins={}, mixin=_empty_mixin())
-        scope = base_scope(foo="foo_value")
-
-        # Call scope with new kwargs to add additional values
-        new_scope = scope(bar="bar_value")
-
-        assert new_scope.foo == "foo_value"  # from first call
-        assert new_scope.bar == "bar_value"  # from second call
-
-    def test_scope_call_multiple_kwargs(self) -> None:
-        """Test calling Scope with multiple new kwargs."""
-        base_scope = CachedScope(mixins={}, mixin=_empty_mixin())
-        scope = base_scope(x=1, y=2)
-
-        # Call to add new values (z and w)
-        new_scope = scope(z=3, w=4)
-
-        assert new_scope.x == 1  # from first call
-        assert new_scope.y == 2  # from first call
-        assert new_scope.z == 3  # from second call
-        assert new_scope.w == 4  # from second call
-
-    def test_scope_call_injected_values_accessible(self) -> None:
-        """Test that values injected via Scope call are accessible as resources."""
-        # Create empty scope and inject values via call
-        scope = CachedScope(mixins={}, mixin=_empty_mixin())(
-            config={"db": "postgres"}
-        )(timeout=30)
-
-        # Injected values should be accessible
-        assert scope.config == {"db": "postgres"}
-        assert scope.timeout == 30
-
     def test_scope_call_provides_endo_only_base_value(self) -> None:
         """Test Scope callable providing base value for parameter pattern.
 
@@ -1039,7 +1004,7 @@ class TestScopeCallable:
         class Value:
             pass
 
-        v1, v2 = Value(), Value()
+        v1 = Value()
 
         # CachedScope.__call__ should return InstanceScope
         cached = CachedScope(mixins={}, mixin=_empty_mixin())
@@ -1047,33 +1012,11 @@ class TestScopeCallable:
         assert isinstance(instance1, InstanceScope)
         assert instance1.x is v1
 
-        # Calling InstanceScope again should return another InstanceScope
-        instance2 = instance1(y=v2)
-        assert isinstance(instance2, InstanceScope)
-        assert instance2.x is v1
-        assert instance2.y is v2
-
         # WeakCachedScope.__call__ should also return InstanceScope
         weak = WeakCachedScope(mixins={}, mixin=_empty_mixin())
         weak_instance = weak(x=v1)
         assert isinstance(weak_instance, InstanceScope)
         assert weak_instance.x is v1
-
-    def test_scope_call_creates_fresh_instance(self) -> None:
-        """Test that calling a Scope creates a new instance without modifying the original."""
-        base_scope = CachedScope(mixins={}, mixin=_empty_mixin())
-        scope1 = base_scope(a=1)
-
-        # Call to create a new scope
-        scope2 = scope1(b=2)
-
-        # Original should be unchanged
-        assert scope1.a == 1
-        # New scope should have both
-        assert scope2.a == 1
-        assert scope2.b == 2
-        # They should be different instances
-        assert scope1 is not scope2
 
 
 class TestScopeDir:
