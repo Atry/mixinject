@@ -690,12 +690,6 @@ class Mixin(ABC):
         No additional constraints (such as C3 linearization) are guaranteed.
         """
 
-    symbol: "_Symbol | _SyntheticSymbol"
-    """
-    The symbol for this dependency graph, providing cached symbol resolution.
-    Subclasses define this field with their specific symbol type (use ``Final`` in subclasses).
-    """
-
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
@@ -722,8 +716,8 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
     def __iter__(self) -> Iterator[Hashable]:
         seen: set[Hashable] = set()
 
-        # Keys from self.symbol (if it's a _SymbolMapping)
-        if not isinstance(self.symbol, _SyntheticSymbol):
+        # Keys from self.symbol (only if _DefinedMixin)
+        if isinstance(self, _DefinedMixin):
             assert isinstance(self.symbol, _SymbolMapping)
             for key in self.symbol:
                 if key not in seen:
@@ -772,20 +766,17 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
         if existing is not None:
             return existing
 
-        # Get symbol from self.symbol or create _SyntheticSymbol for inherited-only resources
-        if isinstance(self.symbol, _SyntheticSymbol):
-            item_symbol: _Compilable = _SyntheticSymbol(key=key)
+        # Compile based on whether this is a synthetic or defined mixin
+        if isinstance(self, _SyntheticMixin):
+            mixin = _compile_synthetic(key, self)
         else:
+            assert isinstance(self, _DefinedMixin)
             assert isinstance(self.symbol, _SymbolMapping)
             nested_symbol = self.symbol.get(key)
-            item_symbol = (
-                nested_symbol
-                if nested_symbol is not None
-                else _SyntheticSymbol(key=key)
-            )
-
-        # Delegate to symbol.compile() - all creation logic is in compile methods
-        mixin = item_symbol.compile(self)
+            if nested_symbol is not None:
+                mixin = nested_symbol.compile(self)
+            else:
+                mixin = _compile_synthetic(key, self)
 
         self.intern_pool[key] = cast("NestedMixinMapping | NestedMixin", mixin)
         return mixin
@@ -809,77 +800,97 @@ class _Compilable(ABC):
         """
 
 
-@final
-@dataclass(kw_only=True, eq=False)
-class _SyntheticSymbol(_Compilable):
+def _compile_synthetic(
+    key: Hashable,
+    outer_mixin: "MixinMapping",
+) -> "NestedMixin | NestedMixinMapping":
     """
-    Symbol for inherited-only resources (no local definition).
+    Create a NestedMixin for inherited-only resources.
 
-    When a resource key exists only in base classes but not in the current
-    definition, this symbol is used. Its compile() method validates that
-    all base classes have consistent types (all MixinMapping or all leaf).
+    For leaf resources (Merger, Resource, Patcher), creates a _SyntheticResourceMixin
+    that returns an empty Patcher (similar to @extern).
+
+    For nested scopes (NestedMixinMapping), creates a SyntheticMixinMapping
+    that properly merges base scopes.
+
+    Validates that all base classes have consistent types using the
+    generate_is_mixin_mapping + reduce(assert_equal, ...) pattern.
     """
+    base_indices: dict["NestedMixin", int] = {
+        cast("NestedMixin", item_mixin): i
+        for i, base in enumerate(
+            cast(Iterator["MixinMapping"], outer_mixin.generate_strict_super())
+        )
+        if (item_mixin := base.get(key)) is not None
+    }
 
-    key: Final[Hashable]
+    def generate_is_mixin_mapping() -> Iterator[bool]:
+        """Generate bool indicating whether each base mixin is a MixinMapping."""
+        for mixin in base_indices:
+            yield isinstance(mixin, MixinMapping)
 
-    @override
-    def compile(
-        self, outer_mixin: "MixinMapping", /
-    ) -> "NestedMixin | NestedMixinMapping":
-        """
-        Create a NestedMixin for inherited-only resources.
-
-        For leaf resources (Merger, Resource, Patcher), creates a _SyntheticMixin
-        that returns an empty Patcher (similar to @extern).
-
-        For nested scopes (NestedMixinMapping), creates a NestedMixinMapping
-        that properly merges base scopes.
-
-        Validates that all base classes have consistent types using the
-        generate_is_mixin_mapping + reduce(assert_equal, ...) pattern.
-        """
-        key = self.key
-        base_indices: dict["NestedMixin", int] = {
-            cast("NestedMixin", item_mixin): i
-            for i, base in enumerate(
-                cast(Iterator["MixinMapping"], outer_mixin.generate_strict_super())
+    def assert_equal(a: T, b: T) -> T:
+        if a != b:
+            raise ValueError(
+                "Inconsistent mixin types for same-named resource across bases"
             )
-            if (item_mixin := base.get(key)) is not None
-        }
+        return a
 
-        def generate_is_mixin_mapping() -> Iterator[bool]:
-            """Generate bool indicating whether each base mixin is a MixinMapping."""
-            for mixin in base_indices:
-                yield isinstance(mixin, MixinMapping)
+    try:
+        is_mixin_mapping = reduce(assert_equal, generate_is_mixin_mapping())
+    except TypeError as exception:
+        # reduce raises TypeError when iterator is empty (no bases have this key)
+        raise KeyError(key) from exception
 
-        def assert_equal(a: T, b: T) -> T:
-            if a != b:
-                raise ValueError(
-                    "Inconsistent mixin types for same-named resource across bases"
-                )
-            return a
-
-        try:
-            is_mixin_mapping = reduce(assert_equal, generate_is_mixin_mapping())
-        except TypeError as exception:
-            # reduce raises TypeError when iterator is empty (no bases have this key)
-            raise KeyError(key) from exception
-
-        if is_mixin_mapping:
-            return SyntheticMixinMapping(
-                key=key,
-                outer=outer_mixin,
-                symbol=self,
-                base_indices=cast(Mapping["NestedMixinMapping", int], base_indices),
-            )
-
-        # For leaf resources, create _SyntheticResourceMixin (empty Patcher)
-        return _SyntheticResourceMixin(
+    if is_mixin_mapping:
+        return SyntheticMixinMapping(
             key=key,
             outer=outer_mixin,
-            symbol=self,
-            base_indices=base_indices,
+            base_indices=cast(Mapping["NestedMixinMapping", int], base_indices),
         )
+
+    # For leaf resources, create _SyntheticResourceMixin (empty Patcher)
+    return _SyntheticResourceMixin(
+        key=key,
+        outer=outer_mixin,
+        base_indices=base_indices,
+    )
+
+
+class _SyntheticMixin(ABC):
+    """
+    Marker base class for synthetic mixins (no local definition, only inherited).
+
+    Synthetic mixins are created when a resource or nested scope is inherited from
+    base classes but has no local definition in the current scope.
+
+    Subclasses
+    ==========
+
+    - ``_SyntheticResourceMixin``: For leaf resources (Merger, Resource, Patcher)
+    - ``SyntheticMixinMapping``: For nested scopes
+    """
+
+
+@dataclass(kw_only=True, eq=False)
+class _DefinedMixin(ABC):
+    """
+    Marker base class for defined mixins (has local definition in current scope).
+
+    Defined mixins are created when a resource or nested scope has a local definition
+    in the current scope. They have access to the full symbol information.
+
+    Subclasses
+    ==========
+
+    - ``_NestedMergerMixin``, ``_NestedResourceMixin``, etc.: For leaf resources
+    - ``DefinedMixinMapping``: For nested scopes
+    - ``RootMixinMapping``: For root mixin
+
+    All subclasses have ``symbol: _Symbol`` (narrowed from the base class type).
+    """
+
+    symbol: Final["_Symbol"]
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
@@ -930,7 +941,7 @@ class EvaluatorGetter(Generic[TEvaluator_co], ABC):
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class RootMixinMapping(StaticMixinMapping):
+class RootMixinMapping(_DefinedMixin, StaticMixinMapping):
     """
     Root of a dependency graph.
 
@@ -1176,7 +1187,7 @@ TResult = TypeVar("TResult")
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class _NestedMergerMixin(
-    MergerMixin[TPatch_contra, TResult_co], Generic[TPatch_contra, TResult_co]
+    _DefinedMixin, MergerMixin[TPatch_contra, TResult_co], Generic[TPatch_contra, TResult_co]
 ):
     """NestedMixin for _MergerSymbol."""
 
@@ -1184,9 +1195,6 @@ class _NestedMergerMixin(
     def get_evaluator(
         self, captured_scopes: CapturedScopes, /
     ) -> "Merger[TPatch_contra, TResult_co]":
-        assert not isinstance(
-            self.symbol, _SyntheticSymbol
-        ), "SYNTHETIC symbols should use _SyntheticMixin"
         symbol = cast("_MergerSymbol[TPatch_contra, TResult_co]", self.symbol)
         aggregation_function = symbol.jit_compiled_function(captured_scopes)
         return FunctionMerger(aggregation_function=aggregation_function)
@@ -1195,7 +1203,7 @@ class _NestedMergerMixin(
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
 class _NestedResourceMixin(
-    MergerMixin["Endofunction[TResult]", TResult], Generic[TResult]
+    _DefinedMixin, MergerMixin["Endofunction[TResult]", TResult], Generic[TResult]
 ):
     """NestedMixin for _ResourceSymbol.
 
@@ -1206,9 +1214,6 @@ class _NestedResourceMixin(
     def get_evaluator(
         self, captured_scopes: CapturedScopes, /
     ) -> "Merger[Endofunction[TResult], TResult]":
-        assert not isinstance(
-            self.symbol, _SyntheticSymbol
-        ), "SYNTHETIC symbols should use _SyntheticMixin"
         symbol = cast("_ResourceSymbol[TResult]", self.symbol)
         base_value = symbol.jit_compiled_function(captured_scopes)
         return _EndofunctionMerger(base_value=base_value)
@@ -1216,14 +1221,11 @@ class _NestedResourceMixin(
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class _NestedSinglePatchMixin(PatcherMixin[TPatch_co], Generic[TPatch_co]):
+class _NestedSinglePatchMixin(_DefinedMixin, PatcherMixin[TPatch_co], Generic[TPatch_co]):
     """NestedMixin for _SinglePatchSymbol."""
 
     @override
     def get_evaluator(self, captured_scopes: CapturedScopes, /) -> "Patcher[TPatch_co]":
-        assert not isinstance(
-            self.symbol, _SyntheticSymbol
-        ), "SYNTHETIC symbols should use _SyntheticMixin"
         symbol = cast("_SinglePatchSymbol[TPatch_co]", self.symbol)
 
         def patch_generator() -> Iterator[TPatch_co]:
@@ -1234,56 +1236,17 @@ class _NestedSinglePatchMixin(PatcherMixin[TPatch_co], Generic[TPatch_co]):
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
-class _NestedMultiplePatchMixin(PatcherMixin[TPatch_co], Generic[TPatch_co]):
+class _NestedMultiplePatchMixin(_DefinedMixin, PatcherMixin[TPatch_co], Generic[TPatch_co]):
     """NestedMixin for _MultiplePatchSymbol."""
 
     @override
     def get_evaluator(self, captured_scopes: CapturedScopes, /) -> "Patcher[TPatch_co]":
-        assert not isinstance(
-            self.symbol, _SyntheticSymbol
-        ), "SYNTHETIC symbols should use _SyntheticMixin"
         symbol = cast("_MultiplePatchSymbol[TPatch_co]", self.symbol)
 
         def patch_generator() -> Iterator[TPatch_co]:
             return (yield from symbol.jit_compiled_function(captured_scopes))
 
         return FunctionPatcher(patch_generator=patch_generator)
-
-
-class _SyntheticMixin(ABC):
-    """
-    Marker base class for synthetic mixins (no local definition, only inherited).
-
-    Synthetic mixins are created when a resource or nested scope is inherited from
-    base classes but has no local definition in the current scope.
-
-    Subclasses
-    ==========
-
-    - ``_SyntheticResourceMixin``: For leaf resources (Merger, Resource, Patcher)
-    - ``SyntheticMixinMapping``: For nested scopes
-
-    All subclasses have ``symbol: _SyntheticSymbol`` (narrowed from the base class type).
-    """
-
-
-class _DefinedMixin(ABC):
-    """
-    Marker base class for defined mixins (has local definition in current scope).
-
-    Defined mixins are created when a resource or nested scope has a local definition
-    in the current scope. They have access to the full symbol information.
-
-    Subclasses
-    ==========
-
-    - ``_NestedMergerMixin``, ``_NestedResourceMixin``, etc.: For leaf resources
-    - ``DefinedMixinMapping``: For nested scopes
-
-    All subclasses have ``symbol: _Symbol`` (narrowed from the base class type).
-    """
-
-    symbol: "_Symbol"
 
 
 @final
@@ -1548,8 +1511,6 @@ class SyntheticMixinMapping(_SyntheticMixin, NestedMixinMapping):
     and have no extend references.
     """
 
-    symbol: "_SyntheticSymbol"  # type: ignore[assignment]  # Narrowing from base class
-
     @property
     def linearized_base_indices(self) -> Mapping[NestedMixinMapping, NestedMixinIndex]:
         """Return only inherited base indices (no extension references)."""
@@ -1705,6 +1666,18 @@ class InstanceMixinMapping(MixinMapping):
         """
         return iter(())
 
+    def __iter__(self) -> Iterator[Hashable]:
+        """Delegate to prototype."""
+        return iter(self.prototype)
+
+    def __len__(self) -> int:
+        """Delegate to prototype."""
+        return len(self.prototype)
+
+    def __getitem__(self, key: Hashable) -> "Mixin":
+        """Delegate to prototype."""
+        return self.prototype[key]
+
 
 Resource = NewType("Resource", object)
 
@@ -1809,12 +1782,12 @@ class Scope(Mapping[Hashable, "Node"], ABC):
     def __iter__(self) -> Iterator[Hashable]:
         visited: set[Hashable] = set()
         for mixin in self.mixins.keys():
-            symbol = mixin.symbol
-            if isinstance(symbol, _SyntheticSymbol):
-                # Synthetic symbols don't have their own keys
+            if isinstance(mixin, _SyntheticMixin):
+                # Synthetic mixins don't have their own keys
                 continue
-            assert isinstance(symbol, _SymbolMapping)
-            for key in symbol.keys():
+            assert isinstance(mixin, _DefinedMixin)
+            assert isinstance(mixin.symbol, _SymbolMapping)
+            for key in mixin.symbol.keys():
                 if key not in visited:
                     visited.add(key)
                     yield key
@@ -1869,9 +1842,7 @@ class StaticScope(Scope, ABC):
         cached_ref = self.mixin._cached_instance_mixin
         instance_path = cached_ref() if cached_ref is not None else None
         if instance_path is None:
-            instance_path = InstanceMixinMapping(
-                prototype=self.mixin, symbol=self.mixin.symbol
-            )
+            instance_path = InstanceMixinMapping(prototype=self.mixin)
             self.mixin._cached_instance_mixin = weakref.ref(instance_path)
 
         return InstanceScope(

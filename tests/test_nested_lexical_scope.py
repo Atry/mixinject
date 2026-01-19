@@ -137,7 +137,6 @@ class _DirectSymbol:
         return _DirectNestedMixin(
             key="test",
             outer=outer_mixin,
-            symbol=self,
             base_indices={},
             item=self.item,
         )

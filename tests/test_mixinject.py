@@ -13,7 +13,7 @@ from mixinject import (
     InstanceScope,
     _NestedSymbolMapping,
     _RootSymbol,
-    _SyntheticSymbol,
+    _DefinedMixin,
     CapturedScopes,
     _PackageDefinitionMapping,
     _DefinitionMapping,
@@ -787,9 +787,8 @@ class TestSymbolSharing:
 
             When object1 extends Outer, accessing Inner through both paths should yield
             the same symbol since they refer to the same Python class definition
-            (Root.Outer.Inner). Currently, each InstanceChildMixinMapping has its own
-            intern_pool, leading to separate ChildMixinMapping instances with different
-            symbol values (_SyntheticSymbol vs real _Symbol).
+            (Root.Outer.Inner). Both mixins should be _DefinedMixin instances with the
+            same symbol.
 
             The fix should ensure that all access paths to the same scope definition
             share the same _Symbol instance.
@@ -818,15 +817,12 @@ class TestSymbolSharing:
         outer_inner = root.Outer(arg="v1").Inner
         object1_inner = root.object1(arg="v2").Inner
 
-        # Use the mixin's symbol directly
-        outer_symbol = outer_inner.mixin.symbol
-        object1_symbol = object1_inner.mixin.symbol
+        # Both mixins should be _DefinedMixin (not synthetic)
+        assert isinstance(outer_inner.mixin, _DefinedMixin)
+        assert isinstance(object1_inner.mixin, _DefinedMixin)
 
         # Both should share the same symbol since they access the same Inner definition
-        assert outer_symbol is object1_symbol
-        # Neither should be SYNTHETIC - they should have real _Symbol
-        assert not isinstance(outer_symbol, _SyntheticSymbol)
-        assert not isinstance(object1_symbol, _SyntheticSymbol)
+        assert outer_inner.mixin.symbol is object1_inner.mixin.symbol
 
 
 class TestScopeAsSymlink:
