@@ -731,44 +731,32 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
         """
         Get or create the child Mixin for the specified key.
 
-        Symbol → Mixin Type Mapping Rules
-        ==================================
+        .. todo::
 
-        This method determines which Mixin subclass to create based on ``item_symbol`` type:
+            Simplify this method to delegate all creation logic to
+            ``Symbol.compile()``:
 
-        ========================== ========================
-        ``item_symbol`` Type       Created Mixin Type
-        ========================== ========================
-        ``_NestedSymbolMapping``   ``NestedMixinMapping``
-        ``_MergerSymbol``          ``NestedMergerMixin``
-        ``_ResourceSymbol``        ``NestedMergerMixin``
-        ``_SinglePatchSymbol``     ``NestedPatcherMixin``
-        ``_MultiplePatchSymbol``   ``NestedPatcherMixin``
-        ``SymbolSentinel.SYNTHETIC`` Infer type from bases
-        ========================== ========================
+            1. Check ``intern_pool`` for existing Mixin
+            2. If not found, call ``self.symbol[key].compile(self)``
+            3. Store the result in ``intern_pool``
 
-        Current Implementation Issues
-        -----------------------------
+            Target implementation::
 
-        Currently only distinguishes ``Mapping`` vs ``non-Mapping``, doesn't distinguish ``Merger`` vs ``Patcher``.
-        Need to refactor to create typed Mixin based on Symbol type.
+                existing = self.intern_pool.get(key)
+                if existing is not None:
+                    return existing
+                mixin = self.symbol[key].compile(self)
+                self.intern_pool[key] = mixin
+                return mixin
 
-        Target Implementation After Refactoring
-        ----------------------------------------
+            Each ``Symbol.compile()`` method will be responsible for:
 
-        ::
+            - Collecting ``base_indices`` from ``outer_mixin.generate_linearized_bases()``
+            - Creating the appropriate ``NestedMixin`` subclass instance
 
-            match item_symbol:
-                case SymbolSentinel.SYNTHETIC:
-                    mixin_class = self._infer_mixin_class_from_bases(item_mixins)
-                case _NestedSymbolMapping():
-                    mixin_class = NestedMixinMapping  # IS-A Mapping
-                case _MergerSymbol() | _ResourceSymbol():
-                    mixin_class = NestedMergerMixin
-                case _SinglePatchSymbol() | _MultiplePatchSymbol():
-                    mixin_class = NestedPatcherMixin
-
-        .. todo:: Create typed Mixin based on Symbol type to support JIT optimization.
+            The ``_SyntheticSymbol`` singleton (replacing ``SymbolSentinel.SYNTHETIC``)
+            will handle inherited-only resources by inferring the Mixin type from
+            the first base class.
         """
         existing = self.intern_pool.get(key)
         if existing is not None:
@@ -825,6 +813,22 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
 
 
 class SymbolSentinel(Enum):
+    """
+    Sentinel enum for special symbol states.
+
+    .. todo::
+
+        Replace ``SYNTHETIC`` with a ``_SyntheticSymbol`` singleton class.
+        The singleton implements ``compile(outer_mixin, key)`` that:
+
+        1. Collects ``base_indices`` from bases
+        2. Infers the ``NestedMixin`` subclass type from the first base
+        3. Creates and returns that subclass instance
+
+        This allows ``MixinMapping.__getitem__`` to uniformly call
+        ``symbol.compile()`` for all symbol types.
+    """
+
     SYNTHETIC = auto()
     """
     Sentinel indicating that the dependency graph is synthetic and does not correspond to a real symbol.
@@ -863,7 +867,22 @@ TEvaluator_co = TypeVar("TEvaluator_co", bound="Merger | Patcher", covariant=Tru
 
 
 class EvaluatorGetter(Generic[TEvaluator_co], ABC):
-    """ABC for retrieving an Evaluator from a CapturedScopes context."""
+    """
+    ABC for retrieving an Evaluator from a CapturedScopes context.
+
+    .. todo::
+
+        After refactoring, ``NestedMixin`` will inherit from this ABC,
+        and the four ``_XxxEvaluatorGetter`` implementation classes will
+        be replaced by ``NestedMixin`` subclasses:
+
+        - ``_NestedMergerMixin`` replaces ``_MergerEvaluatorGetter``
+        - ``_NestedResourceMixin`` replaces ``_ResourceEvaluatorGetter``
+        - ``_NestedSinglePatchMixin`` replaces ``_SinglePatchEvaluatorGetter``
+        - ``_NestedMultiplePatchMixin`` replaces ``_MultiplePatchEvaluatorGetter``
+
+        This unifies the Mixin and EvaluatorGetter hierarchies.
+    """
 
     @abstractmethod
     def get_evaluator(self, captured_scopes: "CapturedScopes", /) -> TEvaluator_co:
@@ -970,59 +989,23 @@ class NestedMixin(Mixin):
     """
     Leaf Mixin corresponding to non-Mapping resource definitions.
 
-    Refactoring Goals
-    =================
-
-    This class will be split into two subclasses:
-
-    - ``NestedMergerMixin``: For resources produced by ``MergerDefinition``
-    - ``NestedPatcherMixin``: For resources produced by ``PatcherDefinition``
-
-    NestedMergerMixin
-    -----------------
-
-    ::
-
-        class NestedMergerMixin(Mixin):
-            '''Leaf Mixin guaranteeing __call__ returns pure Merger (not Patcher).'''
-            name: Final[Hashable]
-            outer: Final[MixinMapping]
-            symbol: Final[_MergerSymbol | _ResourceSymbol]  # Type narrowed
-            base_indices: Final[Mapping[NestedMergerMixin, int]]
-
-            def __call__(self, captured_scopes: CapturedScopes) -> Merger:
-                evaluator_getter = self.symbol.compile(self.outer)
-                return evaluator_getter.get_evaluator(captured_scopes)  # Returns Merger
-
-    NestedPatcherMixin
-    ------------------
-
-    ::
-
-        class NestedPatcherMixin(Mixin):
-            '''Leaf Mixin guaranteeing __call__ returns pure Patcher (not Merger).'''
-            name: Final[Hashable]
-            outer: Final[MixinMapping]
-            symbol: Final[_SinglePatchSymbol | _MultiplePatchSymbol]  # Type narrowed
-            base_indices: Final[Mapping[NestedPatcherMixin, int]]
-
-            def __call__(self, captured_scopes: CapturedScopes) -> Patcher:
-                evaluator_getter = self.symbol.compile(self.outer)
-                return evaluator_getter.get_evaluator(captured_scopes)  # Returns Patcher
-
-    ``__call__`` Semantics
-    ======================
-
-    Calling ``mixin(captured_scopes)`` returns an ``Evaluator``:
-
-    1. Check if ``self.symbol`` is ``SymbolSentinel.SYNTHETIC``
-    2. Call ``self.symbol.compile(self.outer)`` to get ``EvaluatorGetter``
-    3. Call ``evaluator_getter.get_evaluator(captured_scopes)`` to return ``Evaluator``
+    This is the base class for all leaf Mixins. Subclasses implement
+    ``get_evaluator`` to return the appropriate Evaluator type.
 
     .. todo::
 
-        1. Split into ``NestedMergerMixin`` and ``NestedPatcherMixin``
-        2. Implement ``__call__(captured_scopes: CapturedScopes) -> Evaluator``
+        1. Remove ``@final`` decorator to allow subclasses
+        2. Inherit from ``EvaluatorGetter[Merger | Patcher]``
+        3. Add abstract ``get_evaluator`` method
+        4. Create four subclasses:
+
+           - ``_NestedMergerMixin``: For ``_MergerSymbol``, returns ``Merger``
+           - ``_NestedResourceMixin``: For ``_ResourceSymbol``, returns ``Merger``
+           - ``_NestedSinglePatchMixin``: For ``_SinglePatchSymbol``, returns ``Patcher``
+           - ``_NestedMultiplePatchMixin``: For ``_MultiplePatchSymbol``, returns ``Patcher``
+
+        5. Each subclass implements ``get_evaluator`` by calling
+           ``self.symbol.jit_compiled_function(captured_scopes)``
     """
 
     base_indices: Final[Mapping["NestedMixin", int]]
@@ -1700,7 +1683,15 @@ class _MergerEvaluatorGetter(
     Generic[TPatch_contra, TResult_co],
     EvaluatorGetter[Merger[TPatch_contra, TResult_co]],
 ):
-    """EvaluatorGetter for _MergerSymbol."""
+    """
+    EvaluatorGetter for _MergerSymbol.
+
+    .. todo::
+
+        Delete this class after refactoring. Its functionality will be
+        merged into ``_NestedMergerMixin``, which inherits from both
+        ``NestedMixin`` and ``EvaluatorGetter``.
+    """
 
     outer: Final[MixinMapping]
     jit_compiled_function: Final[
@@ -1720,7 +1711,15 @@ class _ResourceEvaluatorGetter(
     Generic[TResult],
     EvaluatorGetter[Merger[Callable[[TResult], TResult], TResult]],
 ):
-    """EvaluatorGetter for _ResourceSymbol."""
+    """
+    EvaluatorGetter for _ResourceSymbol.
+
+    .. todo::
+
+        Delete this class after refactoring. Its functionality will be
+        merged into ``_NestedResourceMixin``, which inherits from both
+        ``NestedMixin`` and ``EvaluatorGetter``.
+    """
 
     outer: Final[MixinMapping]
     jit_compiled_function: Final[Callable[[CapturedScopes], TResult]]
@@ -1738,7 +1737,15 @@ class _SinglePatchEvaluatorGetter(
     Generic[TPatch_co],
     EvaluatorGetter[Patcher[TPatch_co]],
 ):
-    """EvaluatorGetter for _SinglePatchSymbol."""
+    """
+    EvaluatorGetter for _SinglePatchSymbol.
+
+    .. todo::
+
+        Delete this class after refactoring. Its functionality will be
+        merged into ``_NestedSinglePatchMixin``, which inherits from both
+        ``NestedMixin`` and ``EvaluatorGetter``.
+    """
 
     outer: Final[MixinMapping]
     jit_compiled_function: Final[Callable[[CapturedScopes], TPatch_co]]
@@ -1758,7 +1765,15 @@ class _MultiplePatchEvaluatorGetter(
     Generic[TPatch_co],
     EvaluatorGetter[Patcher[TPatch_co]],
 ):
-    """EvaluatorGetter for _MultiplePatchSymbol."""
+    """
+    EvaluatorGetter for _MultiplePatchSymbol.
+
+    .. todo::
+
+        Delete this class after refactoring. Its functionality will be
+        merged into ``_NestedMultiplePatchMixin``, which inherits from both
+        ``NestedMixin`` and ``EvaluatorGetter``.
+    """
 
     outer: Final[MixinMapping]
     jit_compiled_function: Final[Callable[[CapturedScopes], Iterable[TPatch_co]]]
@@ -1785,6 +1800,24 @@ def _mixin_getitem(
     Calls ``mixin.symbol[key](mixin)`` to get the
     second-level callable, passing the mixin's mixin (not the
     scope's mixin from captured_scopes).
+
+    .. todo::
+
+        Simplify after refactoring to use ``mixin[key]`` directly::
+
+            nested_mixin = mixin[key]  # Already a NestedMixin (IS-A EvaluatorGetter)
+
+            def bind_scope(scope: Scope) -> Evaluator:
+                inner_captured_scopes: CapturedScopes = (*captured_scopes, scope)
+                evaluator = nested_mixin.get_evaluator(inner_captured_scopes)
+                if isinstance(evaluator, _ScopeSemigroup):
+                    return replace(evaluator, access_path_outer=scope.mixin)
+                return evaluator
+
+            return bind_scope
+
+        This removes the need to call ``symbol[key].compile(mixin)`` since
+        ``mixin[key]`` returns the interned NestedMixin directly.
     """
     first_level = mixin.symbol[key]
     resolved_function = first_level.compile(mixin)
@@ -1820,7 +1853,27 @@ class _NestedSymbol(_Symbol):
 
     @abstractmethod
     def compile(self, outer_mixin: "MixinMapping", /) -> Any:
-        """Compile this symbol for a given mixin."""
+        """
+        Compile this symbol for a given mixin.
+
+        .. todo::
+
+            Change return type to ``NestedMixin`` after refactoring.
+
+            Each subclass should:
+
+            1. Collect ``base_indices`` by iterating ``outer_mixin.generate_linearized_bases()``
+               and finding same-key mixins via ``base.get(key)``
+            2. Create the appropriate ``NestedMixin`` subclass instance with:
+
+               - ``name``: the resource name
+               - ``outer``: the outer_mixin
+               - ``symbol``: self
+               - ``base_indices``: the collected mapping
+
+            Add a helper method ``_collect_base_indices(outer_mixin, key)`` to share
+            this logic across all Symbol subclasses.
+        """
 
     @property
     def depth(self) -> int:
@@ -2023,6 +2076,18 @@ class _MergerSymbol(_NestedSymbol, Generic[TPatch_contra, TResult_co]):
     def compile(
         self, outer_mixin: MixinMapping
     ) -> _MergerEvaluatorGetter[TPatch_contra, TResult_co]:
+        """
+        Compile this symbol into an EvaluatorGetter.
+
+        .. todo::
+
+            Change return type to ``_NestedMergerMixin`` after refactoring.
+
+            Implementation should:
+
+            1. Collect ``base_indices`` using ``_collect_base_indices(outer_mixin, self.resource_name)``
+            2. Return ``_NestedMergerMixin(name=..., outer=..., symbol=self, base_indices=...)``
+        """
         return _MergerEvaluatorGetter(
             outer=outer_mixin,
             jit_compiled_function=self.jit_compiled_function,
@@ -2051,6 +2116,18 @@ class _ResourceSymbol(_NestedSymbol, Generic[TResult]):
     def compile(
         self, outer_mixin: MixinMapping
     ) -> _ResourceEvaluatorGetter[TResult]:
+        """
+        Compile this symbol into an EvaluatorGetter.
+
+        .. todo::
+
+            Change return type to ``_NestedResourceMixin`` after refactoring.
+
+            Implementation should:
+
+            1. Collect ``base_indices`` using ``_collect_base_indices(outer_mixin, self.resource_name)``
+            2. Return ``_NestedResourceMixin(name=..., outer=..., symbol=self, base_indices=...)``
+        """
         return _ResourceEvaluatorGetter(
             outer=outer_mixin,
             jit_compiled_function=self.jit_compiled_function,
@@ -2079,6 +2156,18 @@ class _SinglePatchSymbol(_NestedSymbol, Generic[TPatch_co]):
     def compile(
         self, outer_mixin: MixinMapping
     ) -> _SinglePatchEvaluatorGetter[TPatch_co]:
+        """
+        Compile this symbol into an EvaluatorGetter.
+
+        .. todo::
+
+            Change return type to ``_NestedSinglePatchMixin`` after refactoring.
+
+            Implementation should:
+
+            1. Collect ``base_indices`` using ``_collect_base_indices(outer_mixin, self.resource_name)``
+            2. Return ``_NestedSinglePatchMixin(name=..., outer=..., symbol=self, base_indices=...)``
+        """
         return _SinglePatchEvaluatorGetter(
             outer=outer_mixin,
             jit_compiled_function=self.jit_compiled_function,
@@ -2105,6 +2194,18 @@ class _MultiplePatchSymbol(_NestedSymbol, Generic[TPatch_co]):
         )
 
     def compile(self, outer_mixin: MixinMapping) -> _MultiplePatchEvaluatorGetter[TPatch_co]:
+        """
+        Compile this symbol into an EvaluatorGetter.
+
+        .. todo::
+
+            Change return type to ``_NestedMultiplePatchMixin`` after refactoring.
+
+            Implementation should:
+
+            1. Collect ``base_indices`` using ``_collect_base_indices(outer_mixin, self.resource_name)``
+            2. Return ``_NestedMultiplePatchMixin(name=..., outer=..., symbol=self, base_indices=...)``
+        """
         return _MultiplePatchEvaluatorGetter(
             outer=outer_mixin,
             jit_compiled_function=self.jit_compiled_function,

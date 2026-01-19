@@ -103,7 +103,15 @@ class PureMerger(Merger[Any, Any]):
 
 @dataclass
 class _DirectEvaluatorGetter:
-    """EvaluatorGetter that directly returns an item without any dependency resolution."""
+    """
+    EvaluatorGetter that directly returns an item without any dependency resolution.
+
+    .. todo::
+
+        After refactoring, this test helper should become a ``NestedMixin``
+        subclass that implements ``get_evaluator``, similar to the production
+        ``_NestedXxxMixin`` classes.
+    """
 
     item: Any
 
@@ -115,7 +123,14 @@ class _DirectEvaluatorGetter:
 
 @dataclass
 class _DirectSymbol:
-    """Symbol that directly returns an item without any dependency resolution."""
+    """
+    Symbol that directly returns an item without any dependency resolution.
+
+    .. todo::
+
+        After refactoring, ``compile()`` should return a ``NestedMixin``
+        subclass instance that also implements ``get_evaluator``.
+    """
 
     item: Any
 
