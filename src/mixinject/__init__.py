@@ -678,8 +678,17 @@ class Mixin(ABC):
     """
 
     @abstractmethod
-    def generate_linearized_bases(self) -> Iterator[Mixin]:
-        """Generate the base mixins that this mixin extends."""
+    def generate_strict_super(self) -> Iterator[Mixin]:
+        """
+        Generate the strict super mixins (all direct and transitive bases, excluding self).
+
+        "Strict super" follows the mathematical convention where a strict superset
+        excludes the set itself. Similarly, this method yields all direct and transitive
+        base mixins, but not the mixin itself.
+
+        The result is linearized (stable, reproducible order) and deduplicated.
+        No additional constraints (such as C3 linearization) are guaranteed.
+        """
 
     symbol: "_Symbol | _SyntheticSymbol"
     """
@@ -722,7 +731,7 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
                     yield key
 
         # Keys from bases
-        for base in cast(Iterator[MixinMapping], self.generate_linearized_bases()):
+        for base in cast(Iterator[MixinMapping], self.generate_strict_super()):
             for key in base:
                 if key not in seen:
                     seen.add(key)
@@ -755,7 +764,7 @@ class MixinMapping(Mixin, Mapping[Hashable, "Mixin"]):
 
             Each ``Symbol.compile()`` method will be responsible for:
 
-            - Collecting ``base_indices`` from ``outer_mixin.generate_linearized_bases()``
+            - Collecting ``base_indices`` from ``outer_mixin.generate_strict_super()``
             - Creating the appropriate ``NestedMixin`` subclass instance
 
         """
@@ -833,7 +842,7 @@ class _SyntheticSymbol(_Compilable):
         base_indices: dict["NestedMixin", int] = {
             cast("NestedMixin", item_mixin): i
             for i, base in enumerate(
-                cast(Iterator["MixinMapping"], outer_mixin.generate_linearized_bases())
+                cast(Iterator["MixinMapping"], outer_mixin.generate_strict_super())
             )
             if (item_mixin := base.get(key)) is not None
         }
@@ -929,23 +938,61 @@ class RootMixinMapping(StaticMixinMapping):
     NestedMixinMapping nodes within that dependency graph.
     """
 
-    def generate_linearized_bases(self) -> Iterator[Mixin]:
+    def generate_strict_super(self) -> Iterator[Mixin]:
         """
-        Root mixin cannot extend any other mixins.
+        Root mixin has no strict super mixins.
+
+        Since root is the top of the hierarchy, there are no direct or transitive bases.
         """
         return iter(())
 
 
 class MixinIndexSentinel(Enum):
-    SELF = auto()
+    """Sentinel value for mixin indices indicating the mixin itself (not a base)."""
+
+    OWN = auto()
 
 
-MixinIndex: TypeAlias = int | MixinIndexSentinel
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class OuterBaseIndex:
+    """
+    Index into outer mixin's linearized bases.
+
+    Used when the nested mixin is inherited from one of the outer mixin's base classes.
+    """
+
+    index: Final[int]
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class OwnBaseIndex:
+    """
+    Index into the extend reference list (own bases).
+
+    Used when the nested mixin is explicitly extended via the ``extend`` parameter
+    in the ``@scope`` decorator.
+    """
+
+    index: Final[int]
+
+
+PrimaryMixinIndex: TypeAlias = OuterBaseIndex | OwnBaseIndex | MixinIndexSentinel
 """
-The index of a symbol from its outer mixin mapping.
+The primary index identifying the source of a nested mixin.
 
-- If an integer, it represents the index in the outer's ``bases``
-- If ``MixinIndexSentinel.SELF``, it represents the outer mixin mapping itself.
+- ``OuterBaseIndex``: Inherited from outer mixin's linearized bases
+- ``OwnBaseIndex``: Explicitly extended via the ``extend`` parameter
+- ``MixinIndexSentinel.OWN``: The nested mixin itself (used as secondary_index)
+"""
+
+SecondaryMixinIndex: TypeAlias = int | MixinIndexSentinel
+"""
+The secondary index within a primary base's linearized chain.
+
+- ``int``: Position in the primary base's ``generate_strict_super()``
+- ``MixinIndexSentinel.OWN``: The primary base itself (not one of its strict super mixins)
 """
 
 
@@ -961,20 +1008,54 @@ class NestedMixinIndex:
     ``NestedMixinIndex`` uses a two-dimensional index ``(primary_index, secondary_index)`` to locate
     a Mixin's position in its outer MixinMapping's linearized inheritance chain.
 
-    - ``primary_index``: Index in ``outer.generate_linearized_bases()``
-    - ``secondary_index``: Index in the result of ``symbol[name].compile(outer)`` for that base class
+    - ``primary_index``: Identifies the source of the nested mixin
+
+      - ``OuterBaseIndex``: Inherited from outer's linearized bases
+      - ``OwnBaseIndex``: Explicitly extended via ``extend`` parameter
+
+    - ``secondary_index``: Position within that source's linearized chain
+
+      - ``int``: Position in the source's ``generate_strict_super()``
+      - ``MixinIndexSentinel.OWN``: The source itself (not one of its strict super mixins)
+
+    Index Semantics
+    ===============
+
+    The integer indices in ``OuterBaseIndex`` and ``OwnBaseIndex`` are plain array subscripts
+    with no special meaning. ``MixinIndexSentinel.OWN`` is needed because a mixin does not
+    appear in its own ``generate_strict_super()`` - only its strict super mixins do.
 
     Index Examples
     ==============
 
-    - ``NestedMixinIndex(primary_index=5, secondary_index=2)``:
-      ``tuple(outer.generate_linearized_bases())[5].symbol[name].compile(outer)[2]``
+    Given ``nested_mixin: NestedMixinMapping`` with ``key`` in ``outer: MixinMapping``,
+    and integer indices ``i``, ``j``:
 
-    - ``NestedMixinIndex(primary_index=MixinIndexSentinel.SELF, secondary_index=3)``:
-      ``tuple(outer.symbol[name].compile(outer).generate_linearized_bases())[3]``
+    - ``NestedMixinIndex(primary_index=OuterBaseIndex(index=i), secondary_index=MixinIndexSentinel.OWN)``::
 
-    - ``NestedMixinIndex(primary_index=14, secondary_index=MixinIndexSentinel.SELF)``:
-      ``tuple(outer.generate_linearized_bases())[14].symbol[name].compile(outer)``
+        # outer_bases[i][key] itself
+        outer_bases = tuple(outer.generate_strict_super())
+        target = outer_bases[i][key]
+
+    - ``NestedMixinIndex(primary_index=OuterBaseIndex(index=i), secondary_index=j)``::
+
+        # The j-th strict super mixin of outer_bases[i][key]
+        outer_bases = tuple(outer.generate_strict_super())
+        outer_nested = outer_bases[i][key]
+        target = tuple(outer_nested.generate_strict_super())[j]
+
+    - ``NestedMixinIndex(primary_index=OwnBaseIndex(index=i), secondary_index=MixinIndexSentinel.OWN)``::
+
+        # extend_refs[i] itself
+        extend_refs = nested_mixin.symbol.definition.bases
+        target = _resolve_mixin_reference(extend_refs[i], outer, NestedMixinMapping)
+
+    - ``NestedMixinIndex(primary_index=OwnBaseIndex(index=i), secondary_index=j)``::
+
+        # The j-th strict super mixin of extend_refs[i]
+        extend_refs = nested_mixin.symbol.definition.bases
+        own_base = _resolve_mixin_reference(extend_refs[i], outer, NestedMixinMapping)
+        target = tuple(own_base.generate_strict_super())[j]
 
     JIT Optimization Use Cases
     ===========================
@@ -982,7 +1063,7 @@ class NestedMixinIndex:
     This data structure is designed for JIT and Proxy optimization:
 
     1. **Eliminate runtime traversal**: JIT can directly access specific Mixins using indices,
-       without traversing ``generate_linearized_bases()``
+       without traversing ``generate_strict_super()``
 
     2. **O(1) random access**: Given ``NestedMixinIndex``, the Mixin's position can be directly
        computed with O(1) time complexity
@@ -1008,8 +1089,8 @@ class NestedMixinIndex:
             evaluator = merger(captured_scopes)  # Return type guaranteed to be Merger
     """
 
-    primary_index: Final[MixinIndex]
-    secondary_index: Final[MixinIndex]
+    primary_index: Final[PrimaryMixinIndex]
+    secondary_index: Final[SecondaryMixinIndex]
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
@@ -1039,8 +1120,8 @@ class NestedMixin(Mixin, EvaluatorGetter["Merger | Patcher"]):
     outer: Final[MixinMapping]
     key: Final[Hashable]
 
-    def generate_linearized_bases(self) -> Iterator[Mixin]:
-        """Generate the base mixins that this mixin extends."""
+    def generate_strict_super(self) -> Iterator[Mixin]:
+        """Generate the strict super mixins (all direct and transitive bases, excluding self)."""
         return iter(self.base_indices.keys())
 
     @abstractmethod
@@ -1353,7 +1434,7 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
     ``NestedMixinIndex`` provides O(1) random access capability. For example::
 
         NestedMixinIndex(primary_index=5, secondary_index=2)
-        # Represents: tuple(outer.generate_linearized_bases())[5].symbol[name].compile(outer)[2]
+        # Represents: tuple(outer.generate_strict_super())[5].symbol[name].compile(outer)[2]
 
     Combined with typed indices, JIT can:
 
@@ -1368,15 +1449,15 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
         ``mapping_base_indices`` properties.
     """
 
-    def generate_linearized_bases(self):
+    def generate_strict_super(self):
         """
-        Generate the base mixins that this mixin extends.
+        Generate the strict super mixins (all direct and transitive bases, excluding self).
 
         .. todo::
 
             This method will be used with the new ``Scope.captured_scopes_sequence``
             (which replaces ``Scope.mixins``) via
-            ``zip(mixin.generate_linearized_bases(), scope.captured_scopes_sequence)``.
+            ``zip(mixin.generate_strict_super(), scope.captured_scopes_sequence)``.
         """
         return iter(self.linearized_base_indices.keys())
 
@@ -1389,37 +1470,38 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
     key: Final[Hashable]
 
     @cached_property
-    def _inherited_base_indices(self) -> Mapping["NestedMixinMapping", NestedMixinIndex]:
+    def _linearized_outer_base_indices(self) -> Mapping["NestedMixinMapping", NestedMixinIndex]:
         """
-        Index mapping for inherited base classes (common to both subclasses).
+        Index mapping for outer base classes (common to both subclasses).
 
         This includes:
-        1. Direct base classes from ``self.base_indices``
-        2. Inherited base classes from each direct base class's ``generate_linearized_bases()``
+        1. Outer base classes from ``self.base_indices``
+        2. Strict super mixins from each outer base class's ``generate_strict_super()``
 
-        Uses ``ChainMap`` to avoid dictionary unpacking. Direct base classes take
-        precedence over inherited ones (first map in ChainMap wins on key collision).
+        Uses ``ChainMap`` to avoid dictionary unpacking. Outer base classes take
+        precedence over their strict super mixins (first map in ChainMap wins on key collision).
         """
-        direct_base_indices: dict["NestedMixinMapping", NestedMixinIndex] = {
+        outer_base_indices: dict["NestedMixinMapping", NestedMixinIndex] = {
             base: NestedMixinIndex(
-                primary_index=primary_index,
-                secondary_index=MixinIndexSentinel.SELF,
+                primary_index=OuterBaseIndex(index=primary_index),
+                secondary_index=MixinIndexSentinel.OWN,
             )
             for base, primary_index in self.base_indices.items()
         }
-        inherited_base_indices: dict["NestedMixinMapping", NestedMixinIndex] = {
+        linearized_outer_base_indices: dict["NestedMixinMapping", NestedMixinIndex] = {
             cast("NestedMixinMapping", linearized_base): NestedMixinIndex(
-                primary_index=primary_index,
+                primary_index=OuterBaseIndex(index=primary_index),
                 secondary_index=secondary_index,
             )
             for base, primary_index in self.base_indices.items()
             for secondary_index, linearized_base in enumerate(
-                base.generate_linearized_bases()
+                base.generate_strict_super()
             )
         }
-        return ChainMap(direct_base_indices, inherited_base_indices)
+        return ChainMap(outer_base_indices, linearized_outer_base_indices)
 
-    @cached_property
+    @property
+    @abstractmethod
     def linearized_base_indices(self) -> Mapping["NestedMixinMapping", NestedMixinIndex]:
         """
         Index mapping for all linearized base classes.
@@ -1427,7 +1509,9 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
         This property maps all base classes (including direct and inherited base classes) to their
         ``NestedMixinIndex``, supporting O(1) random access.
 
-        Subclasses override this to include/exclude extension references.
+        Subclasses implement this to include/exclude extension references:
+        - ``SyntheticMixinMapping``: Returns only inherited base indices
+        - ``DefinedMixinMapping``: Returns inherited + extension base indices
 
         .. todo::
 
@@ -1440,7 +1524,6 @@ class NestedMixinMapping(SemigroupMixin, HasDict, StaticMixinMapping):
             from base classes). They should not appear in the linearized base indices because
             they don't contribute any actual behavior.
         """
-        return self._inherited_base_indices
 
     @abstractmethod
     def get_evaluator(self, captured_scopes: CapturedScopes, /) -> "_ScopeSemigroup":
@@ -1467,7 +1550,11 @@ class SyntheticMixinMapping(_SyntheticMixin, NestedMixinMapping):
 
     symbol: "_SyntheticSymbol"  # type: ignore[assignment]  # Narrowing from base class
 
-    @override
+    @property
+    def linearized_base_indices(self) -> Mapping[NestedMixinMapping, NestedMixinIndex]:
+        """Return only inherited base indices (no extension references)."""
+        return self._linearized_outer_base_indices
+
     def get_evaluator(self, captured_scopes: CapturedScopes, /) -> "_ScopeSemigroup":
         """Resolve resources using default CachedScope (no extend references)."""
 
@@ -1500,41 +1587,61 @@ class DefinedMixinMapping(_DefinedMixin, NestedMixinMapping):
     symbol: "_NestedSymbolMapping"  # type: ignore[assignment]  # Narrowing from base class
 
     @cached_property
-    @override
+    def _linearized_own_base_indices(self) -> dict[NestedMixinMapping, NestedMixinIndex]:
+        """
+        Linearized indices for own bases (extend references) and their strict super mixins.
+
+        This includes:
+        1. Direct extend references from ``self.symbol.definition.bases``
+        2. Strict super mixins from each extend reference's ``generate_strict_super()``
+
+        Uses ``OwnBaseIndex`` to distinguish from outer base indices.
+        """
+        result: dict[NestedMixinMapping, NestedMixinIndex] = {}
+        for own_base_index, reference in enumerate(self.symbol.definition.bases):
+            own_base = _resolve_mixin_reference(reference, self.outer, NestedMixinMapping)
+            # Direct extend reference
+            result[own_base] = NestedMixinIndex(
+                primary_index=OwnBaseIndex(index=own_base_index),
+                secondary_index=MixinIndexSentinel.OWN,
+            )
+            # Linearized strict super mixins of the extend reference
+            for linearized_index, linearized_base in enumerate(own_base.generate_strict_super()):
+                if linearized_base not in result:  # Avoid overwriting more direct references
+                    result[cast(NestedMixinMapping, linearized_base)] = NestedMixinIndex(
+                        primary_index=OwnBaseIndex(index=own_base_index),
+                        secondary_index=linearized_index,
+                    )
+        return result
+
+    @property
     def linearized_base_indices(self) -> Mapping[NestedMixinMapping, NestedMixinIndex]:
         """
-        Index mapping including extension references from ``self.symbol.definition.bases``.
+        Index mapping including own bases (extend references) and outer bases.
 
         Data Sources
         ============
 
-        Indices consist of three parts:
+        Indices consist of four parts:
 
-        1. **Direct base classes**: From ``self.base_indices``,
-           ``secondary_index`` is ``MixinIndexSentinel.SELF``
+        1. **Outer base classes**: From ``self.base_indices``,
+           ``primary_index`` is ``OuterBaseIndex``, ``secondary_index`` is ``MixinIndexSentinel.OWN``
 
-        2. **Extension references**: From ``self.symbol.definition.bases``,
-           ``primary_index`` is ``MixinIndexSentinel.SELF``
+        2. **Strict super mixins of outer bases**: From each outer base's ``generate_strict_super()``,
+           ``primary_index`` is ``OuterBaseIndex``, ``secondary_index`` is ``int``
 
-        3. **Inherited base classes**: From each direct base class's ``generate_linearized_bases()``
+        3. **Own bases (extend references)**: From ``self.symbol.definition.bases``,
+           ``primary_index`` is ``OwnBaseIndex``, ``secondary_index`` is ``MixinIndexSentinel.OWN``
 
-        Uses ``ChainMap`` to avoid dictionary unpacking. Extension references take
-        precedence over inherited ones (first map in ChainMap wins on key collision).
+        4. **Strict super mixins of own bases**: From each extend reference's ``generate_strict_super()``,
+           ``primary_index`` is ``OwnBaseIndex``, ``secondary_index`` is ``int``
+
+        Uses ``ChainMap`` to avoid dictionary unpacking. Own bases take
+        precedence over outer bases (first map in ChainMap wins on key collision).
         """
-        extension_base_indices: dict[NestedMixinMapping, NestedMixinIndex] = {
-            _resolve_mixin_reference(
-                reference, self.outer, NestedMixinMapping
-            ): NestedMixinIndex(
-                primary_index=MixinIndexSentinel.SELF,
-                secondary_index=secondary_index,
-            )
-            for secondary_index, reference in enumerate(
-                self.symbol.definition.bases
-            )
-        }
         return ChainMap(
-            extension_base_indices,
-            cast(dict[NestedMixinMapping, NestedMixinIndex], self._inherited_base_indices),
+            self._linearized_own_base_indices,
+            cast(dict[NestedMixinMapping, NestedMixinIndex], self._linearized_outer_base_indices),
         )
 
     @override
@@ -1590,9 +1697,11 @@ class InstanceMixinMapping(MixinMapping):
     The static dependency graph that this instance is based on.
     """
 
-    def generate_linearized_bases(self) -> Iterator[Mixin]:
+    def generate_strict_super(self) -> Iterator[Mixin]:
         """
-        Instance mixin cannot merge with other mixins.
+        Instance mixin has no strict super mixins.
+
+        Instance mixins are leaf nodes that cannot merge with other mixins.
         """
         return iter(())
 
@@ -1738,11 +1847,11 @@ class StaticScope(Scope, ABC):
     .. todo::
 
         Delete this field and replace with ``captured_scopes_sequence: Sequence[CapturedScopes]``
-        that is isomorphic to ``mixin.generate_linearized_bases()``.
+        that is isomorphic to ``mixin.generate_strict_super()``.
 
         This enables:
 
-        - Zip with ``generate_linearized_bases()`` to pair each Mixin with its CapturedScopes
+        - Zip with ``generate_strict_super()`` to pair each Mixin with its CapturedScopes
         - O(1) random access outer scope using ``NestedMixinIndex`` to construct
           ``Sequence[CapturedScopes]``
     """
@@ -2019,11 +2128,11 @@ class _NestedSymbol(_Compilable, _Symbol):
     def _collect_base_indices(
         self, outer_mixin: "MixinMapping", key: Hashable, /
     ) -> Mapping["NestedMixin", int]:
-        """Collect base_indices from outer_mixin's linearized bases."""
+        """Collect base_indices from outer_mixin's strict super mixins."""
         return {
             cast("NestedMixin", item_mixin): i
             for i, base in enumerate(
-                cast(Iterator["MixinMapping"], outer_mixin.generate_linearized_bases())
+                cast(Iterator["MixinMapping"], outer_mixin.generate_strict_super())
             )
             if (item_mixin := base.get(key)) is not None
         }
