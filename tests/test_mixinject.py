@@ -13,7 +13,7 @@ from mixinject import (
     InstanceScope,
     _NestedSymbolMapping,
     _RootSymbol,
-    SymbolSentinel,
+    _SyntheticSymbol,
     CapturedScopes,
     _PackageDefinitionMapping,
     _DefinitionMapping,
@@ -749,7 +749,7 @@ class TestSymbolSharing:
             the same symbol since they refer to the same Python class definition
             (Root.Outer.Inner). Currently, each InstanceChildMixinMapping has its own
             intern_pool, leading to separate ChildMixinMapping instances with different
-            symbol values (SymbolSentinel.MERGED vs real _Symbol).
+            symbol values (_SyntheticSymbol vs real _Symbol).
 
             The fix should ensure that all access paths to the same scope definition
             share the same _Symbol instance.
@@ -784,9 +784,9 @@ class TestSymbolSharing:
 
         # Both should share the same symbol since they access the same Inner definition
         assert outer_symbol is object1_symbol
-        # Neither should be MERGED sentinel - they should have real _Symbol
-        assert outer_symbol is not SymbolSentinel.SYNTHETIC
-        assert object1_symbol is not SymbolSentinel.SYNTHETIC
+        # Neither should be SYNTHETIC - they should have real _Symbol
+        assert not isinstance(outer_symbol, _SyntheticSymbol)
+        assert not isinstance(object1_symbol, _SyntheticSymbol)
 
 
 class TestScopeAsSymlink:

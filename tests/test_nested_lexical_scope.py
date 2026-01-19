@@ -1,6 +1,6 @@
 import pytest
 from dataclasses import dataclass
-from typing import Any, Iterator, override
+from typing import Any, Final, Iterator, override
 from typing import Callable
 from mixinject import (
     Merger,
@@ -16,6 +16,7 @@ from mixinject import (
     scope,
     Definition,
     MixinMapping,
+    NestedMixin,
     CapturedScopes,
     RelativeReference as R,
 )
@@ -101,20 +102,18 @@ class PureMerger(Merger[Any, Any]):
         )
 
 
-@dataclass
-class _DirectEvaluatorGetter:
+@dataclass(kw_only=True, slots=True, weakref_slot=True, eq=False)
+class _DirectNestedMixin(NestedMixin):
     """
-    EvaluatorGetter that directly returns an item without any dependency resolution.
+    NestedMixin that directly returns an item without any dependency resolution.
 
-    .. todo::
-
-        After refactoring, this test helper should become a ``NestedMixin``
-        subclass that implements ``get_evaluator``, similar to the production
-        ``_NestedXxxMixin`` classes.
+    This test helper implements ``get_evaluator`` to return a pre-configured
+    Evaluator (Merger or Patcher) for testing purposes.
     """
 
     item: Any
 
+    @override
     def get_evaluator(
         self, captured_scopes: CapturedScopes, /
     ) -> Merger[Any, Any] | Patcher[Any]:
@@ -124,20 +123,24 @@ class _DirectEvaluatorGetter:
 @dataclass
 class _DirectSymbol:
     """
-    Symbol that directly returns an item without any dependency resolution.
+    Symbol that directly returns a _DirectNestedMixin.
 
-    .. todo::
-
-        After refactoring, ``compile()`` should return a ``NestedMixin``
-        subclass instance that also implements ``get_evaluator``.
+    This test helper's ``compile()`` creates a _DirectNestedMixin instance
+    with the pre-configured Evaluator.
     """
 
     item: Any
 
     def compile(
-        self, mixin: MixinMapping, /
-    ) -> _DirectEvaluatorGetter:
-        return _DirectEvaluatorGetter(item=self.item)
+        self, outer_mixin: MixinMapping, /
+    ) -> _DirectNestedMixin:
+        return _DirectNestedMixin(
+            name="test",
+            outer=outer_mixin,
+            symbol=self,
+            base_indices={},
+            item=self.item,
+        )
 
 
 @dataclass
