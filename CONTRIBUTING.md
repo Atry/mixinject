@@ -728,6 +728,102 @@ def process_results(results: list[str]):
 Use `assert` for internal invariants about trusted code paths; use `ValueError` for invalid caller/user inputs. Let the program crash—crashes are your friend in finding bugs.
 
 
+## Handling Test Failures After Code Changes
+
+When code modifications cause tests to fail, consider **three possible scenarios** before making any changes:
+
+### 1. Tests Need to Be Updated
+
+The test expectations are outdated and need to reflect the new, correct behavior.
+
+**When this applies:**
+- The code change was intentional and the new behavior is correct
+- The test was written for the old behavior that is no longer valid
+- The test assertions need to match the new expected output
+
+**Action:** Update the test to reflect the new behavior.
+
+### 2. Source Code Has a Trivial Bug
+
+There's a simple, obvious bug in the source code that can be fixed without changing the design.
+
+**When this applies:**
+- The fix is a typo, missing import, or obvious logic error
+- The fix does not change the intended behavior or design
+- The fix is unambiguous and doesn't require design decisions
+
+**Action:** Fix the trivial bug in the source code.
+
+### 3. Source Code Design Conflicts with Test Assumptions
+
+The source code's design and the test's assumptions are fundamentally incompatible.
+
+**When this applies:**
+- Fixing the test failure would require changing the source code's behavior
+- The "fix" would involve adding workarounds, special cases, or design changes
+- You are uncertain whether the source code or the test is "correct"
+
+**Action:** **STOP and ask the user.** Do NOT autonomously modify source code behavior.
+
+### 🎉 Discovering Design Conflicts is Valuable
+
+When tests fail and reveal a conflict between source code design and test assumptions, **this is a good thing**. It proves the value of tests:
+
+- Tests caught a real design issue that would otherwise go unnoticed
+- The conflict forces explicit design decisions rather than implicit assumptions
+- This is exactly what tests are for: exposing problems early
+
+**Do NOT view this as an obstacle to overcome.** View it as valuable information that requires human judgment.
+
+### ☠️ Autonomous Workarounds Are Extremely Harmful
+
+Adding workarounds **without user confirmation** to make tests pass is **catastrophically bad**:
+
+- Workarounds hide the real problem instead of solving it
+- They introduce behavior changes outside of the planned design
+- They create technical debt that compounds over time
+- They break the trust relationship between tests and implementation
+- A passing test suite becomes meaningless if tests pass due to workarounds
+
+**Examples of forbidden autonomous workarounds:**
+- Adding method overrides (like `__contains__`) just to make tests pass
+- Adding special case handling for specific test scenarios
+- Modifying return values to match test expectations without understanding why
+- Catching and suppressing exceptions that tests don't expect
+
+**Workarounds are acceptable ONLY when explicitly requested by the user.** The user may have valid reasons to accept a workaround as a temporary or permanent solution. But this decision belongs to the user, not to the assistant.
+
+**The correct response to a design conflict is ALWAYS to stop and ask.**
+
+### ⚠️ Critical Rule
+
+**Source code behavior changes MUST only come from:**
+1. The original plan approved by the user
+2. Explicit user requests
+
+**Source code behavior changes MUST NEVER come from:**
+- Attempts to make tests pass
+- Assumptions about what the "correct" behavior should be
+
+If you cannot fix a test failure through trivial bug fixes or test updates, you MUST ask the user for guidance. Do NOT add workarounds, override methods, or change behavior just to make tests pass.
+
+```python
+# ✗ FORBIDDEN - Adding __contains__ override just to fix a test
+def __contains__(self, key: object) -> bool:
+    # This changes the class's behavior beyond the original plan
+    return any(k == key for k in self)
+
+# ✗ FORBIDDEN - Adding special case handling to pass tests
+if isinstance(result, SyntheticSymbol):
+    # Workaround to make test pass - violates design
+    result = create_workaround_symbol()
+
+# ✓ CORRECT - Ask the user when design conflicts with tests
+# "The test expects X but the code does Y. Should I:
+#  (a) Update the test to expect Y, or
+#  (b) Change the code design to produce X?"
+```
+
 ## Logging Best Practices
 
 ### Use `logging`, NOT `print`
