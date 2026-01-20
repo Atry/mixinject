@@ -17,7 +17,7 @@ from mixinject import (
     Scope,
     RelativeReference,
     StaticScope,
-    _ResourceDefinition,
+    _EndofunctionDefinition,
     _SinglePatchDefinition,
     merge,
     extern,

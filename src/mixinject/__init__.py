@@ -590,15 +590,15 @@ class Symbol(ABC):
     - ``Evaluator = Merger | Patcher``
     - ``Merger``: Merges patches to produce result
     - ``Patcher``: Provides patches
-    - ``_ScopeSemigroup``: An Evaluator that implements both Merger and Patcher
+    - ``_NestedMappingMixin``: An Evaluator that implements both Merger and Patcher
 
     **Relationship**
 
     - ``NestedMergerSymbol.__call__`` returns ``Merger``
     - ``NestedPatcherSymbol.__call__`` returns ``Patcher``
-    - ``NestedSymbolMapping.__call__`` returns ``_ScopeSemigroup`` (an Evaluator)
+    - ``NestedSymbolMapping.__call__`` returns ``_NestedMappingMixin`` (an Evaluator)
 
-    ``_ScopeSemigroup`` is currently the only Semigroup Evaluator, but the system
+    ``_NestedMappingMixin`` is currently the only Semigroup Evaluator, but the system
     will support other Semigroups in the future. Semigroup is an Evaluator layer
     concept and should not be conflated with the Symbol layer.
 
@@ -641,7 +641,7 @@ class Symbol(ABC):
         │   ├── StaticSymbolMapping (ABC)
         │   │   ├── RootSymbolMapping
         │   │   └── NestedSymbolMapping (IS-A Mapping, contains nested resources)
-        │   │           __call__() → _ScopeSemigroup (an Evaluator: Merger ∩ Patcher)
+        │   │           __call__() → _NestedMappingMixin (an Evaluator: Merger ∩ Patcher)
         │   │           merger_base_indices: Mapping[NestedMergerSymbol, NestedSymbolIndex]
         │   │           patcher_base_indices: Mapping[NestedPatcherSymbol, NestedSymbolIndex]
         │   │           mapping_base_indices: Mapping[NestedSymbolMapping, NestedSymbolIndex]
@@ -666,7 +666,7 @@ class Symbol(ABC):
 
     - ``NestedMergerSymbol.__call__`` → ``Merger`` (not Patcher)
     - ``NestedPatcherSymbol.__call__`` → ``Patcher`` (not Merger)
-    - ``NestedSymbolMapping.__call__`` → ``_ScopeSemigroup`` (an Evaluator: Merger ∩ Patcher)
+    - ``NestedSymbolMapping.__call__`` → ``_NestedMappingMixin`` (an Evaluator: Merger ∩ Patcher)
 
     Definition Type to Symbol Type Mapping
     =====================================
@@ -675,10 +675,10 @@ class Symbol(ABC):
     Definition Type            Generated Symbol            ``get_evaluator`` Return Type
     ========================== ========================== ============================
     ``_MergerDefinition``      ``_NestedMergerSymbol``     ``Merger`` (not Patcher)
-    ``_ResourceDefinition``    ``_NestedResourceSymbol``   ``Merger`` (not Patcher)
+    ``_EndofunctionDefinition``    ``_EndofunctionSymbol``   ``Merger`` (not Patcher)
     ``_SinglePatchDefinition`` ``_NestedSinglePatchSymbol`` ``Patcher`` (not Merger)
     ``_MultiplePatchDefinition`` ``_NestedMultiplePatchSymbol`` ``Patcher`` (not Merger)
-    ``_DefinitionMapping``     ``DefinedSymbolMapping``    ``_ScopeSemigroup`` (Evaluator)
+    ``_DefinitionMapping``     ``DefinedSymbolMapping``    ``_NestedMappingMixin`` (Evaluator)
     ========================== ========================== ============================
 
     .. todo:: Inherit from ``EvaluatorGetter``. Add ``@abstractmethod __call__``.
@@ -847,7 +847,7 @@ class _DefinedSymbol(Symbol):
     Subclasses
     ==========
 
-    - ``_NestedMergerSymbol``, ``_NestedResourceSymbol``, etc.: For leaf resources
+    - ``_NestedMergerSymbol``, ``_EndofunctionSymbol``, etc.: For leaf resources
     - ``DefinedSymbolMapping``: For nested scopes
     - ``RootSymbolMapping``: For root symbol
 
@@ -1175,17 +1175,16 @@ class _NestedMergerSymbol(
     @override
     def bind(
         self, captured_scopes: CapturedScopes, /
-    ) -> "Merger[TPatch_contra, TResult_co]":
-        aggregation_function = self.jit_compiled_function(captured_scopes)
-        return FunctionMerger(aggregation_function=aggregation_function)
+    ) -> "_NestedMergerMixin[TPatch_contra, TResult_co]":
+        return _NestedMergerMixin(symbol=self, captured_scopes=captured_scopes)
 
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class _NestedResourceSymbol(
+class _EndofunctionSymbol(
     _DefinedSymbol, MergerSymbol["Endofunction[TResult]", TResult], Generic[TResult]
 ):
-    """NestedSymbol for _ResourceDefinition.
+    """NestedSymbol for _EndofunctionDefinition.
 
     Returns ``Merger[Endofunction[T], T]`` which accepts endofunction patches.
     """
@@ -1193,7 +1192,7 @@ class _NestedResourceSymbol(
     @cached_property
     def jit_compiled_function(self) -> Callable[[CapturedScopes], TResult]:
         """JIT-compiled function using mixin-based dependency resolution."""
-        definition = cast("_ResourceDefinition[TResult]", self.definition)
+        definition = cast("_EndofunctionDefinition[TResult]", self.definition)
         assert isinstance(
             self.key, str
         ), f"Resource key must be a string, got {type(self.key)}"
@@ -1206,9 +1205,8 @@ class _NestedResourceSymbol(
     @override
     def bind(
         self, captured_scopes: CapturedScopes, /
-    ) -> "Merger[Endofunction[TResult], TResult]":
-        base_value = self.jit_compiled_function(captured_scopes)
-        return _EndofunctionMerger(base_value=base_value)
+    ) -> "_EndofunctionMixin[TResult]":
+        return _EndofunctionMixin(symbol=self, captured_scopes=captured_scopes)
 
 
 @final
@@ -1232,13 +1230,8 @@ class _NestedSinglePatchSymbol(
         )
 
     @override
-    def bind(self, captured_scopes: CapturedScopes, /) -> "Patcher[TPatch_co]":
-        jit_func = self.jit_compiled_function
-
-        def patch_generator() -> Iterator[TPatch_co]:
-            yield jit_func(captured_scopes)
-
-        return FunctionPatcher(patch_generator=patch_generator)
+    def bind(self, captured_scopes: CapturedScopes, /) -> "_NestedSinglePatchMixin[TPatch_co]":
+        return _NestedSinglePatchMixin(symbol=self, captured_scopes=captured_scopes)
 
 
 @final
@@ -1262,13 +1255,8 @@ class _NestedMultiplePatchSymbol(
         )
 
     @override
-    def bind(self, captured_scopes: CapturedScopes, /) -> "Patcher[TPatch_co]":
-        jit_func = self.jit_compiled_function
-
-        def patch_generator() -> Iterator[TPatch_co]:
-            return (yield from jit_func(captured_scopes))
-
-        return FunctionPatcher(patch_generator=patch_generator)
+    def bind(self, captured_scopes: CapturedScopes, /) -> "_NestedMultiplePatchMixin[TPatch_co]":
+        return _NestedMultiplePatchMixin(symbol=self, captured_scopes=captured_scopes)
 
 
 @final
@@ -1284,11 +1272,8 @@ class _SyntheticResourceSymbol(_SyntheticSymbol, PatcherSymbol[Never]):
     """
 
     @override
-    def bind(self, captured_scopes: CapturedScopes, /) -> "Patcher[Never]":
-        def empty_patch_generator() -> Iterator[Never]:
-            return iter(())
-
-        return FunctionPatcher(patch_generator=empty_patch_generator)
+    def bind(self, captured_scopes: CapturedScopes, /) -> _SyntheticResourceMixin:
+        return _SyntheticResourceMixin(symbol=self, captured_scopes=captured_scopes)
 
 
 class SemigroupSymbol(ABC):
@@ -1296,7 +1281,7 @@ class SemigroupSymbol(ABC):
     Marker base class for Symbols that return a Semigroup (both Merger and Patcher).
 
     Use ``isinstance(mixin, SemigroupSymbol)`` to check if a mixin returns
-    an evaluator that is both Merger and Patcher (e.g., ``_ScopeSemigroup``).
+    an evaluator that is both Merger and Patcher (e.g., ``_NestedMappingMixin``).
 
     Currently, ``NestedSymbolMapping`` is the only subclass.
     """
@@ -1310,7 +1295,7 @@ class NestedSymbolMapping(SemigroupSymbol, StaticSymbolMapping):
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
     This works because interned graphs within the same outer are the same object.
 
-    Implements ``Callable[[CapturedScopes], _ScopeSemigroup]`` to resolve resources
+    Implements ``Callable[[CapturedScopes], _NestedMappingMixin]`` to resolve resources
     from a lexical scope into a scope semigroup.
 
     Inherits ``HasDict`` via ``StaticSymbolMapping`` to enable ``@cached_property``
@@ -1328,16 +1313,16 @@ class NestedSymbolMapping(SemigroupSymbol, StaticSymbolMapping):
     **Important**: This class is a **Symbol** (IS-A Mapping), not a Semigroup.
 
     - ``NestedSymbolMapping`` is a **Symbol layer** concept: a Mapping containing nested resources
-    - ``_ScopeSemigroup`` is an **Evaluator layer** concept: returned by ``__call__``
+    - ``_NestedMappingMixin`` is an **Evaluator layer** concept: returned by ``__call__``
 
     The name ``NestedSymbolMapping`` is retained because it IS-A Mapping (contains nested
-    resources). ``_ScopeSemigroup`` is a type of Evaluator that implements both ``Merger``
+    resources). ``_NestedMappingMixin`` is a type of Evaluator that implements both ``Merger``
     and ``Patcher`` interfaces.
 
     ``__call__`` Semantics
     ======================
 
-    ``__call__`` returns ``_ScopeSemigroup``, which implements both ``Merger`` and ``Patcher``
+    ``__call__`` returns ``_NestedMappingMixin``, which implements both ``Merger`` and ``Patcher``
     interfaces. This allows nested Scopes to simultaneously act as:
 
     - **Merger**: Merge nested Scopes with the same name from multiple base classes
@@ -1535,14 +1520,14 @@ class NestedSymbolMapping(SemigroupSymbol, StaticSymbolMapping):
         """
 
     @abstractmethod
-    def bind(self, captured_scopes: CapturedScopes, /) -> "_ScopeSemigroup":
+    def bind(self, captured_scopes: CapturedScopes, /) -> "_NestedMappingMixin":
         """
-        Resolve resources from the given lexical scope into a _ScopeSemigroup.
+        Resolve resources from the given lexical scope into a _NestedMappingMixin.
 
         This method creates a scope factory that:
         1. Creates a mixin from this definition's definition
         2. Includes mixins from any extended scopes (via extend references)
-        3. Returns a _ScopeSemigroup that can merge with other scopes
+        3. Returns a _NestedMappingMixin that can merge with other scopes
         """
 
 
@@ -1564,7 +1549,7 @@ class SyntheticSymbolMapping(_SyntheticSymbol, NestedSymbolMapping):
         """Return only inherited base indices (no extension references)."""
         return self._linearized_outer_base_indices
 
-    def bind(self, captured_scopes: CapturedScopes, /) -> "_ScopeSemigroup":
+    def bind(self, captured_scopes: CapturedScopes, /) -> "_NestedMappingMixin":
         """Resolve resources using default StaticScope (no extend references)."""
 
         def scope_factory() -> StaticScope:
@@ -1576,7 +1561,7 @@ class SyntheticSymbolMapping(_SyntheticSymbol, NestedSymbolMapping):
                 symbol=self,
             )
 
-        return _ScopeSemigroup(
+        return _NestedMappingMixin(
             scope_factory=scope_factory,
             access_path_outer=self.outer,
             key=self.key,
@@ -1669,7 +1654,7 @@ class DefinedSymbolMapping(_DefinedSymbol, NestedSymbolMapping):
         )
 
     @override
-    def bind(self, captured_scopes: CapturedScopes, /) -> "_ScopeSemigroup":
+    def bind(self, captured_scopes: CapturedScopes, /) -> "_NestedMappingMixin":
         """Resolve resources including extend references from definition."""
 
         def scope_factory() -> StaticScope:
@@ -1699,7 +1684,7 @@ class DefinedSymbolMapping(_DefinedSymbol, NestedSymbolMapping):
                 symbol=self,
             )
 
-        return _ScopeSemigroup(
+        return _NestedMappingMixin(
             scope_factory=scope_factory,
             access_path_outer=self.outer,
             key=self.key,
@@ -2032,27 +2017,6 @@ class Patcher(Iterable[TPatch_co], ABC):
     """
 
 
-@final
-@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class FunctionPatcher(Patcher[TPatch_co]):
-    patch_generator: Callable[[], Iterator[TPatch_co]]
-
-    def __iter__(self) -> Iterator[TPatch_co]:
-        return self.patch_generator()
-
-
-@final
-@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class FunctionMerger(Merger[TPatch_contra, TResult_co]):
-    """Merger that applies custom aggregation function to patches."""
-
-    aggregation_function: Callable[[Iterator[TPatch_contra]], TResult_co]
-
-    @override
-    def merge(self, patches: Iterator[TPatch_contra]) -> TResult_co:
-        return self.aggregation_function(patches)
-
-
 TScope = TypeVar("TScope", bound=StaticScope)
 
 
@@ -2068,6 +2032,73 @@ class _EndofunctionMerger(
     @override
     def merge(self, patches: Iterator[Callable[[TResult], TResult]]) -> TResult:
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class _NestedMergerMixin(Merger[TPatch_contra, TResult_co]):
+    """Mixin for _NestedMergerSymbol."""
+
+    symbol: Final["_NestedMergerSymbol[TPatch_contra, TResult_co]"]
+    captured_scopes: Final[CapturedScopes]
+
+    @override
+    def merge(self, patches: Iterator[TPatch_contra]) -> TResult_co:
+        aggregation_function = self.symbol.jit_compiled_function(self.captured_scopes)
+        return aggregation_function(patches)
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class _EndofunctionMixin(Merger["Endofunction[TResult]", TResult]):
+    """Mixin for _EndofunctionSymbol."""
+
+    symbol: Final["_EndofunctionSymbol[TResult]"]
+    captured_scopes: Final[CapturedScopes]
+
+    @override
+    def merge(self, patches: Iterator["Endofunction[TResult]"]) -> TResult:
+        base_value = self.symbol.jit_compiled_function(self.captured_scopes)
+        return reduce(lambda accumulator, endofunction: endofunction(accumulator), patches, base_value)
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class _NestedSinglePatchMixin(Patcher[TPatch_co]):
+    """Mixin for _NestedSinglePatchSymbol."""
+
+    symbol: Final["_NestedSinglePatchSymbol[TPatch_co]"]
+    captured_scopes: Final[CapturedScopes]
+
+    @override
+    def __iter__(self) -> Iterator[TPatch_co]:
+        yield self.symbol.jit_compiled_function(self.captured_scopes)
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class _NestedMultiplePatchMixin(Patcher[TPatch_co]):
+    """Mixin for _NestedMultiplePatchSymbol."""
+
+    symbol: Final["_NestedMultiplePatchSymbol[TPatch_co]"]
+    captured_scopes: Final[CapturedScopes]
+
+    @override
+    def __iter__(self) -> Iterator[TPatch_co]:
+        yield from self.symbol.jit_compiled_function(self.captured_scopes)
+
+
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True)
+class _SyntheticResourceMixin(Patcher[Never]):
+    """Mixin for _SyntheticResourceSymbol. Empty patcher."""
+
+    symbol: Final["_SyntheticResourceSymbol"]
+    captured_scopes: Final[CapturedScopes]
+
+    @override
+    def __iter__(self) -> Iterator[Never]:
+        return iter(())
 
 
 def _symbol_getitem(
@@ -2089,8 +2120,8 @@ def _symbol_getitem(
         mixin_result = cast(MixinGetter[Mixin], nested_symbol).bind(
             inner_captured_scopes
         )
-        # If mixin_result is a _ScopeSemigroup, set access_path_outer to the scope's symbol
-        if isinstance(mixin_result, _ScopeSemigroup):
+        # If mixin_result is a _NestedMappingMixin, set access_path_outer to the scope's symbol
+        if isinstance(mixin_result, _NestedMappingMixin):
             return replace(mixin_result, access_path_outer=scope.symbol)
         return mixin_result
 
@@ -2221,7 +2252,7 @@ class _MergerDefinition(MergerDefinition[TPatch_contra, TResult_co]):
 
 @final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class _ResourceDefinition(
+class _EndofunctionDefinition(
     Generic[TResult], MergerDefinition[Callable[[TResult], TResult], TResult]
 ):
     """Definition for resource decorator."""
@@ -2230,8 +2261,8 @@ class _ResourceDefinition(
 
     def compile(
         self, outer: SymbolMapping, key: str, /
-    ) -> "_NestedResourceSymbol[TResult]":
-        return _NestedResourceSymbol(
+    ) -> "_EndofunctionSymbol[TResult]":
+        return _EndofunctionSymbol(
             key=key,
             outer=outer,
             definition=self,
@@ -2279,7 +2310,7 @@ DefinitionMapping: TypeAlias = Mapping[
 
 @final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class _ScopeSemigroup(Merger[StaticScope, StaticScope], Patcher[StaticScope]):
+class _NestedMappingMixin(Merger[StaticScope, StaticScope], Patcher[StaticScope]):
     """
     Semigroup for merging Scope instances from extended scopes.
 
@@ -2316,7 +2347,7 @@ class _ScopeSemigroup(Merger[StaticScope, StaticScope], Patcher[StaticScope]):
                 raise AssertionError(" at least one scope expected")
             case _:
                 # Get symbol via __getitem__. The symbol should always exist because
-                # _ScopeSemigroup is created by NestedSymbolMapping.bind which
+                # _NestedMappingMixin is created by NestedSymbolMapping.bind which
                 # passes access_path_outer=self.outer and key=self.key. That
                 # NestedSymbolMapping is stored in self.outer.intern_pool[self.key],
                 # so __getitem__ will find it via intern_pool lookup.
@@ -2836,7 +2867,7 @@ def resource(
                 "Hello"
             )
     """
-    return _ResourceDefinition(function=callable)
+    return _EndofunctionDefinition(function=callable)
 
 
 TMergerDefinition = TypeVar("TMergerDefinition", bound=MergerDefinition[Any, Any])
