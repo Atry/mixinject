@@ -1114,7 +1114,7 @@ class NestedSymbol(HasDict, Symbol, MixinGetter["Merger | Patcher"]):
 
         pure_merger_indices: list[int] = [
             index
-            for base_symbol, index in self.base_indices.items()
+            for index, base_symbol in enumerate(self.generate_strict_super())
             if isinstance(base_symbol, MergerSymbol)
         ]
 
