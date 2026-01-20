@@ -686,19 +686,170 @@ class Symbol(ABC):
     @property
     @abstractmethod
     def depth(self) -> int: ...
-
-    @abstractmethod
-    def generate_strict_super(self) -> Iterator[Symbol]:
+    @final
+    def generate_strict_super(self):
         """
         Generate the strict super symbols (all direct and transitive bases, excluding self).
 
-        "Strict super" follows the mathematical convention where a strict superset
-        excludes the set itself. Similarly, this method yields all direct and transitive
-        base symbols, but not the symbol itself.
+        .. todo::
 
-        The result is linearized (stable, reproducible order) and deduplicated.
-        No additional constraints (such as C3 linearization) are guaranteed.
+            This method will be used with the new ``Scope.captured_scopes_sequence``
+            (which replaces ``Scope.mixins``) via
+            ``zip(mixin.generate_strict_super(), scope.captured_scopes_sequence)``.
         """
+        if isinstance(self, InstanceScopeSymbol):
+            return self.prototype.generate_strict_super()
+        else:
+            return iter(self.strict_super_indices.keys())
+
+    @final
+    @cached_property
+    def union_indices(self) -> Mapping["NestedSymbol", int]:
+        """Collect base_indices from outer's strict super symbols."""
+        if isinstance(self, NestedSymbol):
+            return _collect_union_indices(self.outer, self.key)
+        else:
+            return {}
+
+    @final
+    @cached_property
+    def direct_base_indices(
+        self,
+    ):
+        if not isinstance(self, DefinedSymbol):
+            return {}
+        if not isinstance(self, NestedSymbol):
+            return {}
+
+        return {
+            _resolve_symbol_reference(
+                reference, self.outer, ScopeSymbol
+            ): NestedSymbolIndex(
+                primary_index=OwnBaseIndex(index=own_base_index),
+                secondary_index=SymbolIndexSentinel.OWN,
+            )
+            for own_base_index, reference in enumerate(self.definition.bases)
+        }
+
+    @final
+    @cached_property
+    def transitive_base_indices(
+        self,
+    ):
+        if not isinstance(self, DefinedSymbol):
+            return {}
+        if not isinstance(self, NestedSymbol):
+            return {}
+        result: dict[NestedScopeSymbol, NestedSymbolIndex] = {}
+        return {
+            linearized_base: (
+                NestedSymbolIndex(
+                    primary_index=OwnBaseIndex(index=own_base_index),
+                    secondary_index=linearized_index,
+                )
+            )
+            for own_base_index, reference in enumerate(self.definition.bases)
+            # Linearized strict super symbols of the extend reference
+            for linearized_index, linearized_base in enumerate(
+                _resolve_symbol_reference(
+                    reference, self.outer, NestedScopeSymbol
+                ).generate_strict_super()
+            )
+            if (linearized_base not in result)
+        }
+
+    @final
+    @cached_property
+    def linearized_base_indices(
+        self,
+    ):
+        """
+        Linearized indices for own bases (extend references) and their strict super symbols.
+
+        This includes:
+        1. Direct extend references from ``self.definition.bases``
+        2. Strict super mixins from each extend reference's ``generate_strict_super()``
+
+        Uses ``OwnBaseIndex`` to distinguish from outer base indices.
+        """
+        return ChainMap(
+            self.direct_base_indices,
+            self.transitive_base_indices,
+        )
+
+    @final
+    @property
+    def strict_super_indices(
+        self,
+    ):
+        """
+        Index mapping including own bases (extend references) and outer bases.
+
+        Data Sources
+        ============
+
+        Indices consist of four parts:
+
+        1. **Outer base classes**: From ``self.base_indices``,
+           ``primary_index`` is ``OuterBaseIndex``, ``secondary_index`` is ``SymbolIndexSentinel.OWN``
+
+        2. **Strict super mixins of outer bases**: From each outer base's ``generate_strict_super()``,
+           ``primary_index`` is ``OuterBaseIndex``, ``secondary_index`` is ``int``
+
+        3. **Own bases (extend references)**: From ``self.definition.bases``,
+           ``primary_index`` is ``OwnBaseIndex``, ``secondary_index`` is ``SymbolIndexSentinel.OWN``
+
+        4. **Strict super mixins of own bases**: From each extend reference's ``generate_strict_super()``,
+           ``primary_index`` is ``OwnBaseIndex``, ``secondary_index`` is ``int``
+
+        Uses ``ChainMap`` to avoid dictionary unpacking. Own bases take
+        precedence over outer bases (first map in ChainMap wins on key collision).
+
+        .. todo::
+
+            Exclude ``_SyntheticSymbol`` from this mapping. Synthetic mixins are placeholders
+            for leaf resources that have no definition in the current scope (only inherited
+            from base classes). They should not appear in the linearized base indices because
+            they don't contribute any actual behavior.
+        """
+
+        return ChainMap(
+            self.linearized_base_indices,
+            self.linearized_union_indices,
+        )
+
+    @cached_property
+    def linearized_union_indices(
+        self,
+    ):
+        """
+        Index mapping for outer base classes (common to both subclasses).
+
+        This includes:
+        1. Outer base classes from ``self.base_indices``
+        2. Strict super mixins from each outer base class's ``generate_strict_super()``
+
+        Uses ``ChainMap`` to avoid dictionary unpacking. Outer base classes take
+        precedence over their strict super symbols (first map in ChainMap wins on key collision).
+        """
+        union_own_indices = {
+            base: NestedSymbolIndex(
+                primary_index=OuterBaseIndex(index=primary_index),
+                secondary_index=SymbolIndexSentinel.OWN,
+            )
+            for base, primary_index in self.union_indices.items()
+        }
+        linearized_union_base_indices = {
+            linearized_base: NestedSymbolIndex(
+                primary_index=OuterBaseIndex(index=primary_index),
+                secondary_index=secondary_index,
+            )
+            for base, primary_index in self.union_indices.items()
+            for secondary_index, linearized_base in enumerate(
+                base.generate_strict_super()
+            )
+        }
+        return ChainMap(union_own_indices, linearized_union_base_indices)
 
 
 @dataclass(kw_only=True, frozen=True, eq=False)
@@ -790,7 +941,7 @@ def _compile_synthetic(
     Validates that all base classes have consistent types using the
     generate_is_symbol_mapping + reduce(assert_equal, ...) pattern.
     """
-    base_symbols = _collect_base_indices(outer_symbol, key)
+    base_symbols = _collect_union_indices(outer_symbol, key)
 
     def generate_is_symbol_mapping() -> Iterator[bool]:
         """Generate bool indicating whether each base symbol is a ScopeSymbol."""
@@ -900,14 +1051,6 @@ class RootScopeSymbol(DefinedSymbol, StaticScopeSymbol):
     def depth(self) -> int:
         """Root symbol has depth 0."""
         return 0
-
-    def generate_strict_super(self) -> Iterator[Symbol]:
-        """
-        Root symbol has no strict super symbols.
-
-        Since root is the top of the hierarchy, there are no direct or transitive bases.
-        """
-        return iter(())
 
 
 class SymbolIndexSentinel(Enum):
@@ -1081,12 +1224,6 @@ class NestedSymbol(Symbol, MixinGetter["Merger | Patcher"]):
     outer: Final[ScopeSymbol]
     key: Final[Hashable]
 
-    @final
-    @cached_property
-    def base_indices(self) -> Mapping["NestedSymbol", int]:
-        """Collect base_indices from outer's strict super symbols."""
-        return _collect_base_indices(self.outer, self.key)
-
     @cached_property
     def _cached_depth(self) -> int:
         """Compute depth in O(1) by leveraging outer's cached depth."""
@@ -1104,10 +1241,6 @@ class NestedSymbol(Symbol, MixinGetter["Merger | Patcher"]):
         if isinstance(self.key, str):
             return _make_jit_getter(self.key, index)
         return lambda captured_scopes: captured_scopes[index][self.key]
-
-    def generate_strict_super(self) -> Iterator[Symbol]:
-        """Generate the strict super symbols (all direct and transitive bases, excluding self)."""
-        return iter(self.base_indices.keys())
 
     @cached_property
     def elected_merger_index(self) -> SymbolIndexSentinel | int:
@@ -1466,79 +1599,6 @@ class NestedScopeSymbol(StaticScopeSymbol, NestedSymbol, SemigroupSymbol):
         ``mapping_base_indices`` properties.
     """
 
-    def generate_strict_super(self):
-        """
-        Generate the strict super symbols (all direct and transitive bases, excluding self).
-
-        .. todo::
-
-            This method will be used with the new ``Scope.captured_scopes_sequence``
-            (which replaces ``Scope.mixins``) via
-            ``zip(mixin.generate_strict_super(), scope.captured_scopes_sequence)``.
-        """
-        return iter(self.linearized_base_indices.keys())
-
-
-    @cached_property
-    def _linearized_outer_base_indices(
-        self,
-    ) -> Mapping["NestedScopeSymbol", NestedSymbolIndex]:
-        """
-        Index mapping for outer base classes (common to both subclasses).
-
-        This includes:
-        1. Outer base classes from ``self.base_indices``
-        2. Strict super mixins from each outer base class's ``generate_strict_super()``
-
-        Uses ``ChainMap`` to avoid dictionary unpacking. Outer base classes take
-        precedence over their strict super symbols (first map in ChainMap wins on key collision).
-        """
-        outer_base_indices: dict["NestedScopeSymbol", NestedSymbolIndex] = {
-            base: NestedSymbolIndex(
-                primary_index=OuterBaseIndex(index=primary_index),
-                secondary_index=SymbolIndexSentinel.OWN,
-            )
-            for base, primary_index in self.base_indices.items()
-        }
-        linearized_outer_base_indices: dict["NestedScopeSymbol", NestedSymbolIndex] = {
-            cast("NestedScopeSymbol", linearized_base): NestedSymbolIndex(
-                primary_index=OuterBaseIndex(index=primary_index),
-                secondary_index=secondary_index,
-            )
-            for base, primary_index in self.base_indices.items()
-            for secondary_index, linearized_base in enumerate(
-                base.generate_strict_super()
-            )
-        }
-        return ChainMap(outer_base_indices, linearized_outer_base_indices)
-
-    @property
-    @abstractmethod
-    def linearized_base_indices(
-        self,
-    ) -> Mapping["NestedScopeSymbol", NestedSymbolIndex]:
-        """
-        Index mapping for all linearized base classes.
-
-        This property maps all base classes (including direct and inherited base classes) to their
-        ``NestedSymbolIndex``, supporting O(1) random access.
-
-        Subclasses implement this to include/exclude extension references:
-        - ``SyntheticScopeSymbol``: Returns only inherited base indices
-        - ``DefinedScopeSymbol``: Returns inherited + extension base indices
-
-        .. todo::
-
-            Add typed index properties as filtered views of this property.
-
-        .. todo::
-
-            Exclude ``_SyntheticSymbol`` from this mapping. Synthetic mixins are placeholders
-            for leaf resources that have no definition in the current scope (only inherited
-            from base classes). They should not appear in the linearized base indices because
-            they don't contribute any actual behavior.
-        """
-
     @abstractmethod
     def bind(self, captured_scopes: CapturedScopes, /) -> "ScopeSemigroup":
         """
@@ -1561,13 +1621,6 @@ class SyntheticScopeSymbol(_SyntheticSymbol, NestedScopeSymbol):
     but has no local definition in the current scope. They use default ``StaticScope``
     and have no extend references.
     """
-
-    @property
-    def linearized_base_indices(
-        self,
-    ) -> Mapping[NestedScopeSymbol, NestedSymbolIndex]:
-        """Return only inherited base indices (no extension references)."""
-        return self._linearized_outer_base_indices
 
     def bind(self, captured_scopes: CapturedScopes, /) -> "ScopeSemigroup":
         """Resolve resources using default StaticScope (no extend references)."""
@@ -1599,79 +1652,6 @@ class DefinedScopeSymbol(DefinedSymbol, NestedScopeSymbol):
     """
 
     definition: "_ScopeDefinition"  # type: ignore[assignment]  # Narrowing from base class
-
-    @cached_property
-    def _linearized_own_base_indices(
-        self,
-    ) -> dict[NestedScopeSymbol, NestedSymbolIndex]:
-        """
-        Linearized indices for own bases (extend references) and their strict super symbols.
-
-        This includes:
-        1. Direct extend references from ``self.definition.bases``
-        2. Strict super mixins from each extend reference's ``generate_strict_super()``
-
-        Uses ``OwnBaseIndex`` to distinguish from outer base indices.
-        """
-        result: dict[NestedScopeSymbol, NestedSymbolIndex] = {}
-        for own_base_index, reference in enumerate(self.definition.bases):
-            own_base = _resolve_symbol_reference(
-                reference, self.outer, NestedScopeSymbol
-            )
-            # Direct extend reference
-            result[own_base] = NestedSymbolIndex(
-                primary_index=OwnBaseIndex(index=own_base_index),
-                secondary_index=SymbolIndexSentinel.OWN,
-            )
-            # Linearized strict super symbols of the extend reference
-            for linearized_index, linearized_base in enumerate(
-                own_base.generate_strict_super()
-            ):
-                if (
-                    linearized_base not in result
-                ):  # Avoid overwriting more direct references
-                    result[cast(NestedScopeSymbol, linearized_base)] = (
-                        NestedSymbolIndex(
-                            primary_index=OwnBaseIndex(index=own_base_index),
-                            secondary_index=linearized_index,
-                        )
-                    )
-        return result
-
-    @property
-    def linearized_base_indices(
-        self,
-    ) -> Mapping[NestedScopeSymbol, NestedSymbolIndex]:
-        """
-        Index mapping including own bases (extend references) and outer bases.
-
-        Data Sources
-        ============
-
-        Indices consist of four parts:
-
-        1. **Outer base classes**: From ``self.base_indices``,
-           ``primary_index`` is ``OuterBaseIndex``, ``secondary_index`` is ``SymbolIndexSentinel.OWN``
-
-        2. **Strict super mixins of outer bases**: From each outer base's ``generate_strict_super()``,
-           ``primary_index`` is ``OuterBaseIndex``, ``secondary_index`` is ``int``
-
-        3. **Own bases (extend references)**: From ``self.definition.bases``,
-           ``primary_index`` is ``OwnBaseIndex``, ``secondary_index`` is ``SymbolIndexSentinel.OWN``
-
-        4. **Strict super mixins of own bases**: From each extend reference's ``generate_strict_super()``,
-           ``primary_index`` is ``OwnBaseIndex``, ``secondary_index`` is ``int``
-
-        Uses ``ChainMap`` to avoid dictionary unpacking. Own bases take
-        precedence over outer bases (first map in ChainMap wins on key collision).
-        """
-        return ChainMap(
-            self._linearized_own_base_indices,
-            cast(
-                dict[NestedScopeSymbol, NestedSymbolIndex],
-                self._linearized_outer_base_indices,
-            ),
-        )
 
     @override
     def bind(self, captured_scopes: CapturedScopes, /) -> "ScopeSemigroup":
@@ -1725,14 +1705,6 @@ class InstanceScopeSymbol(ScopeSymbol):
     """
     The static dependency graph that this instance is based on.
     """
-
-    def generate_strict_super(self) -> Iterator[Symbol]:
-        """
-        Instance mixin has no strict super symbols.
-
-        Instance mixins are leaf nodes that cannot merge with other mixins.
-        """
-        return iter(())
 
     def __iter__(self) -> Iterator[Hashable]:
         """Delegate to prototype."""
@@ -2152,7 +2124,7 @@ def _symbol_getitem(
     return bind_scope
 
 
-def _collect_base_indices(
+def _collect_union_indices(
     outer_symbol: "ScopeSymbol", key: Hashable, /
 ) -> Mapping["NestedSymbol", int]:
     """Collect base_indices from outer_symbol's strict super symbols."""
