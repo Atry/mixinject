@@ -2237,7 +2237,10 @@ def _evaluate_resource(
     return selected_merger.merge(flat_patches)
 
 
+@dataclass(kw_only=True, frozen=True, eq=False)
 class Definition(ABC):
+    bases: tuple["ResourceReference[Hashable]", ...] = ()
+
     @abstractmethod
     def compile(self, outer: ScopeSymbol, key: str, /) -> Symbol:
         """
@@ -2560,7 +2563,6 @@ class _ScopeDefinition(
 
     scope_class: type[StaticScope]
     underlying: object
-    bases: tuple["ResourceReference[Hashable]", ...] = ()
 
     def __iter__(self) -> Iterator[Hashable]:
         for name in dir(self.underlying):
@@ -2663,7 +2665,6 @@ class _PackageScopeDefinition(_ScopeDefinition):
 def scope(
     *,
     scope_class: type[StaticScope] = StaticScope,
-    bases: Iterable["ResourceReference[Hashable]"] = (),
 ) -> Callable[[object], _ScopeDefinition]:
     """
     Decorator that converts a class into a NamespaceDefinition.
@@ -2672,14 +2673,11 @@ def scope(
     Note: Always use @scope() with parentheses, not @scope without parentheses.
 
     :param scope_class: The Scope subclass to use for this scope.
-    :param extend: ResourceReferences to other scopes whose mixins should be included.
-                   This allows composing scopes without explicit merge operations.
 
-    Example - Using extend to inherit from another scope::
+    Example - Using @extend to inherit from another scope::
 
-        @scope(extend=(
-            RelativeReference(levels_up=1, path=("Base",)),
-        ))
+        @extend(RelativeReference(levels_up=1, path=("Base",)))
+        @scope()
         class MyScope:
             @patch
             def foo() -> Callable[[int], int]:
@@ -2718,16 +2716,46 @@ def scope(
             root.union_mount_point.bar  # "foo_bar"
 
     """
-    extend_tuple = tuple(bases)
 
     def wrapper(c: object) -> _ScopeDefinition:
         return _ScopeDefinition(
             underlying=c,
             scope_class=scope_class,
-            bases=extend_tuple,
         )
 
     return wrapper
+
+
+TDefinition = TypeVar("TDefinition", bound=Definition)
+
+
+def extend(
+    *bases: "ResourceReference[Hashable]",
+) -> Callable[[TDefinition], TDefinition]:
+    """
+    Decorator that adds base references to a Definition.
+
+    Use this decorator to specify that a scope extends other scopes,
+    inheriting their mixins.
+
+    :param bases: ResourceReferences to other scopes whose mixins should be included.
+                  This allows composing scopes without explicit merge operations.
+
+    Example::
+
+        @extend(RelativeReference(levels_up=1, path=("Base",)))
+        @scope()
+        class MyScope:
+            @patch
+            def foo() -> Callable[[int], int]:
+                return lambda x: x + 1
+
+    """
+
+    def decorator(definition: TDefinition) -> TDefinition:
+        return replace(definition, bases=bases)
+
+    return decorator
 
 
 def _parse_package(

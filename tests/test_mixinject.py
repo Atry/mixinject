@@ -20,6 +20,7 @@ from mixinject import (
     EndofunctionMergerDefinition,
     SinglePatcherDefinition,
     merge,
+    extend,
     extern,
     patch,
     patch_many,
@@ -116,12 +117,11 @@ class TestPatch:
                 def value() -> Callable[[int], int]:
                     return lambda x: x * 2
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Base",)),
-                    R(levels_up=0, path=("Patcher",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Base",)),
+                R(levels_up=0, path=("Patcher",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -149,13 +149,12 @@ class TestPatch:
                 def value() -> Callable[[int], int]:
                     return lambda x: x + 3
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Base",)),
-                    R(levels_up=0, path=("Patch1",)),
-                    R(levels_up=0, path=("Patch2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Base",)),
+                R(levels_up=0, path=("Patch1",)),
+                R(levels_up=0, path=("Patch2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -181,12 +180,11 @@ class TestPatches:
                 def value() -> tuple[Callable[[int], int], ...]:
                     return ((lambda x: x + 5), (lambda x: x + 3))
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Base",)),
-                    R(levels_up=0, path=("Patcher",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Base",)),
+                R(levels_up=0, path=("Patcher",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -257,13 +255,12 @@ class TestMerger:
                 def tags() -> str:
                     return "tag2"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Base",)),
-                    R(levels_up=0, path=("Provider1",)),
-                    R(levels_up=0, path=("Provider2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Base",)),
+                R(levels_up=0, path=("Provider1",)),
+                R(levels_up=0, path=("Provider2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -289,12 +286,11 @@ class TestUnionMount:
                 def bar() -> str:
                     return "bar_value"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Namespace1",)),
-                    R(levels_up=0, path=("Namespace2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Namespace1",)),
+                R(levels_up=0, path=("Namespace2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -311,11 +307,8 @@ class TestUnionMount:
                 def base_value() -> str:
                     return "base"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Namespace1",)),
-                ]
-            )
+            @extend(R(levels_up=0, path=("Namespace1",)))
+            @scope()
             class Namespace2:
                 @extern
                 def base_value() -> str: ...
@@ -357,13 +350,12 @@ class TestUnionMount:
                 def deduplicated_tags(another_dependency: str) -> str:
                     return f"tag2_{another_dependency}"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("branch0",)),
-                    R(levels_up=0, path=("branch1",)),
-                    R(levels_up=0, path=("branch2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("branch0",)),
+                R(levels_up=0, path=("branch1",)),
+                R(levels_up=0, path=("branch2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -392,12 +384,11 @@ class TestUnionMount:
                 def bar(foo: str) -> str:
                     return f"{foo}_bar"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("branch1",)),
-                    R(levels_up=0, path=("branch2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("branch1",)),
+                R(levels_up=0, path=("branch2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -428,11 +419,8 @@ class TestExtendInstanceScopeProhibition:
                 return MyOuter(i=42)
 
             # This should fail because my_instance is an InstanceScope
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("my_instance",)),
-                ]
-            )
+            @extend(R(levels_up=0, path=("my_instance",)))
+            @scope()
             class Invalid:
                 pass
 
@@ -462,11 +450,8 @@ class TestExtendInstanceScopeProhibition:
 
             # This should fail because my_instance is an InstanceScope,
             # even though MyInner is a StaticScope
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("my_instance", "MyInner")),
-                ]
-            )
+            @extend(R(levels_up=0, path=("my_instance", "MyInner")))
+            @scope()
             class Invalid:
                 pass
 
@@ -499,7 +484,8 @@ class TestExtendInstanceScopeProhibition:
                     def base_value() -> int:
                         return 100
 
-                @scope(bases=(R(levels_up=0, path=("Inner2",)),))
+                @extend(R(levels_up=0, path=("Inner2",)))
+                @scope()
                 class Inner1:
                     @patch
                     def base_value(i: int) -> Callable[[int], int]:
@@ -541,7 +527,8 @@ class TestExtendNameResolution:
                 def base_value() -> int:
                     return 42
 
-            @scope(bases=(R(levels_up=0, path=("Base",)),))
+            @extend(R(levels_up=0, path=("Base",)))
+            @scope()
             class Extended:
                 # This should work: base_value should be resolved from Base
                 # Currently fails because symbol table doesn't include extended names
@@ -611,7 +598,8 @@ class TestScalaStylePathDependentTypes:
                 def i() -> int:
                     return 1
 
-                @scope(bases=(R(levels_up=1, path=("Base",)),))
+                @extend(R(levels_up=1, path=("Base",)))
+                @scope()
                 class MyInner:
                     @patch
                     def foo(i: int) -> Callable[[int], int]:
@@ -623,19 +611,19 @@ class TestScalaStylePathDependentTypes:
                 def i() -> int:
                     return 2
 
-                @scope(bases=(R(levels_up=1, path=("Base",)),))
+                @extend(R(levels_up=1, path=("Base",)))
+                @scope()
                 class MyInner:
                     @patch
                     def foo(i: int) -> Callable[[int], int]:
                         return lambda x: x + i
 
             # MyObjectA extends object1.MyInner, object2.MyInner and adds its own patch
-            @scope(
-                bases=(
-                    R(levels_up=0, path=("object1", "MyInner")),
-                    R(levels_up=0, path=("object2", "MyInner")),
-                )
+            @extend(
+                R(levels_up=0, path=("object1", "MyInner")),
+                R(levels_up=0, path=("object2", "MyInner")),
             )
+            @scope()
             class MyObjectA:
                 @patch
                 def foo() -> Callable[[int], int]:
@@ -828,7 +816,8 @@ class TestDefinitionSharing:
                     def value(arg: str) -> str:
                         return f"value_{arg}"
 
-            @scope(bases=(R(levels_up=1, path=("Outer",)),))
+            @extend(R(levels_up=1, path=("Outer",)))
+            @scope()
             class object1:
                 @extern
                 def arg() -> str: ...
@@ -1126,12 +1115,11 @@ class TestScopeDir:
                 def bar() -> str:
                     return "bar"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Namespace1",)),
-                    R(levels_up=0, path=("Namespace2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Namespace1",)),
+                R(levels_up=0, path=("Namespace2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -1157,12 +1145,11 @@ class TestScopeDir:
                 def shared() -> Callable[[str], str]:
                     return lambda s: s + "_patched"
 
-            @scope(
-                bases=[
-                    R(levels_up=0, path=("Namespace1",)),
-                    R(levels_up=0, path=("Namespace2",)),
-                ]
+            @extend(
+                R(levels_up=0, path=("Namespace1",)),
+                R(levels_up=0, path=("Namespace2",)),
             )
+            @scope()
             class Combined:
                 pass
 
@@ -1374,7 +1361,8 @@ class TestScopeSemigroupScopeSymbol:
                 def value() -> int:
                     return 10
 
-            @scope(bases=(R(levels_up=0, path=("Base",)),))
+            @extend(R(levels_up=0, path=("Base",)))
+            @scope()
             class Extended:
                 @resource
                 def doubled(value: int) -> int:
@@ -1433,9 +1421,8 @@ class TestScopeSemigroupScopeSymbol:
                     def nested_value2() -> str:
                         return "nested"
 
-            @scope(
-                bases=(R(levels_up=0, path=("Base",)), R(levels_up=0, path=("Base2",)))
-            )
+            @extend(R(levels_up=0, path=("Base",)), R(levels_up=0, path=("Base2",)))
+            @scope()
             class Extended:
                 @resource
                 def doubled(value: int) -> int:

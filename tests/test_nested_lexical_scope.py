@@ -8,6 +8,7 @@ from mixinject import (
     Scope,
     StaticScope,
     resource,
+    extend,
     extern,
     patch,
     evaluate,
@@ -118,7 +119,7 @@ class _DirectNestedSymbol(NestedSymbol):
         return self.item
 
 
-@dataclass
+@dataclass(frozen=True)
 class DirectDefinition(Definition):
     """
     Definition that directly returns a _DirectNestedSymbol.
@@ -186,10 +187,11 @@ class TestNestedCapturedScopes:
             class N2:
                 target = DirectDefinition(Dual("B"))
 
-            @scope(bases=[
+            @extend(
                 R(levels_up=0, path=("N1",)),
                 R(levels_up=0, path=("N2",)),
-            ])
+            )
+            @scope()
             class Combined:
                 pass
 
@@ -213,10 +215,11 @@ class TestNestedCapturedScopes:
             class N2:
                 target = DirectDefinition(Dual("D"))
 
-            @scope(bases=[
+            @extend(
                 R(levels_up=0, path=("N1",)),
                 R(levels_up=0, path=("N2",)),
-            ])
+            )
+            @scope()
             class Combined:
                 pass
 
@@ -239,10 +242,11 @@ class TestNestedCapturedScopes:
             class N2:
                 target = DirectDefinition(PureMerger("B"))
 
-            @scope(bases=[
+            @extend(
                 R(levels_up=0, path=("N1",)),
                 R(levels_up=0, path=("N2",)),
-            ])
+            )
+            @scope()
             class Combined:
                 pass
 
@@ -299,10 +303,11 @@ class TestNestedCapturedScopes:
                 def extra() -> Result:
                     return Result("extra")
 
-            @scope(bases=[
+            @extend(
                 R(levels_up=0, path=("Base",)),
                 R(levels_up=0, path=("Extension",)),
-            ])
+            )
+            @scope()
             class Combined:
                 pass
 
@@ -331,10 +336,11 @@ class TestNestedCapturedScopes:
                     return "extra"
 
             # Combined explicitly sets scope_class=CustomScope
-            @scope(scope_class=CustomScope, bases=[
+            @extend(
                 R(levels_up=0, path=("Base",)),
                 R(levels_up=0, path=("Extension",)),
-            ])
+            )
+            @scope(scope_class=CustomScope)
             class Combined:
                 pass
 
@@ -363,10 +369,11 @@ class TestNestedCapturedScopes:
                     return "extra"
 
             # Combined uses StaticScope regardless of what Base/Extension use
-            @scope(scope_class=StaticScope, bases=[
+            @extend(
                 R(levels_up=0, path=("Base",)),
                 R(levels_up=0, path=("Extension",)),
-            ])
+            )
+            @scope(scope_class=StaticScope)
             class Combined:
                 pass
 
