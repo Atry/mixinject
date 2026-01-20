@@ -1,21 +1,21 @@
 import gc
 
 from mixinject import (
-    DefinedSymbolMapping,
-    SymbolMapping,
+    DefinedScopeSymbol,
+    ScopeSymbol,
     Scope,
-    RootSymbolMapping,
+    RootScopeSymbol,
     evaluate,
     resource,
     scope,
     StaticScope,
-    _DefinitionMapping,
+    _ScopeDefinition,
 )
 
 
-def _empty_definition() -> _DefinitionMapping:
+def _empty_definition() -> _ScopeDefinition:
     """Create a minimal empty scope definition for testing."""
-    return _DefinitionMapping(scope_class=StaticScope, underlying=object())
+    return _ScopeDefinition(scope_class=StaticScope, underlying=object())
 
 
 class TestRoot:
@@ -23,14 +23,14 @@ class TestRoot:
 
     def test_root_hasintern_pool(self) -> None:
         scope_def = _empty_definition()
-        root = RootSymbolMapping(definition=scope_def)
+        root = RootScopeSymbol(definition=scope_def)
         assert root.intern_pool is not None
 
     def test_different_roots_have_different_pools(self) -> None:
         scope_def1 = _empty_definition()
         scope_def2 = _empty_definition()
-        root1 = RootSymbolMapping(definition=scope_def1)
-        root2 = RootSymbolMapping(definition=scope_def2)
+        root1 = RootScopeSymbol(definition=scope_def1)
+        root2 = RootScopeSymbol(definition=scope_def2)
         assert root1.intern_pool is not root2.intern_pool
 
 
@@ -45,27 +45,27 @@ class TestInterning:
         """Direct instantiation without going through scope_factory creates new objects."""
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootSymbolMapping(definition=scope_def)
-        child1 = DefinedSymbolMapping(outer=root, definition=nested_def, key="test1")
-        child2 = DefinedSymbolMapping(outer=root, definition=nested_def, key="test2")
+        root = RootScopeSymbol(definition=scope_def)
+        child1 = DefinedScopeSymbol(outer=root, definition=nested_def, key="test1")
+        child2 = DefinedScopeSymbol(outer=root, definition=nested_def, key="test2")
         # Without interning, these are different objects
         assert child1 is not child2
 
     def test_different_parent_different_object(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root1 = RootSymbolMapping(definition=scope_def)
-        root2 = RootSymbolMapping(definition=scope_def)
-        child1 = DefinedSymbolMapping(outer=root1, definition=nested_def, key="test")
-        child2 = DefinedSymbolMapping(outer=root2, definition=nested_def, key="test")
+        root1 = RootScopeSymbol(definition=scope_def)
+        root2 = RootScopeSymbol(definition=scope_def)
+        child1 = DefinedScopeSymbol(outer=root1, definition=nested_def, key="test")
+        child2 = DefinedScopeSymbol(outer=root2, definition=nested_def, key="test")
         assert child1 is not child2
 
     def test_each_node_has_ownintern_pool(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootSymbolMapping(definition=scope_def)
-        child1 = DefinedSymbolMapping(outer=root, definition=nested_def, key="child1")
-        child2 = DefinedSymbolMapping(outer=child1, definition=nested_def, key="child2")
+        root = RootScopeSymbol(definition=scope_def)
+        child1 = DefinedScopeSymbol(outer=root, definition=nested_def, key="child1")
+        child2 = DefinedScopeSymbol(outer=child1, definition=nested_def, key="child2")
         assert child1.intern_pool is not root.intern_pool
         assert child2.intern_pool is not child1.intern_pool
         assert child2.intern_pool is not root.intern_pool
@@ -114,9 +114,9 @@ class TestWeakReference:
         """The intern pool is a WeakValueDictionary."""
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootSymbolMapping(definition=scope_def)
+        root = RootScopeSymbol(definition=scope_def)
         # Add an entry manually to the pool
-        child = DefinedSymbolMapping(outer=root, definition=nested_def, key="test")
+        child = DefinedScopeSymbol(outer=root, definition=nested_def, key="test")
         root.intern_pool["test_key"] = child
 
         pool_size_before = len(root.intern_pool)
@@ -133,19 +133,19 @@ class TestSubclass:
     """Test isinstance/issubclass behavior."""
 
     def test_root_is_subclass_of_symbol(self) -> None:
-        assert issubclass(RootSymbolMapping, SymbolMapping)
+        assert issubclass(RootScopeSymbol, ScopeSymbol)
 
     def test_child_is_subclass_of_symbol(self) -> None:
-        assert issubclass(DefinedSymbolMapping, SymbolMapping)
+        assert issubclass(DefinedScopeSymbol, ScopeSymbol)
 
     def test_root_instance_is_instance_of_symbol(self) -> None:
         scope_def = _empty_definition()
-        root = RootSymbolMapping(definition=scope_def)
-        assert isinstance(root, SymbolMapping)
+        root = RootScopeSymbol(definition=scope_def)
+        assert isinstance(root, ScopeSymbol)
 
     def test_child_instance_is_instance_of_symbol(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootSymbolMapping(definition=scope_def)
-        child = DefinedSymbolMapping(outer=root, definition=nested_def, key="test")
-        assert isinstance(child, SymbolMapping)
+        root = RootScopeSymbol(definition=scope_def)
+        child = DefinedScopeSymbol(outer=root, definition=nested_def, key="test")
+        assert isinstance(child, ScopeSymbol)

@@ -17,7 +17,7 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=False, eq=False)
-class SymbolMapping(ABC, Generic[T]):
+class ScopeSymbol(ABC, Generic[T]):
     """Base class for dependency graphs supporting O(1) equality comparison.
 
     Equal graphs are interned to the same object instance within the same root,
@@ -27,9 +27,9 @@ class SymbolMapping(ABC, Generic[T]):
 
     Example::
 
-        >>> root = RootSymbolMapping()
-        >>> graph1 = ChildSymbolMapping(head=1, outer=root)
-        >>> graph2 = ChildSymbolMapping(head=1, outer=root)
+        >>> root = RootScopeSymbol()
+        >>> graph1 = ChildScopeSymbol(head=1, outer=root)
+        >>> graph2 = ChildScopeSymbol(head=1, outer=root)
         >>> graph1 is graph2  # Same object due to interning within same root
         True
 
@@ -43,25 +43,25 @@ class SymbolMapping(ABC, Generic[T]):
         'cached_value'
     """
 
-    intern_pool: Final[weakref.WeakValueDictionary[T, "ChildSymbolMapping[T]"]] = (
+    intern_pool: Final[weakref.WeakValueDictionary[T, "ChildScopeSymbol[T]"]] = (
         field(default_factory=weakref.WeakValueDictionary)
     )
 
 
 @final
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=False, eq=False)
-class RootSymbolMapping(SymbolMapping[T]):
+class RootScopeSymbol(ScopeSymbol[T]):
     """
     Root of a dependency graph, representing an empty dependency chain.
 
-    Each RootSymbolMapping instance has its own intern pool for interning
-    ChildSymbolMapping nodes within that dependency graph.
+    Each RootScopeSymbol instance has its own intern pool for interning
+    ChildScopeSymbol nodes within that dependency graph.
     """
 
 
 @final
 @dataclass(kw_only=True, slots=True, frozen=True, weakref_slot=True, eq=False)
-class ChildSymbolMapping(SymbolMapping[T]):
+class ChildScopeSymbol(ScopeSymbol[T]):
     """Non-empty dependency graph node.
 
     Uses object.__eq__ and object.__hash__ (identity-based) for O(1) comparison.
@@ -73,7 +73,7 @@ class ChildSymbolMapping(SymbolMapping[T]):
     """
     .. todo:: Remove this field. It's legacy and useless now.
     """
-    outer: Final[SymbolMapping[T]]
+    outer: Final[ScopeSymbol[T]]
     """
     .. todo:: Remove this todo since this field has been renamed to ``outer``.
     """
@@ -83,7 +83,7 @@ def _replace_init():
     """
     Replace dataclass-generated ``__init__`` with a custom ``__new__`` for interning.
 
-    This function patches :class:`ChildSymbolMapping` to support the
+    This function patches :class:`ChildScopeSymbol` to support the
     flyweight/interning pattern with a frozen dataclass.
 
     Why delete ``__init__``?
@@ -122,26 +122,26 @@ def _replace_init():
 
     This ensures ``__init__`` is only called once per unique instance.
     """
-    original_init = ChildSymbolMapping.__init__
-    ChildSymbolMapping.__init__ = lambda self, *args, **kwargs: None
+    original_init = ChildScopeSymbol.__init__
+    ChildScopeSymbol.__init__ = lambda self, *args, **kwargs: None
 
     def __new__(
-        cls: Type[ChildSymbolMapping[T]],
+        cls: Type[ChildScopeSymbol[T]],
         *,
         head: T,
-        outer: SymbolMapping[T],
-    ) -> ChildSymbolMapping[T]:
+        outer: ScopeSymbol[T],
+    ) -> ChildScopeSymbol[T]:
         intern_pool = outer.intern_pool
         existing = intern_pool.get(head)
         if existing is not None:
             return existing
         else:
-            instance = super(ChildSymbolMapping, cls).__new__(cls)
+            instance = super(ChildScopeSymbol, cls).__new__(cls)
             original_init(instance, head=head, outer=outer)
             intern_pool[head] = instance
             return instance
 
-    ChildSymbolMapping.__new__ = __new__
+    ChildScopeSymbol.__new__ = __new__
 
 
 _replace_init()

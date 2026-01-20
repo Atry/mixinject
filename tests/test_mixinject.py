@@ -6,19 +6,19 @@ from typing import Callable
 import pytest
 
 from mixinject import (
-    _MergerDefinition,
+    FunctionalMergerDefinition,
     Merger,
-    InstanceSymbolMapping,
+    InstanceScopeSymbol,
     InstanceScope,
-    _DefinedSymbol,
+    DefinedSymbol,
     CapturedScopes,
-    _PackageDefinitionMapping,
-    _DefinitionMapping,
+    _PackageScopeDefinition,
+    _ScopeDefinition,
     Scope,
     RelativeReference,
     StaticScope,
-    _EndofunctionDefinition,
-    _SinglePatchDefinition,
+    EndofunctionMergerDefinition,
+    SinglePatcherDefinition,
     merge,
     extern,
     patch,
@@ -28,24 +28,24 @@ from mixinject import (
     scope,
     _parse_package,
 )
-from mixinject import RootSymbolMapping, DefinedSymbolMapping
+from mixinject import RootScopeSymbol, DefinedScopeSymbol
 
 R = RelativeReference
 
 FIXTURES_DIR = str(Path(__file__).parent / "fixtures")
 
 
-def _empty_definition() -> _DefinitionMapping:
+def _empty_definition() -> _ScopeDefinition:
     """Create a minimal empty scope definition for testing."""
-    return _DefinitionMapping(scope_class=StaticScope, underlying=object())
+    return _ScopeDefinition(scope_class=StaticScope, underlying=object())
 
 
-def _empty_symbol() -> DefinedSymbolMapping:
+def _empty_symbol() -> DefinedScopeSymbol:
     """Create a minimal dependency graph for testing."""
     scope_def = _empty_definition()
     nested_def = _empty_definition()
-    root_symbol = RootSymbolMapping(definition=scope_def)
-    return DefinedSymbolMapping(
+    root_symbol = RootScopeSymbol(definition=scope_def)
+    return DefinedScopeSymbol(
         outer=root_symbol,
         definition=nested_def,
         key="test",
@@ -529,7 +529,7 @@ class TestExtendNameResolution:
         to declare them with @extern.
 
         This works because mixin-based dependency resolution (via
-        _resolve_dependencies_jit_using_symbol) uses SymbolMapping.__getitem__
+        _resolve_dependencies_jit_using_symbol) uses ScopeSymbol.__getitem__
         which handles extends via _compile_synthetic and generate_strict_super().
         """
 
@@ -574,7 +574,7 @@ class TestScalaStylePathDependentTypes:
     object MyObjectA extends object1.MyInner with object2.MyInner { ... }
     ```
 
-    SymbolMappingject takes a different trade-off:
+    ScopeSymbolject takes a different trade-off:
     - Forbids extend through InstanceScope (val-like) entirely
     - But allows composing MULTIPLE scopes via static @scope with lexical scoping
 
@@ -655,12 +655,12 @@ class TestScalaStylePathDependentTypes:
 
 
 class TestInstanceScopeReversedPath:
-    """Test that InstanceScope has correct mixin with InstanceChildSymbolMapping."""
+    """Test that InstanceScope has correct mixin with InstanceChildScopeSymbol."""
 
     def test_instance_scope_nested_access_has_instance_symbol_in_path(
         self,
     ) -> None:
-        """When accessing nested scope through InstanceScope, path should use InstanceChildSymbolMapping."""
+        """When accessing nested scope through InstanceScope, path should use InstanceChildScopeSymbol."""
 
         @scope()
         class Root:
@@ -685,33 +685,33 @@ class TestInstanceScopeReversedPath:
         my_instance = root.my_instance
         my_inner = my_instance.MyInner
 
-        # The mixin should be InstanceChildSymbolMapping to distinguish from static path
-        assert isinstance(my_instance.symbol, InstanceSymbolMapping)
+        # The mixin should be InstanceChildScopeSymbol to distinguish from static path
+        assert isinstance(my_instance.symbol, InstanceScopeSymbol)
 
         # Verify the resource works correctly
         assert my_inner.foo == "foo_42"
 
 
-class TestInstanceSymbolMappingDepth:
-    """Test depth calculation through InstanceSymbolMapping chains."""
+class TestInstanceScopeSymbolDepth:
+    """Test depth calculation through InstanceScopeSymbol chains."""
 
     @pytest.mark.xfail(
-        reason="BUG: InstanceSymbolMapping.__getitem__ delegates to prototype[key], "
+        reason="BUG: InstanceScopeSymbol.__getitem__ delegates to prototype[key], "
         "returning a mixin with outer=prototype instead of outer=self. "
         "This causes depth to be computed incorrectly and _find_param_in_symbol_chain "
-        "to fail when traversing through InstanceSymbolMapping."
+        "to fail when traversing through InstanceScopeSymbol."
     )
     def test_nested_symbol_outer_should_be_instance_symbol_mapping(self) -> None:
-        """When accessing nested scope through InstanceScope, mixin's outer should be InstanceSymbolMapping.
+        """When accessing nested scope through InstanceScope, mixin's outer should be InstanceScopeSymbol.
 
-        Current bug: InstanceSymbolMapping.__getitem__ does:
+        Current bug: InstanceScopeSymbol.__getitem__ does:
             return self.prototype[key]  # Returns mixin with outer=prototype
 
-        Expected: Should return a mixin with outer=self (the InstanceSymbolMapping).
+        Expected: Should return a mixin with outer=self (the InstanceScopeSymbol).
 
         This test verifies the mixin chain is correct when accessing through instance scopes.
         """
-        from mixinject import InstanceSymbolMapping
+        from mixinject import InstanceScopeSymbol
 
         @scope()
         class Root:
@@ -732,15 +732,15 @@ class TestInstanceSymbolMappingDepth:
         # Access Inner through the instance
         inner = instance.Inner
 
-        # The inner scope's mixin should have outer=InstanceSymbolMapping
-        # Currently it has outer=Outer's NestedSymbolMapping (from prototype)
-        assert isinstance(inner.symbol.outer, InstanceSymbolMapping), (
-            f"Expected outer to be InstanceSymbolMapping, got {type(inner.symbol.outer)}"
+        # The inner scope's mixin should have outer=InstanceScopeSymbol
+        # Currently it has outer=Outer's NestedScopeSymbol (from prototype)
+        assert isinstance(inner.symbol.outer, InstanceScopeSymbol), (
+            f"Expected outer to be InstanceScopeSymbol, got {type(inner.symbol.outer)}"
         )
 
 
 class TestDefinitionSharing:
-    """Test that Definition instances are shared among mixins from the same _DefinitionMapping."""
+    """Test that Definition instances are shared among mixins from the same _ScopeDefinition."""
 
     def test_definition_shared_across_different_instance_args(self) -> None:
         """Definition should be shared when accessing Inner through different Outer instances."""
@@ -798,7 +798,7 @@ class TestDefinitionSharing:
 
     @pytest.mark.xfail(
         reason="BUG: Same issue as test_definition_shared_between_instance_and_static_access. "
-        "InstanceChildSymbolMapping has separate intern_pool from ChildSymbolMapping, "
+        "InstanceChildScopeSymbol has separate intern_pool from ChildScopeSymbol, "
         "causing different definition values for the same underlying scope definition."
     )
     def test_definition_shared_when_scope_extends_another(self) -> None:
@@ -839,8 +839,8 @@ class TestDefinitionSharing:
         object1_inner = root.object1(arg="v2").Inner
 
         # Both mixins should be _DefinedSymbol (not synthetic)
-        assert isinstance(outer_inner.symbol, _DefinedSymbol)
-        assert isinstance(object1_inner.symbol, _DefinedSymbol)
+        assert isinstance(outer_inner.symbol, DefinedSymbol)
+        assert isinstance(object1_inner.symbol, DefinedSymbol)
 
         # Both should share the same definition since they access the same Inner definition
         assert outer_inner.symbol.definition is object1_inner.symbol.definition
@@ -875,7 +875,7 @@ class TestModuleParsing:
                 regular_pkg,
                 get_module_scope_class=lambda _: StaticScope,
             )
-            assert isinstance(scope_def, _PackageDefinitionMapping)
+            assert isinstance(scope_def, _PackageScopeDefinition)
         finally:
             sys.path.remove(FIXTURES_DIR)
             sys.modules.pop("regular_pkg", None)
@@ -917,8 +917,8 @@ class TestModuleParsing:
                 regular_mod,
                 get_module_scope_class=lambda _: StaticScope,
             )
-            assert isinstance(scope_def, _DefinitionMapping)
-            assert not isinstance(scope_def, _PackageDefinitionMapping)
+            assert isinstance(scope_def, _ScopeDefinition)
+            assert not isinstance(scope_def, _PackageScopeDefinition)
         finally:
             sys.path.remove(FIXTURES_DIR)
             sys.modules.pop("regular_mod", None)
@@ -933,7 +933,7 @@ class TestModuleParsing:
                 ns_pkg,
                 get_module_scope_class=lambda _: StaticScope,
             )
-            assert isinstance(scope_def, _PackageDefinitionMapping)
+            assert isinstance(scope_def, _PackageScopeDefinition)
 
             root = evaluate(ns_pkg)
             assert root.mod_a.value_a == "a"
@@ -976,7 +976,7 @@ class TestModuleParsing:
                     ns_pkg,
                     get_module_scope_class=lambda _: StaticScope,
                 )
-                assert isinstance(scope_def, _PackageDefinitionMapping)
+                assert isinstance(scope_def, _PackageScopeDefinition)
 
                 root = evaluate(ns_pkg)
                 assert root.mod_a.value_a == "a"
@@ -1355,7 +1355,7 @@ class TestParameter:
             pass
 
 
-class TestScopeSemigroupSymbolMapping:
+class TestScopeSemigroupScopeSymbol:
     """Test _ScopeSemigroup.create correctly assigns mixin."""
 
     def test_extended_scope_has_distinct_symbol(self) -> None:
