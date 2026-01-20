@@ -820,6 +820,7 @@ def _compile_synthetic(
     )
 
 
+@dataclass(kw_only=True, frozen=True, eq=False)
 class _SyntheticSymbol(ABC):
     """
     Marker base class for synthetic symbols (no local definition, only inherited).
