@@ -15,7 +15,7 @@ from mixinject import (
     scope,
     Definition,
     ScopeSymbol,
-    NestedSymbol,
+    Symbol,
     CapturedScopes,
     RelativeReference as R,
 )
@@ -102,9 +102,9 @@ class PureMerger(Merger[Any, Any]):
 
 
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class _DirectNestedSymbol(NestedSymbol):
+class _DirectNestedSymbol(Symbol):
     """
-    NestedSymbol that directly returns an item without any dependency resolution.
+    Symbol that directly returns an item without any dependency resolution.
 
     This test helper implements ``bind`` to return a pre-configured
     Mixin (Merger or Patcher) for testing purposes.
@@ -112,7 +112,6 @@ class _DirectNestedSymbol(NestedSymbol):
 
     item: Any
 
-    @override
     def bind(
         self, captured_scopes: CapturedScopes, /
     ) -> Merger[Any, Any] | Patcher[Any]:

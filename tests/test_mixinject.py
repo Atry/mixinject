@@ -29,7 +29,7 @@ from mixinject import (
     scope,
     _parse_package,
 )
-from mixinject import RootScopeSymbol, DefinedScopeSymbol
+from mixinject import DefinedScopeSymbol, OuterSentinel, KeySentinel
 
 R = RelativeReference
 
@@ -45,7 +45,11 @@ def _empty_symbol() -> DefinedScopeSymbol:
     """Create a minimal dependency graph for testing."""
     scope_def = _empty_definition()
     nested_def = _empty_definition()
-    root_symbol = RootScopeSymbol(definition=scope_def)
+    root_symbol = DefinedScopeSymbol(
+        definition=scope_def,
+        outer=OuterSentinel.ROOT,
+        key=KeySentinel.ROOT,
+    )
     return DefinedScopeSymbol(
         outer=root_symbol,
         definition=nested_def,

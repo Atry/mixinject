@@ -4,7 +4,8 @@ from mixinject import (
     DefinedScopeSymbol,
     ScopeSymbol,
     Scope,
-    RootScopeSymbol,
+    OuterSentinel,
+    KeySentinel,
     evaluate,
     resource,
     scope,
@@ -17,19 +18,28 @@ def _empty_definition() -> _ScopeDefinition:
     return _ScopeDefinition(underlying=object())
 
 
+def _root_symbol(definition: _ScopeDefinition) -> DefinedScopeSymbol:
+    """Create a root scope symbol for testing."""
+    return DefinedScopeSymbol(
+        definition=definition,
+        outer=OuterSentinel.ROOT,
+        key=KeySentinel.ROOT,
+    )
+
+
 class TestRoot:
     """Test root dependency graph behavior."""
 
     def test_root_hasintern_pool(self) -> None:
         scope_def = _empty_definition()
-        root = RootScopeSymbol(definition=scope_def)
+        root = _root_symbol(scope_def)
         assert root.intern_pool is not None
 
     def test_different_roots_have_different_pools(self) -> None:
         scope_def1 = _empty_definition()
         scope_def2 = _empty_definition()
-        root1 = RootScopeSymbol(definition=scope_def1)
-        root2 = RootScopeSymbol(definition=scope_def2)
+        root1 = _root_symbol(scope_def1)
+        root2 = _root_symbol(scope_def2)
         assert root1.intern_pool is not root2.intern_pool
 
 
@@ -44,7 +54,7 @@ class TestInterning:
         """Direct instantiation without going through scope_factory creates new objects."""
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootScopeSymbol(definition=scope_def)
+        root = _root_symbol(scope_def)
         child1 = DefinedScopeSymbol(outer=root, definition=nested_def, key="test1")
         child2 = DefinedScopeSymbol(outer=root, definition=nested_def, key="test2")
         # Without interning, these are different objects
@@ -53,8 +63,8 @@ class TestInterning:
     def test_different_parent_different_object(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root1 = RootScopeSymbol(definition=scope_def)
-        root2 = RootScopeSymbol(definition=scope_def)
+        root1 = _root_symbol(scope_def)
+        root2 = _root_symbol(scope_def)
         child1 = DefinedScopeSymbol(outer=root1, definition=nested_def, key="test")
         child2 = DefinedScopeSymbol(outer=root2, definition=nested_def, key="test")
         assert child1 is not child2
@@ -62,7 +72,7 @@ class TestInterning:
     def test_each_node_has_ownintern_pool(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootScopeSymbol(definition=scope_def)
+        root = _root_symbol(scope_def)
         child1 = DefinedScopeSymbol(outer=root, definition=nested_def, key="child1")
         child2 = DefinedScopeSymbol(outer=child1, definition=nested_def, key="child2")
         assert child1.intern_pool is not root.intern_pool
@@ -113,7 +123,7 @@ class TestWeakReference:
         """The intern pool is a WeakValueDictionary."""
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootScopeSymbol(definition=scope_def)
+        root = _root_symbol(scope_def)
         # Add an entry manually to the pool
         child = DefinedScopeSymbol(outer=root, definition=nested_def, key="test")
         root.intern_pool["test_key"] = child
@@ -131,20 +141,17 @@ class TestWeakReference:
 class TestSubclass:
     """Test isinstance/issubclass behavior."""
 
-    def test_root_is_subclass_of_symbol(self) -> None:
-        assert issubclass(RootScopeSymbol, ScopeSymbol)
-
     def test_child_is_subclass_of_symbol(self) -> None:
         assert issubclass(DefinedScopeSymbol, ScopeSymbol)
 
     def test_root_instance_is_instance_of_symbol(self) -> None:
         scope_def = _empty_definition()
-        root = RootScopeSymbol(definition=scope_def)
+        root = _root_symbol(scope_def)
         assert isinstance(root, ScopeSymbol)
 
     def test_child_instance_is_instance_of_symbol(self) -> None:
         scope_def = _empty_definition()
         nested_def = _empty_definition()
-        root = RootScopeSymbol(definition=scope_def)
+        root = _root_symbol(scope_def)
         child = DefinedScopeSymbol(outer=root, definition=nested_def, key="test")
         assert isinstance(child, ScopeSymbol)
