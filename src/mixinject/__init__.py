@@ -908,7 +908,7 @@ class ScopeSymbol(Symbol, Mapping[Hashable, "Symbol"]):
             return existing
 
         # Compile based on whether this is a synthetic or defined symbol
-        if isinstance(self, _SyntheticSymbol):
+        if isinstance(self, SyntheticSymbol):
             compiled_symbol = _compile_synthetic(key, self)
         else:
             assert isinstance(self, DefinedSymbol)
@@ -975,7 +975,7 @@ def _compile_synthetic(
 
 
 @dataclass(kw_only=True, frozen=True, eq=False)
-class _SyntheticSymbol(Symbol):
+class SyntheticSymbol(Symbol):
     """
     Marker base class for synthetic symbols (no local definition, only inherited).
 
@@ -1441,7 +1441,7 @@ class MultiplePatcherSymbol(
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class SyntheticResourceSymbol(_SyntheticSymbol, PatcherSymbol[Never]):
+class SyntheticResourceSymbol(SyntheticSymbol, PatcherSymbol[Never]):
     """NestedSymbol for inherited-only leaf resources (no local definition).
 
     Similar to @extern, this produces an empty Patcher that contributes
@@ -1613,7 +1613,7 @@ class NestedScopeSymbol(StaticScopeSymbol, NestedSymbol, SemigroupSymbol):
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class SyntheticScopeSymbol(_SyntheticSymbol, NestedScopeSymbol):
+class SyntheticScopeSymbol(SyntheticSymbol, NestedScopeSymbol):
     """
     NestedScopeSymbol for synthetic symbols (no local definition).
 
@@ -1827,7 +1827,7 @@ class Scope(Mapping[Hashable, "Node"], ABC):
     def __iter__(self) -> Iterator[Hashable]:
         visited: set[Hashable] = set()
         for current_symbol in self.symbols.keys():
-            if isinstance(current_symbol, _SyntheticSymbol):
+            if isinstance(current_symbol, SyntheticSymbol):
                 # Synthetic symbols don't have their own keys
                 continue
             assert isinstance(current_symbol, DefinedSymbol)
