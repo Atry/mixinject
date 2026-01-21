@@ -579,8 +579,15 @@ class InstanceSymbolSentinel(Enum):
     ALREADY_INSTANCE = auto()
 
 
+TMixin_co = TypeVar("TMixin_co", bound="Mixin", covariant=True)
+
+
 @dataclass(kw_only=True, frozen=True, eq=False)
-class Symbol(ABC, Mapping[Hashable, "Symbol"]):
+class Symbol(
+    ABC,
+    Mapping[Hashable, "Symbol"],
+    Generic[TMixin_co],
+):
     """
     Base class for nodes in the dependency graph.
 
@@ -705,6 +712,11 @@ class Symbol(ABC, Mapping[Hashable, "Symbol"]):
     intern_pool: Final[weakref.WeakValueDictionary[Hashable, "Symbol"]] = field(
         default_factory=weakref.WeakValueDictionary
     )
+
+    @abstractmethod
+    def bind(self, captured_scopes: "CapturedScopes", /) -> TMixin_co:
+        """Retrieve the Mixin for the given captured scopes."""
+        ...
 
     def __hash__(self) -> int:
         return id(self)
@@ -1043,20 +1055,6 @@ class Mixin(ABC):
     """Base class for Merger, Patcher, and SyntheticResourceMixin."""
 
 
-TMixin_co = TypeVar("TMixin_co", bound=Mixin, covariant=True)
-
-
-class MixinGetter(ABC, Generic[TMixin_co]):
-    """
-    ABC for retrieving a Mixin from a CapturedScopes context.
-    """
-
-    @abstractmethod
-    def bind(self, captured_scopes: "CapturedScopes", /) -> TMixin_co:
-        """Retrieve the Mixin for the given captured scopes."""
-        ...
-
-
 class SymbolIndexSentinel(Enum):
     """Sentinel value for symbol indices indicating the symbol itself (not a base)."""
 
@@ -1217,8 +1215,7 @@ class NestedSymbolIndex:
 
 @dataclass(kw_only=True, frozen=True, eq=False)
 class MergerSymbol(
-    Symbol,
-    MixinGetter["Merger[TPatch_contra, TResult_co]"],
+    Symbol["Merger[TPatch_contra, TResult_co]"],
     Generic[TPatch_contra, TResult_co],
 ):
     """
@@ -1241,7 +1238,7 @@ class MergerSymbol(
 
 
 @dataclass(kw_only=True, frozen=True, eq=False)
-class PatcherSymbol(Symbol, MixinGetter["Patcher[TPatch_co]"], Generic[TPatch_co]):
+class PatcherSymbol(Symbol["Patcher[TPatch_co]"], Generic[TPatch_co]):
     """
     Intermediate base class for Symbol subclasses that return Patcher.
 
@@ -1260,7 +1257,7 @@ class PatcherSymbol(Symbol, MixinGetter["Patcher[TPatch_co]"], Generic[TPatch_co
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class SyntheticSymbol(Symbol, MixinGetter["Synthetic"]):
+class SyntheticSymbol(Symbol["Synthetic"]):
     """
     Symbol for inherited-only resources (no local definition).
 
@@ -1863,16 +1860,14 @@ def _symbol_getitem(
     """
     Get a factory function from a dependency graph by key.
 
-    Uses ``symbol_mapping[key]`` to get the NestedSymbol (which IS-A MixinGetter),
+    Uses ``symbol_mapping[key]`` to get the NestedSymbol (which IS-A Symbol),
     then creates a closure that calls ``bind`` with the captured scopes.
     """
     nested_symbol = symbol_mapping[key]
 
     def bind_scope(scope: Scope) -> Mixin:
         inner_captured_scopes: CapturedScopes = (*captured_scopes, scope)
-        mixin_result = cast(MixinGetter[Mixin], nested_symbol).bind(
-            inner_captured_scopes
-        )
+        mixin_result = cast(Symbol[Mixin], nested_symbol).bind(inner_captured_scopes)
         # If mixin_result is a ScopeSemigroup, set access_path_outer to the scope's symbol
         if isinstance(mixin_result, ScopeSemigroup):
             return replace(mixin_result, access_path_outer=scope.symbol)
