@@ -916,7 +916,6 @@ class Symbol(
     ) -> dict["Symbol", NestedSymbolIndex]:
         match (self, self.outer):
             case (DefinedSymbol(definition=definition), Symbol() as outer_scope):
-                result: dict["Symbol", NestedSymbolIndex] = {}
                 return {
                     linearized_base: (
                         NestedSymbolIndex(
@@ -931,7 +930,6 @@ class Symbol(
                             reference, outer_scope, SemigroupSymbol
                         ).generate_strict_super()
                     )
-                    if (linearized_base not in result)
                 }
             case _:
                 return {}
