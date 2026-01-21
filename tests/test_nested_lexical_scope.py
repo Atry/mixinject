@@ -62,10 +62,10 @@ class Result:
         return f"Result({self.value!r})"
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class Dual(Patcher[Any], Merger[Any, Any]):
-    value: Any
-    _scope_class: type[Scope] | None = None
+    value: Final[Any]
+    _scope_class: Final[type[Scope] | None] = None
 
     @property
     @override
@@ -83,10 +83,10 @@ class Dual(Patcher[Any], Merger[Any, Any]):
         yield f"patch-{self.value}"
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PureMerger(Merger[Any, Any]):
-    value: Any
-    _scope_class: type[Scope] | None = None
+    value: Final[Any]
+    _scope_class: Final[type[Scope] | None] = None
 
     @property
     @override
@@ -109,15 +109,15 @@ class _DirectNestedSymbol(Symbol):
     Mixin (Merger or Patcher) for testing purposes.
     """
 
-    item: Any
+    item_factory: Final[Callable[["_DirectNestedSymbol"], Any]]
 
     def bind(
         self, captured_scopes: CapturedScopes, /
     ) -> Merger[Any, Any] | Patcher[Any]:
-        return self.item
+        return self.item_factory(self)
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DirectDefinition(Definition):
     """
     Definition that directly returns a _DirectNestedSymbol.
@@ -126,7 +126,7 @@ class DirectDefinition(Definition):
     with the pre-configured Mixin.
     """
 
-    item: Any
+    item_factory: Final[Callable[["_DirectNestedSymbol"], Any]]
 
     @override
     def compile(
@@ -135,7 +135,7 @@ class DirectDefinition(Definition):
         return _DirectNestedSymbol(
             key=key,
             outer=outer,
-            item=self.item,
+            item_factory=self.item_factory,
         )
 
 
@@ -167,7 +167,9 @@ class TestNestedCapturedScopes:
 
         @scope
         class Namespace:
-            target = DirectDefinition(Dual("A"))
+            target = DirectDefinition(
+                item_factory=lambda symbol: Dual(symbol=symbol, value="A")
+            )
 
         root = evaluate(Namespace)
         assert root.target == Result("merger-A-")
@@ -179,11 +181,15 @@ class TestNestedCapturedScopes:
         class Root:
             @scope
             class N1:
-                target = DirectDefinition(Dual("A"))
+                target = DirectDefinition(
+                    item_factory=lambda symbol: Dual(symbol=symbol, value="A")
+                )
 
             @scope
             class N2:
-                target = DirectDefinition(Dual("B"))
+                target = DirectDefinition(
+                    item_factory=lambda symbol: Dual(symbol=symbol, value="B")
+                )
 
             @extend(
                 R(levels_up=0, path=("N1",)),
@@ -207,11 +213,15 @@ class TestNestedCapturedScopes:
         class Root:
             @scope
             class N1:
-                target = DirectDefinition(PureMerger("P"))
+                target = DirectDefinition(
+                    item_factory=lambda symbol: PureMerger(symbol=symbol, value="P")
+                )
 
             @scope
             class N2:
-                target = DirectDefinition(Dual("D"))
+                target = DirectDefinition(
+                    item_factory=lambda symbol: Dual(symbol=symbol, value="D")
+                )
 
             @extend(
                 R(levels_up=0, path=("N1",)),
@@ -234,11 +244,15 @@ class TestNestedCapturedScopes:
         class Root:
             @scope
             class N1:
-                target = DirectDefinition(PureMerger("A"))
+                target = DirectDefinition(
+                    item_factory=lambda symbol: PureMerger(symbol=symbol, value="A")
+                )
 
             @scope
             class N2:
-                target = DirectDefinition(PureMerger("B"))
+                target = DirectDefinition(
+                    item_factory=lambda symbol: PureMerger(symbol=symbol, value="B")
+                )
 
             @extend(
                 R(levels_up=0, path=("N1",)),
@@ -255,9 +269,9 @@ class TestNestedCapturedScopes:
     def test_evaluate_resource_no_merger_error(self, scope_class: type[Scope]) -> None:
         """Test: Only patches (no merger) -> NotImplementedError."""
 
-        @dataclass(frozen=True)
+        @dataclass(kw_only=True, frozen=True)
         class PurePatch(Patcher[Any]):
-            value: Any
+            value: Final[Any]
 
             @override
             def __iter__(self) -> Iterator[Any]:
@@ -265,7 +279,9 @@ class TestNestedCapturedScopes:
 
         @scope
         class N1:
-            target = DirectDefinition(PurePatch("A"))
+            target = DirectDefinition(
+                item_factory=lambda symbol: PurePatch(symbol=symbol, value="A")
+            )
 
         root = evaluate(N1)
         with pytest.raises(NotImplementedError, match="No Factory definition provided"):

@@ -532,6 +532,7 @@ from typing import (
     Never,
     NewType,
     ParamSpec,
+    Self,
     Sequence,
     TypeAlias,
     TypeVar,
@@ -1075,8 +1076,11 @@ class DefinedSymbol(Symbol):
     definition: "Definition"
 
 
+@dataclass(kw_only=True, frozen=True, eq=False)
 class Mixin(ABC):
     """Base class for Merger, Patcher, and SyntheticResourceMixin."""
+
+    symbol: Final["Symbol[Self]"]
 
 
 class SymbolIndexSentinel(Enum):
@@ -1491,6 +1495,7 @@ class DefinedScopeSymbol(DefinedSymbol, SemigroupSymbol):
             )
 
         return ScopeSemigroup(
+            symbol=self,
             scope_factory=scope_factory,
             access_path_outer=outer_scope,
             key=self.key,
@@ -1709,7 +1714,12 @@ class InstanceScope(Scope):
 
             def generate_resource() -> Iterator[Mixin]:
                 # Yield the kwargs value as a Merger
-                yield KeywordArgumentMerger(base_value=cast(Resource, value))
+                keyword_argument_symbol = KeywordArgumentSymbol(
+                    outer=self.symbol,
+                    key=key,
+                    base_value=cast(Resource, value),
+                )
+                yield keyword_argument_symbol.bind(())
                 # Also collect any Patchers from symbols
                 for current_symbol, captured_scopes in self.symbols.items():
                     try:
@@ -1785,13 +1795,37 @@ TScope = TypeVar("TScope", bound=StaticScope)
 
 
 @final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
+class KeywordArgumentSymbol(
+    MergerSymbol["Endofunction[TResult]", TResult],
+    Generic[TResult],
+):
+    """
+    Symbol for keyword argument values passed to InstanceScope.
+
+    Represents a kwargs value as a Symbol, allowing KeywordArgumentMerger
+    to have a valid symbol reference like all other Mixin subclasses.
+    """
+
+    base_value: Final[TResult]
+
+    def bind(
+        self, _captured_scopes: CapturedScopes, /
+    ) -> "KeywordArgumentMerger[TResult]":
+        return KeywordArgumentMerger(
+            symbol=cast("Symbol[KeywordArgumentMerger[TResult]]", self),
+            base_value=self.base_value,
+        )
+
+
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class KeywordArgumentMerger(
     Generic[TResult], Merger[Callable[[TResult], TResult], TResult]
 ):
     """Merger that applies patches as endofunctions via reduce."""
 
-    base_value: TResult
+    base_value: Final[TResult]
 
     def merge(self, patches: Iterator[Callable[[TResult], TResult]]) -> TResult:
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
