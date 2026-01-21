@@ -1306,7 +1306,6 @@ class FunctionalMergerSymbol(
                     self.key,
                 )
 
-    @override
     def bind(
         self, captured_scopes: CapturedScopes, /
     ) -> "FunctionalMerger[TPatch_contra, TResult_co]":
@@ -1342,7 +1341,6 @@ class EndofunctionMergerSymbol(
                     self.key,
                 )
 
-    @override
     def bind(self, captured_scopes: CapturedScopes, /) -> "EndofunctionMerger[TResult]":
         return EndofunctionMerger(symbol=self, captured_scopes=captured_scopes)
 
@@ -1369,7 +1367,6 @@ class SinglePatcherSymbol(DefinedSymbol, PatcherSymbol[TPatch_co], Generic[TPatc
                     self.key,
                 )
 
-    @override
     def bind(self, captured_scopes: CapturedScopes, /) -> "SinglePatcher[TPatch_co]":
         return SinglePatcher(symbol=self, captured_scopes=captured_scopes)
 
@@ -1398,7 +1395,6 @@ class MultiplePatcherSymbol(
                     self.key,
                 )
 
-    @override
     def bind(self, captured_scopes: CapturedScopes, /) -> "MultiplePatcher[TPatch_co]":
         return MultiplePatcher(symbol=self, captured_scopes=captured_scopes)
 
@@ -1434,7 +1430,6 @@ class DefinedScopeSymbol(DefinedSymbol, SemigroupSymbol):
 
     definition: "_ScopeDefinition"  # type: ignore[assignment]  # Narrowing from base class
 
-    @override
     def bind(self, captured_scopes: CapturedScopes, /) -> "ScopeSemigroup":
         """Resolve resources including extend references from definition."""
         match self.outer:
@@ -1676,7 +1671,6 @@ class InstanceScope(Scope):
     symbol: Symbol  # type: ignore[misc]
 
     @property
-    @override
     def symbols(
         self,
     ) -> Mapping[Symbol, CapturedScopes]:
@@ -1710,10 +1704,6 @@ class InstanceScope(Scope):
         for key in super(InstanceScope, self).__iter__():
             if key not in self.kwargs:
                 yield key
-
-    @override
-    def __len__(self) -> int:
-        return sum(1 for _ in self)
 
 
 def _calculate_most_derived_class(first: type, *rest: type) -> type:
@@ -1777,7 +1767,6 @@ class KeywordArgumentMerger(
 
     base_value: TResult
 
-    @override
     def merge(self, patches: Iterator[Callable[[TResult], TResult]]) -> TResult:
         return reduce(lambda acc, endo: endo(acc), patches, self.base_value)
 
@@ -1790,7 +1779,6 @@ class FunctionalMerger(Merger[TPatch_contra, TResult_co]):
     symbol: Final["FunctionalMergerSymbol[TPatch_contra, TResult_co]"]
     captured_scopes: Final[CapturedScopes]
 
-    @override
     def merge(self, patches: Iterator[TPatch_contra]) -> TResult_co:
         aggregation_function = self.symbol.jit_compiled_function(self.captured_scopes)
         return aggregation_function(patches)
@@ -1804,7 +1792,6 @@ class EndofunctionMerger(Merger["Endofunction[TResult]", TResult]):
     symbol: Final["EndofunctionMergerSymbol[TResult]"]
     captured_scopes: Final[CapturedScopes]
 
-    @override
     def merge(self, patches: Iterator["Endofunction[TResult]"]) -> TResult:
         base_value = self.symbol.jit_compiled_function(self.captured_scopes)
         return reduce(
@@ -1822,7 +1809,6 @@ class SinglePatcher(Patcher[TPatch_co]):
     symbol: Final["SinglePatcherSymbol[TPatch_co]"]
     captured_scopes: Final[CapturedScopes]
 
-    @override
     def __iter__(self) -> Iterator[TPatch_co]:
         yield self.symbol.jit_compiled_function(self.captured_scopes)
 
@@ -1835,7 +1821,6 @@ class MultiplePatcher(Patcher[TPatch_co]):
     symbol: Final["MultiplePatcherSymbol[TPatch_co]"]
     captured_scopes: Final[CapturedScopes]
 
-    @override
     def __iter__(self) -> Iterator[TPatch_co]:
         yield from self.symbol.jit_compiled_function(self.captured_scopes)
 
@@ -2078,7 +2063,6 @@ class ScopeSemigroup(Semigroup[StaticScope]):
     access_path_outer: Final[Symbol]
     key: Final[Hashable]
 
-    @override
     def merge(self, patches: Iterator[StaticScope]) -> StaticScope:
         """
         Create a merged Scope from factory and patches.
@@ -2115,7 +2099,6 @@ class ScopeSemigroup(Semigroup[StaticScope]):
             symbol=self.access_path_outer[self.key],
         )
 
-    @override
     def __iter__(self) -> Iterator[StaticScope]:
         scope = self.scope_factory()
         assert isinstance(
@@ -2325,8 +2308,9 @@ class _PackageScopeDefinition(_ScopeDefinition):
 
     underlying: ModuleType
 
+    @override
     def __iter__(self) -> Iterator[Hashable]:
-        yield from super(_PackageScopeDefinition, self)
+        yield from super(_PackageScopeDefinition, self).__iter__()
 
         for mod_info in pkgutil.iter_modules(self.underlying.__path__):
             yield mod_info.name
