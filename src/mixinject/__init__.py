@@ -995,6 +995,41 @@ class Symbol(
         )
 
     @cached_property
+    def union_own_indices(self):
+        """
+        Index mapping for outer base classes themselves.
+
+        Maps each outer base class to its ``NestedSymbolIndex`` with
+        ``OuterBaseIndex`` as primary and ``SymbolIndexSentinel.OWN`` as secondary.
+        """
+        return {
+            base: NestedSymbolIndex(
+                primary_index=OuterBaseIndex(index=primary_index),
+                secondary_index=SymbolIndexSentinel.OWN,
+            )
+            for base, primary_index in self.union_indices.items()
+        }
+
+    @cached_property
+    def linearized_union_base_indices(self):
+        """
+        Index mapping for strict super symbols of outer base classes.
+
+        Maps each strict super symbol from outer base classes to its ``NestedSymbolIndex``
+        with ``OuterBaseIndex`` as primary and the linearized index as secondary.
+        """
+        return {
+            linearized_base: NestedSymbolIndex(
+                primary_index=OuterBaseIndex(index=primary_index),
+                secondary_index=secondary_index,
+            )
+            for base, primary_index in self.union_indices.items()
+            for secondary_index, linearized_base in enumerate(
+                base.strict_super_indices
+            )
+        }
+
+    @cached_property
     def linearized_union_indices(
         self,
     ):
@@ -1008,24 +1043,7 @@ class Symbol(
         Uses ``ChainMap`` to avoid dictionary unpacking. Outer base classes take
         precedence over their strict super symbols (first map in ChainMap wins on key collision).
         """
-        union_own_indices = {
-            base: NestedSymbolIndex(
-                primary_index=OuterBaseIndex(index=primary_index),
-                secondary_index=SymbolIndexSentinel.OWN,
-            )
-            for base, primary_index in self.union_indices.items()
-        }
-        linearized_union_base_indices = {
-            linearized_base: NestedSymbolIndex(
-                primary_index=OuterBaseIndex(index=primary_index),
-                secondary_index=secondary_index,
-            )
-            for base, primary_index in self.union_indices.items()
-            for secondary_index, linearized_base in enumerate(
-                base.generate_strict_super()
-            )
-        }
-        return ChainMap(union_own_indices, linearized_union_base_indices)
+        return ChainMap(self.union_own_indices, self.linearized_union_base_indices)
 
 
 @dataclass(kw_only=True, frozen=True, eq=False)
