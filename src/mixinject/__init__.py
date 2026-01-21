@@ -1403,7 +1403,7 @@ class MultiplePatcherSymbol(
         return MultiplePatcher(symbol=self, captured_scopes=captured_scopes)
 
 
-class SemigroupSymbol(MergerSymbol["StaticScope", "StaticScope"]):
+class SemigroupSymbol(MergerSymbol[T, T], PatcherSymbol[T], Symbol["Semigroup[T]"], Generic[T]):
     """
     Marker base class for Symbols that return a Semigroup (both Merger and Patcher).
 
@@ -1416,6 +1416,10 @@ class SemigroupSymbol(MergerSymbol["StaticScope", "StaticScope"]):
 
     Subclass: ``DefinedScopeSymbol``.
     """
+
+    @abstractmethod
+    def bind(self, captured_scopes: CapturedScopes, /) -> "Semigroup[T]":
+        """Retrieve the Patcher for the given captured scopes."""
 
 
 @final
