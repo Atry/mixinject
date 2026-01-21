@@ -898,13 +898,17 @@ class Symbol(
         match (self, self.outer):
             case (DefinedSymbol(definition=definition), Symbol() as outer_scope):
                 return {
-                    _resolve_symbol_reference(
-                        reference, outer_scope, Symbol
-                    ): NestedSymbolIndex(
+                    symbol: NestedSymbolIndex(
                         primary_index=OwnBaseIndex(index=own_base_index),
                         secondary_index=SymbolIndexSentinel.OWN,
                     )
                     for own_base_index, reference in enumerate(definition.bases)
+                    if isinstance(
+                        symbol := _resolve_symbol_reference(
+                            reference, outer_scope, Symbol
+                        ),
+                        DefinedSymbol,
+                    )
                 }
             case _:
                 return {}
@@ -917,18 +921,22 @@ class Symbol(
         match (self, self.outer):
             case (DefinedSymbol(definition=definition), Symbol() as outer_scope):
                 return {
-                    linearized_base: (
+                    symbol: (
                         NestedSymbolIndex(
                             primary_index=OwnBaseIndex(index=own_base_index),
-                            secondary_index=linearized_index,
+                            secondary_index=secondary_index,
                         )
                     )
                     for own_base_index, reference in enumerate(definition.bases)
                     # Linearized strict super symbols of the extend reference
-                    for linearized_index, linearized_base in enumerate(
+                    for secondary_index, symbol in enumerate(
                         _resolve_symbol_reference(
                             reference, outer_scope, SemigroupSymbol
                         ).generate_strict_super()
+                    )
+                    if isinstance(
+                        symbol,
+                        DefinedSymbol,
                     )
                 }
             case _:
@@ -1003,11 +1011,12 @@ class Symbol(
         ``OuterBaseIndex`` as primary and ``SymbolIndexSentinel.OWN`` as secondary.
         """
         return {
-            base: NestedSymbolIndex(
+            symbol: NestedSymbolIndex(
                 primary_index=OuterBaseIndex(index=primary_index),
                 secondary_index=SymbolIndexSentinel.OWN,
             )
-            for base, primary_index in self.union_indices.items()
+            for symbol, primary_index in self.union_indices.items()
+            if isinstance(symbol, DefinedSymbol)
         }
 
     @cached_property
@@ -1019,14 +1028,13 @@ class Symbol(
         with ``OuterBaseIndex`` as primary and the linearized index as secondary.
         """
         return {
-            linearized_base: NestedSymbolIndex(
+            symbol: NestedSymbolIndex(
                 primary_index=OuterBaseIndex(index=primary_index),
                 secondary_index=secondary_index,
             )
             for base, primary_index in self.union_indices.items()
-            for secondary_index, linearized_base in enumerate(
-                base.strict_super_indices
-            )
+            for secondary_index, symbol in enumerate(base.strict_super_indices)
+            if isinstance(symbol, DefinedSymbol)
         }
 
     @cached_property
@@ -1064,7 +1072,7 @@ class DefinedSymbol(Symbol):
     All subclasses have ``definition: Definition`` (narrowed from the base class type).
     """
 
-    definition: Final["Definition"]
+    definition: "Definition"
 
 
 class Mixin(ABC):
@@ -1415,7 +1423,9 @@ class MultiplePatcherSymbol(
         return MultiplePatcher(symbol=self, captured_scopes=captured_scopes)
 
 
-class SemigroupSymbol(MergerSymbol[T, T], PatcherSymbol[T], Symbol["Semigroup[T]"], Generic[T]):
+class SemigroupSymbol(
+    MergerSymbol[T, T], PatcherSymbol[T], Symbol["Semigroup[T]"], Generic[T]
+):
     """
     Marker base class for Symbols that return a Semigroup (both Merger and Patcher).
 
@@ -1444,7 +1454,7 @@ class DefinedScopeSymbol(DefinedSymbol, SemigroupSymbol):
     scope. They use the scope class from the definition and include extend references.
     """
 
-    definition: "_ScopeDefinition"  # type: ignore[assignment]  # Narrowing from base class
+    definition: "_ScopeDefinition"
 
     def bind(self, captured_scopes: CapturedScopes, /) -> "ScopeSemigroup":
         """Resolve resources including extend references from definition."""
