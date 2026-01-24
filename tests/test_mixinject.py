@@ -1588,3 +1588,47 @@ class TestSyntheticScopeCallable:
         # This will fail because Synthetic doesn't have __call__
         extended_inner_instance = root.Extended.Inner(arg="inherited")
         assert extended_inner_instance.value == "value_inherited"
+
+
+class TestExtendWithModule:
+    """Test @extend decorator with module references."""
+
+    def test_extend_references_sibling_modules(self) -> None:
+        """Test that @extend can reference sibling modules in a package.
+
+        The union_mount package contains:
+        - branch0.py: defines @merge deduplicated_tags and @scope union_mount_point
+        - branch1.py: defines @patch deduplicated_tags, @resource another_dependency,
+                      and @scope union_mount_point with foo resource
+        - branch2.py: defines @extern another_dependency, @patch deduplicated_tags,
+                      and @scope union_mount_point with bar resource (depends on foo)
+        - __init__.py: defines @scope combined that @extend all three branches
+
+        This tests that @extend with RelativeReference can reference modules.
+        """
+        sys.path.insert(0, FIXTURES_DIR)
+        try:
+            import union_mount
+
+            root = evaluate(union_mount)
+
+            # Test that combined scope has resources from all branches
+            # deduplicated_tags is a merge from branch0 with patches from branch1 and branch2
+            assert root.combined.deduplicated_tags == frozenset(
+                {"tag1", "tag2_dependency_value"}
+            )
+
+            # union_mount_point is a semigroup scope merged from all branches
+            # foo comes from branch1, bar comes from branch2 (depends on foo)
+            assert root.combined.union_mount_point.foo == "foo"
+            assert root.combined.union_mount_point.bar == "foo_bar"
+
+            # another_dependency comes from branch1
+            assert root.combined.another_dependency == "dependency_value"
+
+        finally:
+            sys.path.remove(FIXTURES_DIR)
+            sys.modules.pop("union_mount", None)
+            sys.modules.pop("union_mount.branch0", None)
+            sys.modules.pop("union_mount.branch1", None)
+            sys.modules.pop("union_mount.branch2", None)

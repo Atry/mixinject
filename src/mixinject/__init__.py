@@ -63,7 +63,7 @@ This explicit-only design makes dependency injection predictable and self-docume
 
 Example::
 
-    from mixinject import resource, patch, mount
+    from mixinject import resource, patch, evaluate
 
     # ✓ CORRECT: Explicitly decorated
     @resource
@@ -78,7 +78,7 @@ Example::
     def ignored_function() -> str:
         return "This won't be injected"
 
-    root = mount(...)
+    root = evaluate(...)
     root.greeting  # "Hello!"
     root.ignored_function  # AttributeError: 'StaticScope' object has no attribute 'ignored_function'
 
@@ -89,8 +89,8 @@ If we make an analogy to union filesystems:
 
 - :class:`Scope` objects are like directory objects
 - Resources are like files
-- Modules, packages, callables, and :class:`ScopeDefinition` are filesystem definitions before mounting
-- The compiled result (from :func:`mount`) is a concrete :class:`Scope` that implements resource access
+- Modules, packages, callables, and :class:`ScopeDefinition` are filesystem definitions before evaluation
+- The compiled result (from :func:`evaluate`) is a concrete :class:`Scope` that implements resource access
 
 Merger/Patcher Architecture
 =============================
@@ -318,7 +318,7 @@ transforming an outer scope's definition::
             def counter(counter: int) -> int:  # same-name parameter
                 return counter + 1  # extends outer's counter
 
-    root = mount(Outer)
+    root = evaluate(Outer)
     root.counter  # 0
     root.Inner.counter  # 1 (outer's 0 + 1)
 
@@ -367,8 +367,8 @@ When merging N same-named definitions, the Merger/Patcher evaluation algorithm a
 Union Mounting at Entry Point
 ------------------------------
 
-At the framework entry point (:func:`mount`), users can pass multiple packages, modules,
-or objects, which are union-mounted into a unified root :class:`Scope`, similar to
+At the framework entry point (:func:`evaluate`), users can pass a package, module,
+or object, which is evaluated into a root :class:`Scope`, similar to
 https://github.com/mxmlnkn/ratarmount/pull/163.
 
 Parameter Injection Pattern
@@ -428,9 +428,9 @@ Example
         return f"{settings['host']}:{settings['port']}"
 
     # main.py
-    from mixinject import mount
+    from mixinject import evaluate
 
-    root = mount(config)(settings={"host": "db.example.com", "port": "3306"})
+    root = evaluate(config)(settings={"host": "db.example.com", "port": "3306"})
     assert root.connection_string == "db.example.com:3306"
 
 Use Cases
@@ -455,7 +455,7 @@ creating an :class:`InstanceScope` that stores kwargs directly for lookup.
 
 Example::
 
-    # Create a Scope and inject values using mount
+    # Create a Scope and inject values using evaluate
     @scope
     class Config:
         @extern
@@ -463,7 +463,7 @@ Example::
         @extern
         def count(): ...
 
-    scope = mount(Config)
+    scope = evaluate(Config)
     new_scope = scope(setting="value", count=42)
 
     # Access injected values
@@ -477,13 +477,13 @@ The primary use of Scope as Callable is to provide base values for parameter inj
 By using :meth:`Scope.__call__` in an outer scope to inject parameter values, resources in
 modules can access these values via symbol table lookup::
 
-    # Provide base value in outer scope via mount
+    # Provide base value in outer scope via evaluate
     @scope
     class Config:
         @extern
         def db_config(): ...
 
-    outer_scope = mount(Config)(db_config={"host": "localhost", "port": "5432"})
+    outer_scope = evaluate(Config)(db_config={"host": "localhost", "port": "5432"})
 
     outer_scope: CapturedScopes = (outer_scope,)
 
@@ -2288,37 +2288,41 @@ def scope(c: object) -> _ScopeDefinition:
             def foo() -> Callable[[int], int]:
                 return lambda x: x + 1
 
-    Example - Union mounting multiple scopes across modules::
+    Example - Union mounting multiple scopes using @extend::
 
-        Multiple ``@scope`` definitions with the same name are automatically merged
-        as semigroups. This is the recommended way to create union mount points::
+        Use ``@extend`` with ``RelativeReference`` to combine multiple scopes.
+        This is the recommended way to create union mount points::
 
-            # In branch0.py:
+            from mixinject import RelativeReference as R
+
             @scope
-            class union_mount_point:
-                pass  # Base empty scope
+            class Root:
+                @scope
+                class Branch1:
+                    @resource
+                    def foo() -> str:
+                        return "foo"
 
-            # In branch1.py:
-            @scope
-            class union_mount_point:
-                @resource
-                def foo() -> str:
-                    return "foo"
+                @scope
+                class Branch2:
+                    @extern
+                    def foo(): ...
 
-            # In branch2.py:
-            @scope
-            class union_mount_point:
-                @extern
-                def foo() -> str: ...
+                    @resource
+                    def bar(foo: str) -> str:
+                        return f"{foo}_bar"
 
-                @resource
-                def bar(foo: str) -> str:
-                    return f"{foo}_bar"
+                @extend(
+                    R(levels_up=0, path=("Branch1",)),
+                    R(levels_up=0, path=("Branch2",)),
+                )
+                @scope
+                class Combined:
+                    pass
 
-            # In main.py:
-            root = mount(branch0, branch1, branch2)
-            root.union_mount_point.foo  # "foo"
-            root.union_mount_point.bar  # "foo_bar"
+            root = evaluate(Root)
+            root.Combined.foo  # "foo"
+            root.Combined.bar  # "foo_bar"
 
     """
     return _ScopeDefinition(underlying=c)
@@ -2339,14 +2343,61 @@ def extend(
     :param bases: ResourceReferences to other scopes whose mixins should be included.
                   This allows composing scopes without explicit merge operations.
 
-    Example::
+    Example - Extending a sibling scope::
 
-        @extend(RelativeReference(levels_up=1, path=("Base",)))
+        from mixinject import RelativeReference as R
+
         @scope
-        class MyScope:
-            @patch
-            def foo() -> Callable[[int], int]:
-                return lambda x: x + 1
+        class Root:
+            @scope
+            class Base:
+                @resource
+                def value() -> int:
+                    return 10
+
+            @extend(R(levels_up=0, path=("Base",)))
+            @scope
+            class Extended:
+                @patch
+                def value() -> Callable[[int], int]:
+                    return lambda x: x + 1
+
+        root = evaluate(Root)
+        root.Extended.value  # 11
+
+    Example - Extending sibling modules in a package::
+
+        When a package contains multiple modules, use ``@extend`` in
+        ``__init__.py`` to combine them::
+
+            # my_package/branch1.py
+            @resource
+            def foo() -> str:
+                return "foo"
+
+            # my_package/branch2.py
+            @extern
+            def foo(): ...
+
+            @resource
+            def bar(foo: str) -> str:
+                return f"{foo}_bar"
+
+            # my_package/__init__.py
+            from mixinject import RelativeReference as R, extend, scope
+
+            @extend(
+                R(levels_up=0, path=("branch1",)),
+                R(levels_up=0, path=("branch2",)),
+            )
+            @scope
+            class combined:
+                pass
+
+            # Usage:
+            # root = evaluate(my_package)
+            # root.combined.foo  # "foo"
+            # root.combined.bar  # "foo_bar"
 
     """
 
@@ -2388,39 +2439,51 @@ def merge(
 
     Example:
 
-    The following example defines an merge that deduplicates strings from multiple patches into a frozenset.
-        # In branch0.py:
+    The following example defines a merge that deduplicates strings from multiple patches into a frozenset::
 
-        from mixinject import merge
-        @merge
-        def deduplicated_tags():
-            return frozenset[str]
+        from mixinject import merge, patch, resource, extend, scope, evaluate, extern
+        from mixinject import RelativeReference as R
 
-    Now, when multiple patches provide tags, they will be aggregated into a frozenset without duplicates.
+        @scope
+        class Root:
+            @scope
+            class Branch0:
+                @merge
+                def deduplicated_tags():
+                    return frozenset[str]
 
-        # In branch1.py:
-        @patch
-        def deduplicated_tags():
-            return "tag1"
+            @scope
+            class Branch1:
+                @patch
+                def deduplicated_tags():
+                    return "tag1"
 
-        # In branch1.py:
-        @resource
-        def another_dependency() -> str:
-            return "dependency_value"
+                @resource
+                def another_dependency() -> str:
+                    return "dependency_value"
 
-        # In branch2.py:
-        @patch
-        def deduplicated_tags(another_dependency):
-            return f"tag2_{another_dependency}"
+            @scope
+            class Branch2:
+                @extern
+                def another_dependency(): ...
 
-        # In main.py:
-        import branch0
-        import branch1
-        import branch2
-        root = mount(branch0, branch1, branch2)
-        root.deduplicated_tags  # frozenset(("tag1", "tag2_dependency_value"))
+                @patch
+                def deduplicated_tags(another_dependency):
+                    return f"tag2_{another_dependency}"
 
-    Note: For union mounting multiple scopes, use ``@scope`` semigroups instead.
+            @extend(
+                R(levels_up=0, path=("Branch0",)),
+                R(levels_up=0, path=("Branch1",)),
+                R(levels_up=0, path=("Branch2",)),
+            )
+            @scope
+            class Combined:
+                pass
+
+        root = evaluate(Root)
+        root.Combined.deduplicated_tags  # frozenset(("tag1", "tag2_dependency_value"))
+
+    Note: For combining multiple scopes, use ``@extend`` with ``RelativeReference``.
     See :func:`scope` for examples.
     """
     return FunctionalMergerDefinition(function=callable)
