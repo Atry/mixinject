@@ -1477,19 +1477,6 @@ class TestRelativeBases:
         )
         assert root_symbol.relative_bases == ()
 
-    def test_root_symbol_with_non_empty_bases_raises_type_error(self) -> None:
-        """Root symbol with non-empty bases should raise TypeError."""
-        scope_def = _ScopeDefinition(
-            underlying=object(),
-            bases=(R(levels_up=0, path=("foo",)),),
-        )
-        root_symbol = DefinedScopeSymbol(
-            definition=scope_def,
-            outer=OuterSentinel.ROOT,
-            key=KeySentinel.ROOT,
-        )
-        with pytest.raises(TypeError, match="Cannot compute relative_bases"):
-            _ = root_symbol.relative_bases
 
 
 class TestMissingDependency:

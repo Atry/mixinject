@@ -725,13 +725,20 @@ class Symbol(
         reference: "ResourceReference[Hashable]",
     ) -> "RelativeReference[Hashable]":
         """
-        Convert a ResourceReference to a RelativeReference using this symbol as starting point.
+        Convert a ResourceReference to a RelativeReference for resolution from outer scope.
+
+        The returned RelativeReference should be resolved from self.outer (not from self).
+
+        Analogy with file paths:
+        - self = current file `/foo/bar/baz`
+        - self.outer = PWD `/foo/bar/`
+        - AbsoluteReference `/qux` → RelativeReference `../../qux` (from PWD)
 
         For RelativeReference: return as-is.
-        For AbsoluteReference: compute depth to root and create equivalent RelativeReference.
+        For AbsoluteReference: levels_up = depth(self.outer) = depth(self) - 1.
 
         :param reference: The reference to convert.
-        :return: A RelativeReference equivalent to the input.
+        :return: A RelativeReference for resolution from self.outer.
         """
         match reference:
             case RelativeReference():
@@ -743,10 +750,10 @@ class Symbol(
                     match current.outer:
                         case OuterSentinel.ROOT:
                             break
-                        case Symbol() as outer_scope:
+                        case Symbol() as outer_symbol:
                             depth += 1
-                            current = outer_scope
-                return RelativeReference(levels_up=depth, path=path)
+                            current = outer_symbol
+                return RelativeReference(levels_up=depth - 1, path=path)
             case _ as unreachable:
                 assert_never(unreachable)
 
@@ -1217,15 +1224,8 @@ class DefinedSymbol(Symbol):
         This caches the conversion so that both direct_base_indices and
         transitive_base_indices can reuse the result.
         """
-        outer_scope = self.outer
-        if not isinstance(outer_scope, Symbol):
-            if self.definition.bases:
-                raise TypeError(
-                    f"Cannot compute relative_bases: outer is {outer_scope}, not a Symbol"
-                )
-            return ()
         return tuple(
-            outer_scope.to_relative_reference(reference)
+            self.to_relative_reference(reference)
             for reference in self.definition.bases
         )
 
