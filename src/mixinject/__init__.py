@@ -753,6 +753,50 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     ``MultiplePatcherDefinition``  ``MultiplePatcherSymbol``    ``MultiplePatcher``
     ``ScopeDefinition``            (no EvaluatorSymbol)         (creates nested MixinSymbol)
     ============================== ============================ ============================
+
+    .. todo:: MixinV2 and ScopeV2 Redesign
+
+       Implement a new ``MixinV2`` and ``ScopeV2`` design to properly support
+       ``is_local`` and ``is_eager`` semantics.
+
+       **MixinV2 (Lazy Evaluation Layer)**
+
+       - ``MixinV2`` can be lazily evaluated to produce either a ``Resource`` or a ``ScopeV2``
+       - ``MixinV2`` may be a dynamically generated class
+       - ``MixinV2`` is NOT frozen (mutable)
+       - All lazy evaluation occurs at the ``MixinV2.evaluated`` level
+
+       **ScopeV2 (Frozen Data Container)**
+
+       - ``ScopeV2`` is a frozen, dynamically generated dataclass
+       - ``ScopeV2`` does NOT inherit from ``MixinV2``
+       - ``ScopeV2`` has NO lazy evaluation capability at the attribute level
+       - All attributes are eagerly resolved when the ``ScopeV2`` instance is created
+
+       **Circular Dependencies Between MixinV2 Instances**
+
+       ``MixinV2`` instances under the same ``ScopeV2`` can have circular dependencies.
+       This is achieved through a two-phase construction:
+
+       1. First, construct all ``MixinV2`` instances without arguments (empty initialization)
+       2. Then, mutually set references by assigning each ``MixinV2`` instance to the
+          appropriate attributes of the others
+
+       This pattern requires ``MixinV2`` to be mutable (not frozen), enabling the deferred
+       wiring of circular references after initial construction.
+
+       **Key Difference from Current Design**
+
+       The current ``Scope`` implements lazy evaluation at the attribute level (each field
+       is lazily evaluated via descriptors). This duplicates the lazy evaluation already
+       provided by ``Mixin``'s single-value lazy evaluation, resulting in redundant and
+       inelegant design.
+
+       In the new design:
+
+       - Lazy evaluation happens ONLY at the ``MixinV2.evaluated`` boundary
+       - ``ScopeV2`` attributes are NOT lazily evaluated
+       - This eliminates the redundancy and provides a cleaner separation of concerns
     """
 
     origin: Nested | Sequence["Definition"]
