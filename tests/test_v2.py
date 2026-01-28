@@ -7,7 +7,6 @@ from typing import Callable
 import pytest
 
 from mixinject import (
-    evaluate,
     resource,
     scope,
     eager,
@@ -375,56 +374,6 @@ class TestUnionMount:
         root = evaluate_v2(First, Second)
         assert root.a == "a"
         assert root.b == "b"
-
-
-class TestV2VsV1Parity:
-    """Test that V2 produces same results as V1 for basic cases."""
-
-    def test_simple_resource_parity(self) -> None:
-        @scope
-        class Namespace:
-            @resource
-            def greeting() -> str:
-                return "Hello"
-
-        v1_root = evaluate(Namespace)
-        v2_root = evaluate_v2(Namespace)
-
-        assert v1_root.greeting == v2_root.greeting
-
-    def test_dependency_parity(self) -> None:
-        @scope
-        class Namespace:
-            @resource
-            def name() -> str:
-                return "World"
-
-            @resource
-            def greeting(name: str) -> str:
-                return f"Hello, {name}!"
-
-        v1_root = evaluate(Namespace)
-        v2_root = evaluate_v2(Namespace)
-
-        assert v1_root.greeting == v2_root.greeting
-
-    def test_nested_scope_parity(self) -> None:
-        @scope
-        class Outer:
-            @resource
-            def value() -> int:
-                return 10
-
-            @scope
-            class inner:
-                @resource
-                def doubled(value: int) -> int:
-                    return value * 2
-
-        v1_root = evaluate(Outer)
-        v2_root = evaluate_v2(Outer)
-
-        assert v1_root.inner.doubled == v2_root.inner.doubled
 
 
 class TestPatch:

@@ -1,12 +1,10 @@
+"""Tests for MixinSymbol interning and weak references."""
+
 import gc
 
 from mixinject import (
-    Mixin,
     MixinSymbol,
     Nested,
-    evaluate,
-    resource,
-    scope,
     ScopeDefinition,
 )
 
@@ -69,42 +67,6 @@ class TestInterning:
         assert child1._nested is not root._nested
         assert child2._nested is not child1._nested
         assert child2._nested is not root._nested
-
-    def test_interning_via_mount(self) -> None:
-        """Interning happens when using mount."""
-        @scope
-        class Root:
-            @resource
-            def foo() -> int:
-                return 42
-
-        root1 = evaluate(Root)
-        root2 = evaluate(Root)
-
-        # Different mount calls create different scopes
-        assert root1 is not root2
-        # But they should have different mixins since each mount creates a new root
-
-    def test_interning_via_nested_scope_access(self) -> None:
-        """Accessing the same nested scope multiple times returns scopes with the same mixin."""
-        @scope
-        class Root:
-            @scope
-            class Inner:
-                @resource
-                def foo() -> int:
-                    return 42
-
-        root = evaluate(Root)
-        inner1 = root.Inner
-        inner2 = root.Inner
-
-        # Cached scope should return the same object
-        assert inner1 is inner2
-        # Therefore same mixin
-        assert isinstance(inner1, Mixin)
-        assert isinstance(inner2, Mixin)
-        assert inner1.symbol is inner2.symbol
 
 
 class TestWeakReference:
