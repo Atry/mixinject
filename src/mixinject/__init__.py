@@ -542,6 +542,7 @@ from pathlib import PurePath
 import pkgutil
 from types import ModuleType
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncContextManager,
     Awaitable,
@@ -566,6 +567,9 @@ from typing import (
     overload,
     override,
 )
+
+if TYPE_CHECKING:
+    from mixinject import v2
 
 
 import weakref
@@ -842,7 +846,12 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
 
     @cached_property
     def definitions(self) -> tuple["Definition", ...]:
-        """Definitions for this MixinSymbol. Can be 0, 1, or multiple."""
+        """Definitions for this MixinSymbol. Can be 0, 1, or multiple.
+
+        TODO: Rename to ``own_definitions`` to clarify that this only returns
+        definitions directly on this symbol, not inherited from bases/supers.
+        Inherited definitions should be accessed via ``strict_super_indices``.
+        """
         match self.origin:
             case Nested(outer=outer, key=key):
                 return tuple(
@@ -928,6 +937,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 # MIXIN-style resolution (see lib.nix lookUpVariable):
                 # At each level, check in order:
                 # 1. Is first_segment a property? → early binding, return full path
+                #    (but skip is_local=True when levels_up >= 1)
                 # 2. Is first_segment == that level's key? → self-reference, return path[1:]
                 # 3. Recurse to outer
                 if not path:
@@ -945,6 +955,17 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         case MixinSymbol() as outer_symbol:
                             is_property = first_segment in outer_symbol
                             is_self_reference = first_segment == outer_symbol.key
+
+                            # Error on is_local=True resources when levels_up >= 1
+                            # Local resources are only visible within their own scope
+                            # Silently skipping would be surprising behavior for users
+                            if is_property and levels_up >= 1:
+                                child_symbol = outer_symbol.get(first_segment)
+                                if child_symbol is not None and child_symbol.is_local:
+                                    raise LookupError(
+                                        f"Cannot resolve '{first_segment}': resource is marked "
+                                        f"as @local and is not accessible from nested scopes"
+                                    )
 
                             if is_property and is_self_reference:
                                 raise ValueError(
@@ -974,8 +995,21 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                             raise LookupError(f"FixtureReference '{name}' not found")
                         case MixinSymbol() as outer_symbol:
                             levels_up += 1
-                            # Skip first match if same-name
+                            # Check if name exists in outer_symbol
                             if name in outer_symbol:
+                                # Error on is_local=True resources when levels_up >= 1
+                                # Local resources are only visible within their own scope
+                                # Silently skipping would be surprising behavior for users
+                                child_symbol = outer_symbol.get(name)
+                                is_local = (
+                                    child_symbol is not None and child_symbol.is_local
+                                )
+                                if is_local and levels_up >= 1:
+                                    raise LookupError(
+                                        f"Cannot resolve '{name}': resource is marked "
+                                        f"as @local and is not accessible from nested scopes"
+                                    )
+
                                 if skip_first:
                                     skip_first = False
                                 else:
@@ -1164,6 +1198,24 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             for super_symbol in chain((self,), self.strict_super_indices)
             for definition in super_symbol.definitions
             if isinstance(definition, MergerDefinition)
+        )
+
+    @cached_property
+    def is_scope(self) -> bool:
+        """
+        Returns True if this symbol evaluates to a scope.
+
+        A symbol is a scope if all definitions (own and super) are ScopeDefinition.
+        """
+        all_definitions = tuple(
+            definition
+            for symbol in chain((self,), self.strict_super_indices)
+            for definition in symbol.definitions
+        )
+        if not all_definitions:
+            return False
+        return all(
+            isinstance(definition, ScopeDefinition) for definition in all_definitions
         )
 
     @cached_property
@@ -2094,6 +2146,13 @@ class FunctionalMergerSymbol(
     def bind(self, mixin: "Mixin") -> "FunctionalMerger[TPatch_contra, TResult_co]":
         return FunctionalMerger(mixin=mixin, evaluator_getter=self)
 
+    def bind_v2(
+        self, mixin: "v2.MixinV2"
+    ) -> "v2.FunctionalMergerV2[TPatch_contra, TResult_co]":
+        return v2.FunctionalMergerV2(
+            evaluator_getter=self, mixin=mixin
+        )
+
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
@@ -2127,6 +2186,13 @@ class EndofunctionMergerSymbol(
     def bind(self, mixin: "Mixin") -> "EndofunctionMerger[TResult]":
         return EndofunctionMerger(mixin=mixin, evaluator_getter=self)
 
+    def bind_v2(
+        self, mixin: "v2.MixinV2"
+    ) -> "v2.EndofunctionMergerV2[TResult]":
+        return v2.EndofunctionMergerV2(
+            evaluator_getter=self, mixin=mixin
+        )
+
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
@@ -2154,6 +2220,13 @@ class SinglePatcherSymbol(PatcherSymbol[TPatch_co], Generic[TPatch_co]):
     def bind(self, mixin: "Mixin") -> "SinglePatcher[TPatch_co]":
         return SinglePatcher(mixin=mixin, evaluator_getter=self)
 
+    def bind_v2(
+        self, mixin: "v2.MixinV2"
+    ) -> "v2.SinglePatcherV2[TPatch_co]":
+        return v2.SinglePatcherV2(
+            evaluator_getter=self, mixin=mixin
+        )
+
 
 @final
 @dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
@@ -2180,6 +2253,13 @@ class MultiplePatcherSymbol(PatcherSymbol[TPatch_co], Generic[TPatch_co]):
 
     def bind(self, mixin: "Mixin") -> "MultiplePatcher[TPatch_co]":
         return MultiplePatcher(mixin=mixin, evaluator_getter=self)
+
+    def bind_v2(
+        self, mixin: "v2.MixinV2"
+    ) -> "v2.MultiplePatcherV2[TPatch_co]":
+        return v2.MultiplePatcherV2(
+            evaluator_getter=self, mixin=mixin
+        )
 
 
 class SemigroupSymbol(MergerSymbol[T, T], PatcherSymbol[T], Generic[T]):
@@ -3118,6 +3198,62 @@ class ResolvedReference:
                 # Intermediate step: must be a Scope to continue navigation
                 assert isinstance(result, Scope)
             current = result
+
+        return current
+
+    def get_mixin_v2(
+        self,
+        outer: "v2.MixinV2",
+        lexical_outer_index: "SymbolIndexSentinel | int",
+    ) -> "v2.MixinV2":
+        """
+        Get the target MixinV2 by navigating from outer using V2 semantics.
+
+        Similar to get_mixin but works with V2's frozen ScopeV2.
+        Uses key-based lookup at runtime to support merged scopes correctly.
+
+        NOTE: This only handles non-local resources via navigation. Local resources
+        at the same scope level are accessed via _sibling_dependencies, not navigation.
+
+        :param outer: The MixinV2 from which navigation starts.
+        :param lexical_outer_index: The lexical outer index of the caller.
+        :return: The resolved MixinV2 (call .evaluated for actual value).
+        """
+        # Start from outer.outer (the parent scope where we search)
+        if isinstance(outer.outer, v2.MixinV2):
+            current: v2.MixinV2 = outer.outer
+        else:
+            current = outer  # Root case: stay at outer
+
+        current_lexical_index: SymbolIndexSentinel | int = lexical_outer_index
+
+        # Traverse up the lexical scope chain
+        for _ in range(self.levels_up):
+            base = current.get_super(current_lexical_index)
+            current_lexical_index = base.lexical_outer_index  # KEY: Chain the index!
+            assert isinstance(base.outer, v2.MixinV2)
+            current = base.outer
+
+        # Navigate through path using key-based lookup
+        # At this point, current is a MixinV2 that evaluates to a ScopeV2
+        for key in self.path:
+            scope = current.evaluated
+            assert isinstance(scope, v2.ScopeV2), (
+                f"Expected ScopeV2 during navigation, got {type(scope).__name__}"
+            )
+
+            # Look up child by key in frozen _children
+            child_symbol = scope.symbol.get(key)
+            if child_symbol is None:
+                raise ValueError(
+                    f"Key {key!r} not found in scope {scope.symbol.key!r}"
+                )
+            if child_symbol not in scope._children:
+                raise ValueError(
+                    f"Key {key!r} not in _children (is it local?)"
+                )
+            # _children ALWAYS contains MixinV2 (never evaluated values)
+            current = scope._children[child_symbol]
 
         return current
 
