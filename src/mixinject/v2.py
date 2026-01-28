@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from functools import cached_property, reduce
 from inspect import Parameter
 import logging
@@ -32,6 +33,13 @@ from typing import (
 )
 
 from mixinject import HasDict
+
+
+class KwargsSentinel(Enum):
+    """Sentinel for distinguishing static scopes from instance scopes."""
+
+    STATIC = auto()
+    """No kwargs - this is a static scope (created via evaluate_v2 or nested scope access)."""
 
 if TYPE_CHECKING:
     from mixinject import (
@@ -151,6 +159,17 @@ class MixinV2(HasDict):
     lexical_outer_index: Final["SymbolIndexSentinel | int"]
     """Index for lexical scope resolution."""
 
+    kwargs: Final["Mapping[str, object] | KwargsSentinel"]
+    """
+    Keyword arguments for instance scope support.
+
+    - KwargsSentinel.STATIC: This is a static scope (no instance kwargs)
+    - Mapping[str, object]: This is an instance scope with the given kwargs
+
+    Used by _evaluate_resource for PATCHER_ONLY resources to get base values.
+    Propagated to nested scopes when MixinV2.evaluated creates a ScopeV2.
+    """
+
     # Mutable field for two-phase construction (circular dependency support)
     _sibling_dependencies: "Mapping[str, MixinV2]" = field(init=False)
     """
@@ -234,6 +253,7 @@ class MixinV2(HasDict):
                         symbol=child_symbol,
                         outer=self.outer,  # Same outer as us
                         lexical_outer_index=index,  # KEY: Different from OWN!
+                        kwargs=self.kwargs,  # Propagate kwargs from parent
                     )
                     # Set empty _sibling_dependencies (super mixins don't use it)
                     object.__setattr__(direct_mixin, "_sibling_dependencies", {})
@@ -333,9 +353,11 @@ class MixinV2(HasDict):
         if self.symbol.is_scope:
             # Scope: construct nested ScopeV2
             # Pass self as the outer_mixin for children of this scope
+            # Propagate kwargs to nested scope
             return construct_scope_v2(
                 symbol=self.symbol,
                 outer_mixin=self,
+                kwargs=self.kwargs,
             )
         else:
             # Resource: merge patches and return value
@@ -421,11 +443,26 @@ class MixinV2(HasDict):
 
         # Handle PATCHER_ONLY case (requires instance scope with kwargs)
         if elected is MergerElectionSentinel.PATCHER_ONLY:
-            # For V2, we don't support InstanceScope yet
-            # This would require outer to be an InstanceScope with kwargs
-            raise NotImplementedError(
-                f"Patcher-only resource '{self.symbol.key}' requires instance scope, "
-                "which is not yet supported in V2"
+            key = self.symbol.key
+            # Check if we have kwargs (instance scope)
+            if isinstance(self.kwargs, KwargsSentinel):
+                raise ValueError(
+                    f"Patcher-only resource '{key}' requires instance scope. "
+                    f"Call scope(**kwargs) to create an instance scope with the required value."
+                )
+            # Get base value from kwargs
+            if not isinstance(key, str) or key not in self.kwargs:
+                raise ValueError(
+                    f"Patcher-only resource '{key}' requires kwargs['{key}'] but it was not provided."
+                )
+            base_value = self.kwargs[key]
+
+            # Collect all patches and apply as endofunctions
+            patches = generate_patches()
+            return reduce(
+                lambda accumulator, endofunction: endofunction(accumulator),  # type: ignore[operator]
+                patches,
+                base_value,
             )
 
         # Get Merger evaluator from elected position
@@ -460,6 +497,20 @@ class ScopeV2:
 
     symbol: Final["MixinSymbol"]
 
+    _outer_mixin: Final["MixinV2 | OuterSentinel"]
+    """
+    The outer MixinV2 that this scope was constructed from.
+    Needed by __call__ to create instance scopes with the same outer context.
+    """
+
+    kwargs: Final["Mapping[str, object] | KwargsSentinel"]
+    """
+    Keyword arguments for instance scope support.
+
+    - KwargsSentinel.STATIC: This is a static scope (can call __call__ to create instance)
+    - Mapping[str, object]: This is an instance scope (cannot call __call__ again)
+    """
+
     _children: Final[Mapping["MixinSymbol", "MixinV2"]]
     """
     Public child MixinV2 references keyed by MixinSymbol.
@@ -492,10 +543,71 @@ class ScopeV2:
             raise KeyError(key)
         return self._children[child_symbol].evaluated
 
+    def __dir__(self) -> list[str]:
+        """Return list of accessible attribute names including resource names."""
+        # Get standard dataclass attributes
+        base_attrs = set(super(ScopeV2, self).__dir__())
+
+        # Add resource attribute names from children
+        # Use .key which is the actual resource name (e.g., 'foo')
+        for child_symbol in self._children:
+            key = child_symbol.key
+            if isinstance(key, str):
+                base_attrs.add(key)
+
+        return sorted(base_attrs)
+
+    def __call__(self, **kwargs: object) -> "ScopeV2":
+        """
+        Create an instance scope with the given kwargs.
+
+        Instance scopes allow PATCHER_ONLY resources (declared with @extern)
+        to receive their base values from kwargs.
+
+        :param kwargs: Keyword arguments providing values for @extern resources.
+        :return: A new ScopeV2 instance with the provided kwargs.
+        :raises TypeError: If called on an instance scope (cannot create instance from instance).
+        """
+        from mixinject import OuterSentinel, SymbolIndexSentinel
+
+        if not isinstance(self.kwargs, KwargsSentinel):
+            raise TypeError("Cannot create instance from an instance scope")
+
+        # Create a new synthetic outer MixinV2 with instance kwargs.
+        # This is needed so that children can navigate up and find kwargs
+        # for PATCHER_ONLY resources. Without this, children would navigate
+        # to the original static outer MixinV2 which has KwargsSentinel.STATIC.
+        original_outer = self._outer_mixin
+        if isinstance(original_outer, OuterSentinel):
+            # Root scope: create synthetic root mixin with instance kwargs
+            synthetic_outer: MixinV2 | OuterSentinel = MixinV2(
+                symbol=self.symbol,
+                outer=OuterSentinel.ROOT,
+                lexical_outer_index=SymbolIndexSentinel.OWN,
+                kwargs=kwargs,
+            )
+            object.__setattr__(synthetic_outer, "_sibling_dependencies", {})
+        else:
+            # Nested scope: create synthetic outer with same outer chain but instance kwargs
+            synthetic_outer = MixinV2(
+                symbol=original_outer.symbol,
+                outer=original_outer.outer,
+                lexical_outer_index=original_outer.lexical_outer_index,
+                kwargs=kwargs,
+            )
+            object.__setattr__(synthetic_outer, "_sibling_dependencies", {})
+
+        return construct_scope_v2(
+            symbol=self.symbol,
+            outer_mixin=synthetic_outer,
+            kwargs=kwargs,
+        )
+
 
 def construct_scope_v2(
     symbol: "MixinSymbol",
     outer_mixin: "MixinV2 | OuterSentinel",
+    kwargs: "Mapping[str, object] | KwargsSentinel" = KwargsSentinel.STATIC,
 ) -> ScopeV2:
     """
     Two-phase construction for ScopeV2 with circular dependency support.
@@ -506,6 +618,7 @@ def construct_scope_v2(
 
     :param symbol: The MixinSymbol for this scope.
     :param outer_mixin: The parent scope's MixinV2, or OuterSentinel.ROOT for root.
+    :param kwargs: Keyword arguments for instance scope (KwargsSentinel.STATIC for static).
     :return: A ScopeV2 instance.
     """
     from mixinject import SymbolIndexSentinel
@@ -519,6 +632,7 @@ def construct_scope_v2(
             symbol=child_symbol,
             outer=outer_mixin,
             lexical_outer_index=SymbolIndexSentinel.OWN,
+            kwargs=kwargs,  # Pass kwargs to each child
         )
         all_mixins[child_symbol] = mixin
 
@@ -557,6 +671,8 @@ def construct_scope_v2(
     # Phase 4: Create frozen ScopeV2
     return ScopeV2(
         symbol=symbol,
+        _outer_mixin=outer_mixin,
+        kwargs=kwargs,
         _children=children,
     )
 
@@ -829,6 +945,7 @@ def evaluate_v2(
         symbol=root_symbol,
         outer=OuterSentinel.ROOT,
         lexical_outer_index=SymbolIndexSentinel.OWN,
+        kwargs=KwargsSentinel.STATIC,  # Root is always static
     )
     object.__setattr__(root_mixin, "_sibling_dependencies", {})
 

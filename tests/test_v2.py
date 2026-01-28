@@ -971,6 +971,38 @@ class TestModuleParsing:
             sys.modules.pop("ns_pkg.mod_a", None)
             sys.modules.pop("ns_pkg.mod_b", None)
 
+    def test_namespace_package_union_mount_multiple_directories(self) -> None:
+        """Test namespace packages that span multiple directories (ported from V1)."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ns_pkg_dir = Path(tmpdir) / "ns_pkg"
+            ns_pkg_dir.mkdir()
+            (ns_pkg_dir / "mod_c.py").write_text(
+                "from mixinject import resource\n" "value_c = resource(lambda: 'c')\n"
+            )
+
+            sys.path.insert(0, FIXTURES_DIR)
+            sys.path.insert(0, tmpdir)
+            try:
+                import ns_pkg
+
+                assert len(ns_pkg.__path__) == 2
+                scope_def = _parse_package(ns_pkg)
+                assert isinstance(scope_def, PackageScopeDefinition)
+
+                root = evaluate_v2(ns_pkg)
+                assert root.mod_a.value_a == "a"
+                assert root.mod_b.base == "base"
+                assert root.mod_c.value_c == "c"
+            finally:
+                sys.path.remove(FIXTURES_DIR)
+                sys.path.remove(tmpdir)
+                sys.modules.pop("ns_pkg", None)
+                sys.modules.pop("ns_pkg.mod_a", None)
+                sys.modules.pop("ns_pkg.mod_b", None)
+                sys.modules.pop("ns_pkg.mod_c", None)
+
 
 class TestMissingDependency:
     """Test error handling when a resource depends on a non-existent dependency (ported from V1)."""
@@ -1085,3 +1117,727 @@ class TestExtendWithModule:
             sys.modules.pop("union_mount.branch0", None)
             sys.modules.pop("union_mount.branch1", None)
             sys.modules.pop("union_mount.branch2", None)
+
+
+class TestInstanceScope:
+    """Test instance scope created via ScopeV2.__call__ (ported from V1 TestInstanceScope)."""
+
+    def test_instance_scope_single_value(self) -> None:
+        """Ported from V1: test_instance_scope_single_value"""
+
+        @scope
+        class Config:
+            @extern
+            def foo() -> str: ...
+
+        base_scope = evaluate_v2(Config)
+        instance = base_scope(foo="bar")
+        assert isinstance(instance, ScopeV2)
+        assert instance.foo == "bar"
+
+    def test_instance_scope_multiple_values(self) -> None:
+        """Ported from V1: test_instance_scope_multiple_values"""
+
+        @scope
+        class Config:
+            @extern
+            def foo() -> str: ...
+
+            @extern
+            def count() -> int: ...
+
+            @extern
+            def flag() -> bool: ...
+
+        base_scope = evaluate_v2(Config)
+        instance = base_scope(foo="bar", count=42, flag=True)
+        assert isinstance(instance, ScopeV2)
+        assert instance.foo == "bar"
+        assert instance.count == 42
+        assert instance.flag is True
+
+
+class TestScopeCallable:
+    """Test Scope as Callable - dynamic mixin injection (ported from V1 TestScopeCallable)."""
+
+    def test_scope_call_provides_endo_only_base_value(self) -> None:
+        """Test Scope callable providing base value for parameter pattern.
+
+        Pattern:
+        - Use @extern to declare a symbol that will be provided at runtime
+        - Provide the value via Scope.__call__
+        - Other resources can depend on the parameter
+        """
+
+        @scope
+        class Config:
+            @extern
+            def db_config() -> dict: ...
+
+            @resource
+            def connection_string(db_config: dict) -> str:
+                return f"host={db_config['host']}:{db_config['port']}"
+
+        base_scope = evaluate_v2(Config)
+        instance = base_scope(db_config={"host": "localhost", "port": 5432})
+        assert instance.connection_string == "host=localhost:5432"
+
+
+class TestInstanceScopeImplementation:
+    """Test InstanceScope dataclass implementation details (ported from V1)."""
+
+    def test_instance_scope_kwargs_applies_endofunction_patches(self) -> None:
+        """Ported from V1: test_instance_scope_kwargs_applies_endofunction_patches
+
+        When providing a value via __call__, endofunction patches should be applied.
+        """
+        from mixinject import Endofunction
+
+        @scope
+        class Config:
+
+            @patch
+            def greeting() -> Endofunction[str]:
+                return lambda s: s + "!"
+
+        base_scope = evaluate_v2(Config)
+        instance = base_scope(greeting="Hello")
+
+        # The greeting should be "Hello!" (transformed by the endofunction)
+        assert instance.greeting == "Hello!"
+
+
+class TestSyntheticScopeCallable:
+    """Test that inherited scopes (Synthetic) can also be called (ported from V1)."""
+
+    def test_inherited_scope_can_be_called(self) -> None:
+        """Ported from V1: test_inherited_scope_can_be_called
+
+        When accessing an inherited scope through @extend, calling it should work.
+        """
+
+        @scope
+        class Root:
+            @scope
+            class Base:
+                @scope
+                class Inner:
+                    @extern
+                    def arg() -> str: ...
+
+                    @resource
+                    def value(arg: str) -> str:
+                        return f"value_{arg}"
+
+            @extend(R(levels_up=0, path=("Base",)))
+            @scope
+            class Extended:
+                pass
+
+        root = evaluate_v2(Root)
+
+        # Extended inherits Inner from Base
+        extended_inner = root.Extended.Inner
+
+        # Calling the inherited scope should work
+        instance = extended_inner(arg="test")
+        assert instance.value == "value_test"
+
+
+class TestInstanceScopeNestedAccess:
+    """Test nested scope access through instance scopes (ported from V1)."""
+
+    def test_instance_scope_nested_access(self) -> None:
+        """Ported from V1: test_instance_scope_nested_access_has_instance_symbol_in_path"""
+
+        @scope
+        class Root:
+            @scope
+            class MyOuter:
+                @extern
+                def i() -> int: ...
+
+                @scope
+                class MyInner:
+                    @resource
+                    def foo(i: int) -> str:
+                        return f"foo_{i}"
+
+        root = evaluate_v2(Root)
+
+        # Create instance with i=42
+        my_instance = root.MyOuter(i=42)
+        my_inner = my_instance.MyInner
+
+        # Verify the resource works correctly
+        assert my_inner.foo == "foo_42"
+
+
+class TestDefinitionSharing:
+    """Test that Definition instances are shared among mixins (ported from V1)."""
+
+    def test_definition_shared_across_different_instance_args(self) -> None:
+        """Ported from V1: test_definition_shared_across_different_instance_args"""
+
+        @scope
+        class Root:
+            @scope
+            class Outer:
+                @extern
+                def arg() -> str: ...
+
+                @scope
+                class Inner:
+                    @resource
+                    def value(arg: str) -> str:
+                        return f"value_{arg}"
+
+        root = evaluate_v2(Root)
+
+        inner1 = root.Outer(arg="v1").Inner
+        inner2 = root.Outer(arg="v2").Inner
+
+        # Verify different values are produced
+        assert inner1.value == "value_v1"
+        assert inner2.value == "value_v2"
+
+
+class TestExtendInstanceScopeProhibition:
+    """Test that extend cannot reference a path through InstanceScope (ported from V1)."""
+
+    def test_extend_instance_scope_raises_value_error(self) -> None:
+        """Extending from a resource returning Scope raises ValueError.
+
+        Scope MixinSymbol cannot coexist with MergerSymbol or PatcherSymbol.
+        """
+
+        @scope
+        class Root:
+            @scope
+            class MyOuter:
+                @extern
+                def i() -> int: ...
+
+                @resource
+                def foo(i: int) -> str:
+                    return f"foo_{i}"
+
+            @resource
+            def my_instance(MyOuter: ScopeV2) -> ScopeV2:
+                return MyOuter(i=42)
+
+            @extend(R(levels_up=0, path=("my_instance",)))
+            @scope
+            class Extended:
+                pass
+
+        root = evaluate_v2(Root)
+        with pytest.raises(
+            ValueError,
+            match="Scope MixinSymbol cannot coexist with MergerSymbol or PatcherSymbol",
+        ):
+            _ = root.Extended.foo
+
+    def test_extend_path_through_resource_raises_value_error(self) -> None:
+        """Extending from a path through a resource raises ValueError.
+
+        The path ("my_instance", "MyInner") tries to navigate through my_instance
+        which is a MixinSymbol with MergerDefinition (from @resource), not a scope.
+        Symbols with MergerDefinition don't support nested children.
+        """
+
+        @scope
+        class Root:
+            @scope
+            class MyOuter:
+                @extern
+                def i() -> int: ...
+
+                @scope
+                class MyInner:
+                    @resource
+                    def foo() -> str:
+                        return "inner_foo"
+
+            @resource
+            def my_instance(MyOuter: ScopeV2) -> ScopeV2:
+                return MyOuter(i=42)
+
+            # This fails because my_instance is a merger MixinSymbol, not a scope
+            @extend(R(levels_up=0, path=("my_instance", "MyInner")))
+            @scope
+            class Invalid:
+                pass
+
+        with pytest.raises(ValueError, match=r"'my_instance' has no child 'MyInner'"):
+            root = evaluate_v2(Root)
+            _ = root.Invalid.foo
+
+    def test_extend_within_instance_scope_sibling_allowed(self) -> None:
+        """Ported from V1: test_extend_within_instance_scope_sibling_allowed
+
+        Extending a sibling scope within the same InstanceScope is allowed.
+        """
+
+        @scope
+        class Root:
+            @scope
+            class MyOuter:
+                @extern
+                def i() -> int: ...
+
+                @scope
+                class Inner2:
+                    @resource
+                    def base_value() -> int:
+                        return 100
+
+                @extend(R(levels_up=0, path=("Inner2",)))
+                @scope
+                class Inner1:
+                    @patch
+                    def base_value(i: int) -> Callable[[int], int]:
+                        return lambda x: x + i
+
+        root = evaluate_v2(Root)
+        my_instance = root.MyOuter(i=42)
+
+        # Accessing via InstanceScope should work because the extend reference
+        # ("Inner2",) is a sibling reference that doesn't traverse through InstanceScope
+        assert my_instance.Inner2.base_value == 100
+        assert my_instance.Inner1.base_value == 142  # 100 + 42 (patched)
+
+
+class TestExtendNonMixin:
+    """Test extending non-Mixin references (potential edge cases, ported from V1)."""
+
+    def test_extend_resource_with_patch(self) -> None:
+        """Extending a Resource path with @patch works correctly.
+
+        When @extend is used with a path that leads to a Resource (not a Scope),
+        and the extending definition is a @patch, the system correctly resolves
+        the base Resource and applies the patch.
+        """
+
+        @scope
+        class Root:
+            @resource
+            def base_value() -> int:
+                return 10
+
+            # Extending a Resource (not a Scope) with a patch
+            @extend(R(levels_up=0, path=("base_value",)))
+            @patch
+            def patched_value() -> Callable[[int], int]:
+                return lambda x: x + 1
+
+        root = evaluate_v2(Root)
+        # This should work: base_value (10) + patch (+1) = 11
+        assert root.patched_value == 11
+
+
+class TestScopeAsSymlink:
+    """Test Scope return values acting as symlinks (ported from V1)."""
+
+    def test_scope_symlink(self) -> None:
+        @scope
+        class Inner:
+            @extern
+            def inner_value() -> str: ...
+
+        inner_scope = evaluate_v2(Inner)(inner_value="inner")
+
+        @scope
+        class Namespace:
+            @resource
+            def linked() -> ScopeV2:
+                return inner_scope
+
+        root = evaluate_v2(Namespace)
+        assert root.linked.inner_value == "inner"
+
+
+class TestScopeDir:
+    """Test ScopeV2.__dir__ method (ported from V1)."""
+
+    def test_dir_returns_list(self) -> None:
+        """Test that __dir__ returns a list."""
+
+        @scope
+        class Namespace:
+            @resource
+            def foo() -> str:
+                return "foo"
+
+        root = evaluate_v2(Namespace)
+        result = dir(root)
+        assert isinstance(result, list)
+
+    def test_dir_includes_names(self) -> None:
+        """Test that __dir__ includes all resource names."""
+
+        @scope
+        class Namespace:
+            @resource
+            def resource1() -> str:
+                return "r1"
+
+            @resource
+            def resource2() -> str:
+                return "r2"
+
+            @resource
+            def resource3() -> str:
+                return "r3"
+
+        root = evaluate_v2(Namespace)
+        result = dir(root)
+        assert "resource1" in result
+        assert "resource2" in result
+        assert "resource3" in result
+
+    def test_dir_includes_builtin_attrs(self) -> None:
+        """Test that __dir__ includes builtin attributes."""
+
+        @scope
+        class Namespace:
+            @resource
+            def foo() -> str:
+                return "foo"
+
+        root = evaluate_v2(Namespace)
+        result = dir(root)
+        assert "__class__" in result
+        assert "__call__" in result
+        assert "symbol" in result
+
+    def test_dir_is_sorted(self) -> None:
+        """Test that __dir__ returns a sorted list."""
+
+        @scope
+        class Namespace:
+            @resource
+            def zebra() -> str:
+                return "z"
+
+            @resource
+            def apple() -> str:
+                return "a"
+
+            @resource
+            def middle() -> str:
+                return "m"
+
+        root = evaluate_v2(Namespace)
+        result = dir(root)
+        assert result == sorted(result)
+
+    def test_dir_with_multiple_symbols(self) -> None:
+        """Test __dir__ with multiple mixins providing different resources."""
+
+        @scope
+        class Root:
+            @scope
+            class Namespace1:
+                @resource
+                def foo() -> str:
+                    return "foo"
+
+            @scope
+            class Namespace2:
+                @resource
+                def bar() -> str:
+                    return "bar"
+
+            @extend(
+                R(levels_up=0, path=("Namespace1",)),
+                R(levels_up=0, path=("Namespace2",)),
+            )
+            @scope
+            class Combined:
+                pass
+
+        root = evaluate_v2(Root)
+        result = dir(root.Combined)
+        assert "foo" in result
+        assert "bar" in result
+
+    def test_dir_deduplicates_names(self) -> None:
+        """Test that __dir__ deduplicates resource names when multiple mixins provide the same name."""
+
+        @scope
+        class Root:
+            @scope
+            class Namespace1:
+                @resource
+                def shared() -> str:
+                    return "from_ns1"
+
+            @scope
+            class Namespace2:
+                @patch
+                def shared() -> Callable[[str], str]:
+                    return lambda s: s + "_patched"
+
+            @extend(
+                R(levels_up=0, path=("Namespace1",)),
+                R(levels_up=0, path=("Namespace2",)),
+            )
+            @scope
+            class Combined:
+                pass
+
+        root = evaluate_v2(Root)
+        result = dir(root.Combined)
+        assert result.count("shared") == 1
+
+    def test_dir_accessible_via_getattr(self) -> None:
+        """Test that all resource names from __dir__ are accessible via getattr."""
+
+        @scope
+        class Namespace:
+            @resource
+            def accessible1() -> str:
+                return "a1"
+
+            @resource
+            def accessible2() -> str:
+                return "a2"
+
+        root = evaluate_v2(Namespace)
+        assert "accessible1" in dir(root)
+        assert "accessible2" in dir(root)
+        assert getattr(root, "accessible1") == "a1"
+        assert getattr(root, "accessible2") == "a2"
+
+
+class TestParameter:
+    """Test @extern decorator as syntactic sugar for empty patches (ported from V1)."""
+
+    def test_parameter_with_keyword_argument_symbol(self) -> None:
+        """Test that @extern registers a resource name and accepts injected values."""
+
+        @scope
+        class Config:
+            @extern
+            def database_url() -> str: ...
+
+            @resource
+            def connection_string(database_url: str) -> str:
+                return f"Connected to: {database_url}"
+
+        root = evaluate_v2(Config)(database_url="postgresql://localhost/mydb")
+        assert root.connection_string == "Connected to: postgresql://localhost/mydb"
+
+    def test_parameter_with_dependencies(self) -> None:
+        """Test that @extern can have its own dependencies."""
+
+        @scope
+        class Config:
+            @resource
+            def host() -> str:
+                return "localhost"
+
+            @extern
+            def database_url(host: str) -> str:
+                """This parameter depends on host but returns nothing useful."""
+                return f"postgresql://{host}/db"  # Return value is ignored
+
+            @resource
+            def connection_string(database_url: str) -> str:
+                return f"Connected to: {database_url}"
+
+        root = evaluate_v2(Config)(database_url="postgresql://prod-server/mydb")
+        assert root.connection_string == "Connected to: postgresql://prod-server/mydb"
+
+    def test_parameter_without_base_value_raises_error(self) -> None:
+        """Test that accessing a @extern without providing a base value raises ValueError."""
+
+        @scope
+        class Config:
+            @extern
+            def database_url() -> str: ...
+
+            @resource
+            def connection_string(database_url: str) -> str:
+                return f"Connected to: {database_url}"
+
+        root = evaluate_v2(Config)
+        # V2 raises ValueError, not NotImplementedError like V1
+        with pytest.raises(ValueError, match="requires instance scope"):
+            _ = root.connection_string
+
+    def test_parameter_equivalent_to_empty_patches(self) -> None:
+        """Test that @extern is equivalent to @patch_many returning empty collection."""
+
+        @scope
+        class WithParameter:
+            @extern
+            def value() -> int: ...
+
+        @scope
+        class WithEmptyPatches:
+            @patch_many
+            def value() -> tuple[Callable[[int], int], ...]:
+                return ()
+
+        root_param = evaluate_v2(WithParameter)(value=42)
+        root_patches = evaluate_v2(WithEmptyPatches)(value=42)
+
+        assert root_param.value == 42
+        assert root_patches.value == 42
+
+    def test_parameter_multiple_injections(self) -> None:
+        """Test that multiple @extern resources can be injected together."""
+
+        @scope
+        class Config:
+            @extern
+            def host() -> str: ...
+
+            @extern
+            def port() -> int: ...
+
+            @resource
+            def url(host: str, port: int) -> str:
+                return f"http://{host}:{port}"
+
+        root = evaluate_v2(Config)(host="example.com", port=8080)
+        assert root.url == "http://example.com:8080"
+
+    def test_patch_with_identity_endo_equivalent_to_parameter(self) -> None:
+        """Test that @patch with identity endo is equivalent to @extern."""
+
+        @scope
+        class WithParameter:
+            @extern
+            def value() -> int: ...
+
+            @resource
+            def doubled(value: int) -> int:
+                return value * 2
+
+        @scope
+        class WithIdentityPatch:
+            @patch
+            def value() -> Callable[[int], int]:
+                return lambda x: x
+
+            @resource
+            def doubled(value: int) -> int:
+                return value * 2
+
+        # Both should work identically when value is injected
+        root_param = evaluate_v2(WithParameter)(value=21)
+        root_patch = evaluate_v2(WithIdentityPatch)(value=21)
+
+        assert root_param.value == 21
+        assert root_patch.value == 21
+        assert root_param.doubled == 42
+        assert root_patch.doubled == 42
+
+    def test_patch_with_identity_endo_requires_base_value(self) -> None:
+        """Test that @patch with identity endo requires a base value (like @extern)."""
+
+        @scope
+        class WithIdentityPatch:
+            @patch
+            def config() -> Callable[[dict], dict]:
+                return lambda x: x
+
+        root = evaluate_v2(WithIdentityPatch)
+        # V2 raises ValueError, not NotImplementedError like V1
+        with pytest.raises(ValueError, match="requires instance scope"):
+            _ = root.config
+
+
+class TestInstanceScopeV2Specific:
+    """V2-specific instance scope tests."""
+
+    def test_static_scope_has_sentinel_kwargs(self) -> None:
+        """Static scopes have KwargsSentinel.STATIC as kwargs."""
+        from mixinject.v2 import KwargsSentinel
+
+        @scope
+        class Config:
+            @resource
+            def value() -> str:
+                return "static"
+
+        root = evaluate_v2(Config)
+        assert root.kwargs is KwargsSentinel.STATIC
+
+    def test_instance_scope_has_dict_kwargs(self) -> None:
+        """Instance scopes have dict kwargs."""
+        from mixinject.v2 import KwargsSentinel
+
+        @scope
+        class Config:
+            @extern
+            def foo() -> str: ...
+
+        root = evaluate_v2(Config)
+        instance = root(foo="bar")
+        assert not isinstance(instance.kwargs, KwargsSentinel)
+        assert instance.kwargs == {"foo": "bar"}
+
+    def test_cannot_call_instance_again(self) -> None:
+        """Cannot create instance from an instance scope."""
+
+        @scope
+        class Config:
+            @extern
+            def foo() -> str: ...
+
+        root = evaluate_v2(Config)
+        instance = root(foo="bar")
+        with pytest.raises(TypeError, match="Cannot create instance from an instance scope"):
+            instance(foo="baz")
+
+    def test_extern_without_instance_raises_error(self) -> None:
+        """Accessing @extern resource on static scope raises ValueError."""
+
+        @scope
+        class Config:
+            @extern
+            def foo() -> str: ...
+
+        root = evaluate_v2(Config)
+        with pytest.raises(ValueError, match="requires instance scope"):
+            _ = root.foo
+
+    def test_extern_with_missing_kwarg_raises_error(self) -> None:
+        """Accessing @extern resource without the kwarg raises ValueError."""
+
+        @scope
+        class Config:
+            @extern
+            def foo() -> str: ...
+
+            @extern
+            def bar() -> str: ...
+
+        root = evaluate_v2(Config)
+        instance = root(foo="foo_value")  # bar not provided
+        with pytest.raises(ValueError, match="requires kwargs"):
+            _ = instance.bar
+
+    def test_deeply_nested_instance_scope(self) -> None:
+        """kwargs propagate through deeply nested scopes."""
+
+        @scope
+        class Root:
+            @extern
+            def value() -> int: ...
+
+            @scope
+            class Level1:
+                @scope
+                class Level2:
+                    @resource
+                    def doubled(value: int) -> int:
+                        return value * 2
+
+        root = evaluate_v2(Root)
+        instance = root(value=21)
+        assert instance.Level1.Level2.doubled == 42
