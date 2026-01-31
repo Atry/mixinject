@@ -921,7 +921,11 @@
     },
     "root": {
       "inputs": {
-        "nix-ml-ops": "nix-ml-ops"
+        "nix-ml-ops": "nix-ml-ops",
+        "nix2container": [
+          "nix-ml-ops",
+          "nix2container"
+        ]
       }
     },
     "systems": {
