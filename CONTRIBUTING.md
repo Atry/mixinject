@@ -33,6 +33,32 @@ direnv exec . nix run .#update-tests-snapshot
 
 Nix uses Git to track files in the repository. Untracked files are invisible to Nix commands.
 
+### Debugging Test Failures
+
+If you encounter errors when updating tests, use `--show-trace` to see the full stack trace:
+
+```sh
+nix run .#update-tests-snapshot --show-trace
+```
+
+Common issues:
+- **Stack overflow**: Check for infinite recursion in self-references
+- **YAML parsing errors**: Avoid using `====` or similar decorative comment lines (they may be misinterpreted as file paths)
+- **Missing properties**: Ensure all referenced fields exist in composed mixins
+
+To test a single file without updating the full snapshot:
+
+```sh
+nix eval --impure --show-trace --expr '
+let
+  lib = (builtins.getFlake "git+file://'$(pwd)'").lib;
+  yaml = (builtins.getFlake "git+file://'$(pwd)'").inputs.yaml.lib.fromYaml;
+  ast = yaml (builtins.readFile ./tests/src/my_test.mixin.yaml);
+in
+  builtins.attrNames ast
+'
+```
+
 ## Adding TeXLive Packages
 
 TeXLive packages are declared in `modules/texlive.nix`. Note that package names in nixpkgs may differ from CTAN names (e.g., `zi4` is `inconsolata`, `newtxmath` is `newtx`).
