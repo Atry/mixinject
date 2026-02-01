@@ -25,3 +25,9 @@ latexmk -pdf -interaction=nonstopmode mixin-calculus.tex
 ## Adding TeXLive Packages
 
 TeXLive packages are declared in `modules/texlive.nix`. Note that package names in nixpkgs may differ from CTAN names (e.g., `zi4` is `inconsolata`, `newtxmath` is `newtx`).
+
+## Naming Conventions
+
+- **Do not use single-letter variable names.** Use descriptive names that convey the purpose of the variable.
+- **Do not use abbreviated or truncated English words** (e.g., `expr` for `expression`, `env` for `environment`, `val` for `value`). Write out the full word. The fact that an abbreviation is widely used in the industry does not justify its use here.
+- **Exception:** established notations that are part of a fixed formal system are permitted, but these are limited to very few cases (e.g., `T` for a type variable in a typing judgment, `Γ` for a typing context). When in doubt, spell it out.
