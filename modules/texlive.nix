@@ -9,16 +9,26 @@
         texlive = {
           enable = true;
           packages = [
-            "scheme-small"
+            "scheme-medium"
             "cjk"
             "xpinyin"
-            "geometry"
             "latexmk"
-            "pdftex"
-            "latex"
-            "mathtools"
-            "listings"
-            "xcolor"
+            # acmart dependencies not in scheme-medium
+            "xstring"
+            "totpages"
+            "environ"
+            "trimspaces"
+            "ncctools"
+            "comment"
+            "pbalance"
+            "libertine"
+            "inconsolata"
+            "newtx"
+            "hyperxmp"
+            "ifmtarg"
+            "draftwatermark"
+            "preprint"
+            "tex-gyre"
           ];
         };
       };
