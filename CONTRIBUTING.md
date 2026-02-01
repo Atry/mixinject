@@ -22,6 +22,17 @@ cd mixin-calculus
 latexmk -pdf -interaction=nonstopmode mixin-calculus.tex
 ```
 
+## Adding Test Files
+
+When adding new test files (e.g., `tests/src/my_test.mixin.yaml`), you **must** use `git add` before Nix can see them:
+
+```sh
+git add tests/src/my_test.mixin.yaml
+direnv exec . nix run .#update-tests-snapshot
+```
+
+Nix uses Git to track files in the repository. Untracked files are invisible to Nix commands.
+
 ## Adding TeXLive Packages
 
 TeXLive packages are declared in `modules/texlive.nix`. Note that package names in nixpkgs may differ from CTAN names (e.g., `zi4` is `inconsolata`, `newtxmath` is `newtx`).
