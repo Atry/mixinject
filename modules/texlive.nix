@@ -5,6 +5,9 @@
   ];
   partitions.dev.module.perSystem = { pkgs, ... }: {
     ml-ops.devcontainer.devenvShellModule = {
+      packages = [
+        pkgs.tex-fmt
+      ];
       languages = {
         texlive = {
           enable = true;
