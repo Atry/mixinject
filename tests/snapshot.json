@@ -39764,6 +39764,1453 @@
             "{\"position\":[],\"sourceFile\":\"tests/src/church.mixin.yaml\"}"
           ]
         },
+        "continuation": {
+          "allMixinKeys": [
+            "{\"position\":[],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+          ],
+          "allPropertySnapshots": {
+            "Choice": {
+              "allMixinKeys": [
+                "{\"position\":[\"Choice\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "on_failure": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "on_success": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"Choice\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "ChoiceFail": {
+              "allMixinKeys": [
+                "{\"position\":[\"ChoiceFail\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Choice\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "on_failure": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "on_success": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "payload": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "error": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "error": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"ChoiceFail\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "ChoiceSucceed": {
+              "allMixinKeys": [
+                "{\"position\":[\"ChoiceSucceed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Choice\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "on_failure": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "on_success": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "payload": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "ok": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "ok": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"ChoiceSucceed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "ComputeEscape": {
+              "allMixinKeys": [
+                "{\"position\":[\"ComputeEscape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Escapable\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "escape": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "output": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"result\",\"2\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "early": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"result\",\"2\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "early": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"ComputeEscape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "ComputeNormal": {
+              "allMixinKeys": [
+                "{\"position\":[\"ComputeNormal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Escapable\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "escape": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "output": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"result\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "normal": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"result\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "normal": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"ComputeNormal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "Escapable": {
+              "allMixinKeys": [
+                "{\"position\":[\"Escapable\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "escape": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"Escapable\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "ExceptionExit": {
+              "allMixinKeys": [
+                "{\"position\":[\"ExceptionExit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Protected\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "data": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "failed": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "exception_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "normal_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "value": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "failed": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"ExceptionExit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "NormalExit": {
+              "allMixinKeys": [
+                "{\"position\":[\"NormalExit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Protected\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "data": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "completed": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "exception_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "normal_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "value": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "completed": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"NormalExit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "Protected": {
+              "allMixinKeys": [
+                "{\"position\":[\"Protected\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "exception_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "normal_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "ownMixinKeys": [
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"Protected\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "test_escape_path": {
+              "allMixinKeys": [
+                "{\"position\":[\"test_escape_path\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"ComputeEscape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Escapable\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "escape": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_escape_path\",\"2\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "escaped": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\",\"escaped\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"result\",\"2\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "early": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\",\"escaped\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_escape_path\",\"2\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"test_escape_path\",\"2\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "output": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"result\",\"2\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "early": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"result\",\"2\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    },
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "escaped": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\",\"escaped\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"result\",\"2\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "early": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\",\"escaped\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_escape_path\",\"2\",\"escape\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "early": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeEscape\",\"2\",\"value\",\"early\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeEscape\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"test_escape_path\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "test_exception_exit": {
+              "allMixinKeys": [
+                "{\"position\":[\"test_exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"ExceptionExit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Protected\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "data": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "failed": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "exception_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "exceptional": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\",\"exceptional\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "failed": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\",\"exceptional\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "normal_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_exception_exit\",\"2\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_exception_exit\",\"2\",\"normal_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "normal": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_exception_exit\",\"2\",\"normal_exit\",\"result\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_exception_exit\",\"2\",\"normal_exit\",\"result\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_exception_exit\",\"2\",\"normal_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_exception_exit\",\"2\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "exceptional": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\",\"exceptional\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "failed": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\",\"exceptional\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_exception_exit\",\"2\",\"exception_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    },
+                    "value": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "failed": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ExceptionExit\",\"2\",\"data\",\"failed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ExceptionExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ExceptionExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"test_exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "test_failure": {
+              "allMixinKeys": [
+                "{\"position\":[\"test_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"ChoiceFail\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Choice\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "on_failure": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_failure\",\"2\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "failure_handler": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\",\"failure_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "error": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\",\"failure_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_failure\",\"2\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "on_success": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_failure\",\"2\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_failure\",\"2\",\"on_success\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "success_handler": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_failure\",\"2\",\"on_success\",\"result\",\"success_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_failure\",\"2\",\"on_success\",\"result\",\"success_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_failure\",\"2\",\"on_success\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_failure\",\"2\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"test_failure\",\"2\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "payload": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "error": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    },
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "failure_handler": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\",\"failure_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "error": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\",\"failure_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_failure\",\"2\",\"on_failure\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "error": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceFail\",\"2\",\"value\",\"error\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceFail\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"test_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "test_normal_exit": {
+              "allMixinKeys": [
+                "{\"position\":[\"test_normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"NormalExit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Protected\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "data": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "completed": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "exception_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_normal_exit\",\"2\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_normal_exit\",\"2\",\"exception_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "exceptional": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_normal_exit\",\"2\",\"exception_exit\",\"result\",\"exceptional\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_normal_exit\",\"2\",\"exception_exit\",\"result\",\"exceptional\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_normal_exit\",\"2\",\"exception_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_normal_exit\",\"2\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"exception_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "normal_exit": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "normal": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"NormalExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "completed": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "normal": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"NormalExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "completed": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_normal_exit\",\"2\",\"normal_exit\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    },
+                    "value": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"NormalExit\",\"2\",\"data\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "completed": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"NormalExit\",\"2\",\"data\",\"completed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"NormalExit\",\"2\",\"result\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"NormalExit\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Protected\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"test_normal_exit\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "test_normal_path": {
+              "allMixinKeys": [
+                "{\"position\":[\"test_normal_path\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"ComputeNormal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Escapable\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "escape": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_normal_path\",\"2\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_normal_path\",\"2\",\"escape\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_normal_path\",\"2\",\"escape\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_normal_path\",\"2\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"escape\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "output": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"result\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "normal": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"result\",\"output\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "normal": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ComputeNormal\",\"2\",\"value\",\"normal\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ComputeNormal\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Escapable\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"test_normal_path\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            },
+            "test_success": {
+              "allMixinKeys": [
+                "{\"position\":[\"test_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"ChoiceSucceed\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                "{\"position\":[\"Choice\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ],
+              "allPropertySnapshots": {
+                "on_failure": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_success\",\"2\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_success\",\"2\",\"on_failure\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "failure_handler": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_success\",\"2\",\"on_failure\",\"result\",\"failure_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_success\",\"2\",\"on_failure\",\"result\",\"failure_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_success\",\"2\",\"on_failure\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_success\",\"2\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_failure\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "on_success": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"test_success\",\"2\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "success_handler": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\",\"success_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "ok": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\",\"success_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"test_success\",\"2\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "result": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"test_success\",\"2\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"on_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "payload": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "ok": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "ownMixinKeys": [
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    },
+                    "result": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "allPropertySnapshots": {
+                        "success_handler": {
+                          "allMixinKeys": [
+                            "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\",\"success_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\",\"2\",\"payload\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                            "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ],
+                          "allPropertySnapshots": {
+                            "ok": {
+                              "allMixinKeys": [
+                                "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ],
+                              "ownMixinKeys": [
+                                "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                              ]
+                            }
+                          },
+                          "ownMixinKeys": [
+                            "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\",\"success_handler\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                          ]
+                        }
+                      },
+                      "ownMixinKeys": [
+                        "{\"position\":[\"test_success\",\"2\",\"on_success\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}",
+                    "{\"position\":[\"Choice\",\"result\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                },
+                "value": {
+                  "allMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ],
+                  "allPropertySnapshots": {
+                    "ok": {
+                      "allMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ],
+                      "ownMixinKeys": [
+                        "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\",\"ok\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                      ]
+                    }
+                  },
+                  "ownMixinKeys": [
+                    "{\"position\":[\"ChoiceSucceed\",\"2\",\"value\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+                  ]
+                }
+              },
+              "ownMixinKeys": [
+                "{\"position\":[\"test_success\"],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+              ]
+            }
+          },
+          "ownMixinKeys": [
+            "{\"position\":[],\"sourceFile\":\"tests/src/continuation.mixin.yaml\"}"
+          ]
+        },
         "expression_problem": {
           "allMixinKeys": [
             "{\"position\":[],\"sourceFile\":\"tests/src/expression_problem.mixin.yaml\"}"
