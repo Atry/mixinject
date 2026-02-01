@@ -9,6 +9,11 @@ result
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+*.bbl
+*.blg
+*.out
+*.dvi
+*.xcp
 
 # nixago: ignore-linked-files
 /.vscode/extensions.json
