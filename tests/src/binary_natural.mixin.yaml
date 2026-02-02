@@ -25,7 +25,7 @@ BinNat:
 Zero:
   - [BinNat]
   - result:
-      - [Zero, on_zero]
+      - [Zero, [on_zero]]
 
 # Odd(n) = 2n + 1
 Odd:
@@ -35,13 +35,13 @@ Odd:
     applied_operand:
       - [operand]
       - on_odd:
-          - [Odd, on_odd]
+          - [Odd, [on_odd]]
         on_even:
-          - [Odd, on_even]
+          - [Odd, [on_even]]
         on_zero:
-          - [Odd, on_zero]
+          - [Odd, [on_zero]]
     applied_on_odd:
-      - [Odd, on_odd]
+      - [Odd, [on_odd]]
       - argument:
           - [applied_operand, result]
     result:
@@ -55,13 +55,13 @@ Even:
     applied_operand:
       - [operand]
       - on_odd:
-          - [Even, on_odd]
+          - [Even, [on_odd]]
         on_even:
-          - [Even, on_even]
+          - [Even, [on_even]]
         on_zero:
-          - [Even, on_zero]
+          - [Even, [on_zero]]
     applied_on_even:
-      - [Even, on_even]
+      - [Even, [on_even]]
       - argument:
           - [applied_operand, result]
     result:
@@ -211,7 +211,7 @@ Selector:
 lookup_on_zero:
   - [Selector]
   - result:
-      - [lookup_on_zero, trie, value]
+      - [lookup_on_zero, [trie, value]]
 
 LookupOddSelector:
   - [Selector]
@@ -220,7 +220,7 @@ LookupOddSelector:
   - applied_argument:
       - [argument]
       - trie:
-          - [LookupOddSelector, trie, at_odd]
+          - [LookupOddSelector, [trie, at_odd]]
   - result:
       - [applied_argument, result]
 
@@ -232,7 +232,7 @@ lookup_on_odd:
   result:
     - [LookupOddSelector]
     - argument:
-        - [lookup_on_odd, argument]
+        - [lookup_on_odd, [argument]]
 
 LookupEvenSelector:
   - [Selector]
@@ -241,7 +241,7 @@ LookupEvenSelector:
   - applied_argument:
       - [argument]
       - trie:
-          - [LookupEvenSelector, trie, at_even]
+          - [LookupEvenSelector, [trie, at_even]]
   - result:
       - [applied_argument, result]
 
@@ -252,7 +252,7 @@ lookup_on_even:
   result:
     - [LookupEvenSelector]
     - argument:
-        - [lookup_on_even, argument]
+        - [lookup_on_even, [argument]]
 
 # Lookup: composes a BinNat key with the trie observers,
 # then applies the resulting Selector to the trie.
@@ -345,9 +345,9 @@ delete_on_zero:
   - [Rebuilder]
   - result:
       at_odd:
-        - [delete_on_zero, trie, at_odd]
+        - [delete_on_zero, [trie, at_odd]]
       at_even:
-        - [delete_on_zero, trie, at_even]
+        - [delete_on_zero, [trie, at_even]]
 
 # Helper: a Rebuilder that navigates into at_odd,
 # applies the argument Rebuilder, and reassembles.
@@ -358,14 +358,14 @@ DeleteOddRebuilder:
   - applied_argument:
       - [argument]
       - trie:
-          - [DeleteOddRebuilder, trie, at_odd]
+          - [DeleteOddRebuilder, [trie, at_odd]]
   - result:
       value:
-        - [DeleteOddRebuilder, trie, value]
+        - [DeleteOddRebuilder, [trie, value]]
       at_odd:
         - [applied_argument, result]
       at_even:
-        - [DeleteOddRebuilder, trie, at_even]
+        - [DeleteOddRebuilder, [trie, at_even]]
 
 # on_odd callback: takes a Rebuilder (argument), returns a new Rebuilder
 # that navigates into at_odd and delegates to the argument Rebuilder
@@ -375,7 +375,7 @@ delete_on_odd:
   result:
     - [DeleteOddRebuilder]
     - argument:
-        - [delete_on_odd, argument]
+        - [delete_on_odd, [argument]]
 
 # Helper: symmetric to DeleteOddRebuilder, navigates into at_even
 DeleteEvenRebuilder:
@@ -385,12 +385,12 @@ DeleteEvenRebuilder:
   - applied_argument:
       - [argument]
       - trie:
-          - [DeleteEvenRebuilder, trie, at_even]
+          - [DeleteEvenRebuilder, [trie, at_even]]
   - result:
       value:
-        - [DeleteEvenRebuilder, trie, value]
+        - [DeleteEvenRebuilder, [trie, value]]
       at_odd:
-        - [DeleteEvenRebuilder, trie, at_odd]
+        - [DeleteEvenRebuilder, [trie, at_odd]]
       at_even:
         - [applied_argument, result]
 
@@ -402,7 +402,7 @@ delete_on_even:
   result:
     - [DeleteEvenRebuilder]
     - argument:
-        - [delete_on_even, argument]
+        - [delete_on_even, [argument]]
 
 # Delete: folds a BinNat key with delete callbacks to obtain a Rebuilder,
 # then applies it to the trie.

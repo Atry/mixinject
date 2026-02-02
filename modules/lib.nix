@@ -57,13 +57,34 @@ in
           (
             if isOwnProperty lexicalVariableName then
               self.allProperties.${lexicalVariableName}
-            else if selfName == lexicalVariableName then
-              self
             else if outerSymbolTable != null then
               lookUpVariable outerSymbolTable lexicalVariableName
             else
               throw "Variable ${lexicalVariableName} is not found"
           );
+
+      /**
+        # Type
+
+        ```
+        resolveQualifiedThis :: SymbolTable -> String -> Evaluation
+        ```
+
+        Resolves an explicit qualified this reference by walking the symbol table
+        to find the scope whose selfName matches, and returns that scope's
+        dynamic self (evaluation).
+      */
+      resolveQualifiedThis = symbolTable: qualifiedSelfName:
+        let
+          findQualifiedSelf = currentSymbolTable:
+            if currentSymbolTable == null then
+              throw "Qualified self name ${qualifiedSelfName} is not found"
+            else if currentSymbolTable.selfName == qualifiedSelfName then
+              currentSymbolTable.self
+            else
+              findQualifiedSelf currentSymbolTable.outerSymbolTable;
+        in
+        findQualifiedSelf symbolTable;
 
       /**
 
@@ -124,20 +145,39 @@ in
               }
             else if builtins.isList ast then
               let
+                # Explicit qualified this syntax: [SelfName, [path, segments]]
+                # The path segments list can be empty, resolving to the self at that scope level.
+                isExplicitQualifiedThis =
+                  builtins.length ast == 2
+                  && builtins.isString (builtins.head ast)
+                  && builtins.isList (builtins.elemAt ast 1)
+                  && builtins.all builtins.isString (builtins.elemAt ast 1);
+
                 # An inheritance is a list of strings
                 isInheritance = ast != [ ] && builtins.all builtins.isString ast;
               in
-              if isInheritance then
+              if isExplicitQualifiedThis then
+                let
+                  lexicalVariableName = builtins.head ast;
+                  pathSegments = builtins.elemAt ast 1;
+                  resolved = resolveQualifiedThis outerSymbolTable lexicalVariableName
+                  ;
+                  evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) resolved pathSegments;
+                in
                 {
-                  inheritances =
-                    let
-                      lexicalVariableName = builtins.head ast;
-                      restSegments = builtins.tail ast;
-                      lexicalVariable = lookUpVariable outerSymbolTable lexicalVariableName;
-                      evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) lexicalVariable restSegments;
-                    in
-                    evaluation.ownMixins;
-
+                  inheritances = evaluation.ownMixins;
+                  primitives = [ ];
+                  ownProperties = { };
+                }
+              else if isInheritance then
+                let
+                  lexicalVariableName = builtins.head ast;
+                  pathSegments = builtins.tail ast;
+                  resolved = lookUpVariable outerSymbolTable lexicalVariableName;
+                  evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) resolved pathSegments;
+                in
+                {
+                  inheritances = evaluation.ownMixins;
                   primitives = [ ];
                   ownProperties = { };
                 }

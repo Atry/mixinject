@@ -97,32 +97,37 @@ In `.mixin.yaml` files, the following naming conventions apply:
 | Data field / parameter | `snake_case` | `element_type`, `left`, `right`, `on_true` |
 | Temporary variable | `_snake_case` | `_applied_addend`, `_applied_augend`, `_applied_left` |
 
-**Qualified `this`** is a reference of the form `[MixinName, property]` where `MixinName` is the name of the mixin currently being defined. It resolves through dynamic `self`, meaning `property` is looked up on the fully composed evaluation — not just the mixin's own definition. The mixin name in a qualified `this` must be `PascalCase` to avoid name shadowing:
+**Qualified `this`** is a reference of the form `[MixinName, [property, path]]` where `MixinName` is the name of an enclosing mixin resolved via `selfName`. It resolves through dynamic `self`, meaning the path is navigated on the fully composed evaluation — not just the mixin's own definition. The mixin name in a qualified `this` must be `PascalCase` to avoid name shadowing:
 
 ```yaml
-# [NatAdd, addend] is a qualified this — NatAdd refers to the mixin being defined
-# [NatAdd, successor] is also qualified this — successor is inherited from Nat
+# [NatAdd, [addend]] is a qualified this — NatAdd refers to the mixin being defined
+# [NatAdd, [successor]] is also qualified this — successor is inherited from Nat
 NatAdd:
-  - [stdlib, types, Nat]
+  - [types, Nat]
   - augend:
-      - [stdlib, types, Nat]
+      - [types, Nat]
     addend:
-      - [stdlib, types, Nat]
+      - [types, Nat]
     _applied_addend:                   # Temporary variable (not qualified this)
-      - [NatAdd, addend]              # ← Qualified this: NatAdd.addend
+      - [NatAdd, [addend]]            # ← Qualified this: NatAdd.self.addend
       - successor:
-          - [NatAdd, successor]       # ← Qualified this: NatAdd.successor
+          - [NatAdd, [successor]]     # ← Qualified this: NatAdd.self.successor
     result:
       - [_applied_addend, result]     # ← Just a variable reference, not qualified this
 
 # WRONG: lowercase mixin name — prone to shadowing
 nat_add:
-  - [stdlib, types, Nat]
+  - [types, Nat]
   - result:
-      - [nat_add, addend]   # "nat_add" can be shadowed by a property named "nat_add"
+      - [nat_add, [addend]]   # "nat_add" can be shadowed by a property named "nat_add"
 ```
 
 The risk: if any ancestor in the scope chain has a property matching the lowercase name (e.g., `result`, `argument`, `nat_add`), the reference resolves to the wrong binding. PascalCase names like `NatAdd` are distinctive enough to avoid accidental collisions with `snake_case` data fields.
+
+**When to use qualified this vs. direct references**:
+- Use `[property]` or `[property, subproperty]` when the first segment is accessible in the current lexical scope.
+- Use `[MixinName, [property, path]]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).
+- For module-level references within the same module, prefer dropping the module prefix: `[types, Nat]` instead of `[stdlib, [types, Nat]]`.
 
 ## MIXIN Design Patterns
 
@@ -141,18 +146,18 @@ Boolean:
 
 # Constructor: selects on_true branch
 "True":
-  - [stdlib, types, Boolean]
+  - [types, Boolean]
   - result:
-      - ["True", on_true]       # Dynamic self — resolves to caller's on_true
+      - ["True", [on_true]]     # Qualified this — resolves to caller's on_true
 
 # Constructor: selects on_false branch
 "False":
-  - [stdlib, types, Boolean]
+  - [types, Boolean]
   - result:
-      - ["False", on_false]
+      - ["False", [on_false]]
 ```
 
-The key insight: `["True", on_true]` uses dynamic `self`. When `True` is composed with observer arguments, `on_true` resolves to the composed evaluation's `on_true`, not `True`'s own definition.
+The key insight: `["True", [on_true]]` uses qualified this to access `on_true` through `True`'s dynamic `self`. When `True` is composed with observer arguments, `on_true` resolves to the composed evaluation's `on_true`, not `True`'s own definition.
 
 ### Pattern 2: Church Encoding Fold (Non-Recursive Arithmetic)
 
@@ -161,21 +166,21 @@ Church numerals encode iteration in their structure. Arithmetic operations deleg
 ```yaml
 # add(augend, addend)(successor, zero) = augend(successor, addend(successor, zero))
 NatAdd:
-  - [stdlib, types, Nat]              # Inherits successor/zero observer interface
+  - [types, Nat]                       # Inherits successor/zero observer interface
   - augend:
-      - [stdlib, types, Nat]
+      - [types, Nat]
     addend:
-      - [stdlib, types, Nat]
+      - [types, Nat]
     _applied_addend:                   # Temporary: fold addend with the caller's successor/zero
-      - [NatAdd, addend]              # Qualified this
+      - [NatAdd, [addend]]            # Qualified this
       - successor:
-          - [NatAdd, successor]       # Qualified this
+          - [NatAdd, [successor]]     # Qualified this
         zero:
-          - [NatAdd, zero]            # Qualified this
+          - [NatAdd, [zero]]          # Qualified this
     _applied_augend:                   # Temporary: fold augend, chaining after addend
-      - [NatAdd, augend]              # Qualified this
+      - [NatAdd, [augend]]            # Qualified this
       - successor:
-          - [NatAdd, successor]       # Qualified this
+          - [NatAdd, [successor]]     # Qualified this
         zero:
           - [_applied_addend, result]  # Variable reference (not qualified this)
     result:
@@ -199,36 +204,36 @@ Semigroup:
 
 # Nat participates in TWO semigroups:
 NatAddSemigroup:
-  - [stdlib, abstract, Semigroup]
+  - [abstract, Semigroup]
   - element_type:
-      - [stdlib, types, Nat]
+      - [types, Nat]
     Combine:
       left:
-        - [stdlib, types, Nat]
+        - [types, Nat]
       right:
-        - [stdlib, types, Nat]
+        - [types, Nat]
       result:
-        - [stdlib, nat, arithmetic, NatAdd]
+        - [nat, arithmetic, NatAdd]
         - augend:
-            - [NatAddSemigroup, Combine, left]
+            - [NatAddSemigroup, [Combine, left]]
           addend:
-            - [NatAddSemigroup, Combine, right]
+            - [NatAddSemigroup, [Combine, right]]
 
 NatMultiplySemigroup:
-  - [stdlib, abstract, Semigroup]
+  - [abstract, Semigroup]
   - element_type:
-      - [stdlib, types, Nat]       # Same type, different operation
+      - [types, Nat]               # Same type, different operation
     Combine:
       left:
-        - [stdlib, types, Nat]
+        - [types, Nat]
       right:
-        - [stdlib, types, Nat]
+        - [types, Nat]
       result:
-        - [stdlib, nat, arithmetic, NatMultiply]
+        - [nat, arithmetic, NatMultiply]
         - multiplicand:
-            - [NatMultiplySemigroup, Combine, left]
+            - [NatMultiplySemigroup, [Combine, left]]
           multiplier:
-            - [NatMultiplySemigroup, Combine, right]
+            - [NatMultiplySemigroup, [Combine, right]]
 ```
 
 In Haskell, this requires `newtype` wrappers (`Sum`, `Product`). In MIXIN, the semigroup is a separate mixin that references the type — no wrapping needed.
@@ -243,11 +248,11 @@ PolyEquality:
   left: {}
   right: {}
   result:
-    - [stdlib, algorithms, comparison, PolyEquality, equality_operator]
+    - [algorithms, comparison, PolyEquality, equality_operator]
     - left:
-        - [stdlib, algorithms, comparison, PolyEquality, left]
+        - [algorithms, comparison, PolyEquality, left]
       right:
-        - [stdlib, algorithms, comparison, PolyEquality, right]
+        - [algorithms, comparison, PolyEquality, right]
 ```
 
 Usage: compose `PolyEquality` with a concrete `equality_operator` to get type-specific equality without modifying `PolyEquality` itself.

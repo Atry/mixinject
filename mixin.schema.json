@@ -11,6 +11,16 @@
       "minItems": 1,
       "description": "An inheritance, represented as an array of strings."
     },
+    "qualifiedThisReference": {
+      "type": "array",
+      "description": "An explicit qualified this reference [selfName, [path, segments]], accessing the dynamic self of an enclosing scope.",
+      "items": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
     "properties": {
       "type": "object",
       "description": "A collection of property definitions.",
@@ -27,6 +37,9 @@
             "$ref": "#/definitions/inheritance"
           },
           {
+            "$ref": "#/definitions/qualifiedThisReference"
+          },
+          {
             "$ref": "#/definitions/properties"
           },
           {
@@ -40,6 +53,9 @@
       "oneOf": [
         {
           "$ref": "#/definitions/inheritance"
+        },
+        {
+          "$ref": "#/definitions/qualifiedThisReference"
         },
         {
           "$ref": "#/definitions/properties"

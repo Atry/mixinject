@@ -1,17 +1,17 @@
 bar:
   - baz: "qux"
   - sub:
-      - [bar, a]
-      - c: [sub, b]
+      - [bar, [a]]
+      - c: [sub, [b]]
 
 test_late_binding:
   my_mixin1:
     - inner:
         field1: "value1"
     - early_binding:
-        - [test_late_binding, my_mixin1, inner]
+        - [test_late_binding, [my_mixin1, inner]]
     - late_binding:
-        - [my_mixin1, inner]
+        - [my_mixin1, [inner]]
     - late_binding_too:
         - [inner]
   my_mixin2:

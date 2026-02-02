@@ -598,7 +598,47 @@ In this example:
 
   - **Resolution**: It behaves like `this.sibling_mixin.property`, inheriting the `property` in `sibling_mixin`.
 
-#### 5.2.4 Cross-Directory Inheritance
+#### 5.2.4 Qualified This Syntax
+
+When a reference needs to access the dynamic `self` of an enclosing mixin (analogous to `Outer.this` in Java), MIXIN provides an explicit **qualified this** syntax:
+
+```yaml
+- [OuterMixin, [property, path]]
+```
+
+This is a two-element array where the first element is a string (the `selfName` of an enclosing scope) and the second element is a non-empty array of strings (the path to navigate within that scope's dynamic `self`).
+
+**Semantics**: The evaluator walks the symbol table chain to find a scope whose `selfName` matches the first element, retrieves that scope's dynamic `self` (the fully composed evaluation), and then navigates the path segments through `allProperties`.
+
+**Example**:
+
+```yaml
+NatAdd:
+  - [types, Nat]                    # Inheritance (all-string array)
+  - augend:
+      - [types, Nat]
+    addend:
+      - [types, Nat]
+    _applied_addend:
+      - [NatAdd, [addend]]          # Qualified this: NatAdd.self.addend
+      - successor:
+          - [NatAdd, [successor]]   # Qualified this: NatAdd.self.successor
+        zero:
+          - [NatAdd, [zero]]        # Qualified this: NatAdd.self.zero
+    result:
+      - [_applied_addend, result]   # Regular variable reference (not qualified this)
+```
+
+In this example, `[NatAdd, [successor]]` accesses `successor` through NatAdd's dynamic `self`. This is necessary because `successor` is inherited from `Nat` and not directly accessible as a lexical variable within `_applied_addend`'s scope (where `successor` is shadowed by `_applied_addend`'s own property).
+
+**When to use qualified this vs. direct references**:
+
+- Use a direct reference `[property]` or `[property, subproperty]` when the first segment is accessible in the current lexical scope (as an own property or via outer scopes).
+- Use qualified this `[Outer, [property, path]]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).
+
+**Distinction from inheritance references**: An inheritance reference is an all-string array like `[types, Nat]`. A qualified this reference is a two-element array where the second element is a nested list: `[NatAdd, [successor]]`. The evaluator distinguishes between these based on the structure of the array.
+
+#### 5.2.5 Cross-Directory Inheritance
 
 When inheriting mixins across different directories, the path must include relative path segments:
 
@@ -765,9 +805,9 @@ test_binding:
     - inner:
         field1: "value1"
     - early_binding:
-        - [test_binding, my_mixin1, inner] # Early binding to 'inner' in 'my_mixin1'
+        - [test_binding, [my_mixin1, inner]] # Early binding to 'inner' in 'my_mixin1'
     - late_binding:
-        - [my_mixin1, inner] # Late binding to 'inner' in 'my_mixin1'
+        - [my_mixin1, [inner]] # Late binding to 'inner' in 'my_mixin1'
     - late_binding_too:
         - [inner] # Late binding within the same mixin
 
@@ -866,6 +906,16 @@ The following JSON Schema defines the structure of MIXIN files. It specifies the
       "minItems": 1,
       "description": "An inheritance, represented as an array of strings."
     },
+    "qualifiedThisReference": {
+      "type": "array",
+      "description": "An explicit qualified this reference [selfName, [path, segments]], accessing the dynamic self of an enclosing scope.",
+      "items": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
     "properties": {
       "type": "object",
       "description": "A collection of property definitions.",
@@ -882,6 +932,9 @@ The following JSON Schema defines the structure of MIXIN files. It specifies the
             "$ref": "#/definitions/inheritance"
           },
           {
+            "$ref": "#/definitions/qualifiedThisReference"
+          },
+          {
             "$ref": "#/definitions/properties"
           },
           {
@@ -895,6 +948,9 @@ The following JSON Schema defines the structure of MIXIN files. It specifies the
       "oneOf": [
         {
           "$ref": "#/definitions/inheritance"
+        },
+        {
+          "$ref": "#/definitions/qualifiedThisReference"
         },
         {
           "$ref": "#/definitions/properties"

@@ -10,7 +10,7 @@ Boolean:
 "True":
   - [Boolean]
   - result:
-      - ["True", on_true]
+      - ["True", [on_true]]
 
 # Approach 2: extern-style declaration — redeclaring on_false: {} as an own
 # property makes [on_false] resolve via isOwnProperty, avoiding the need for
@@ -28,9 +28,9 @@ Not:
     applied_operand:
       - [operand]
       - on_true:
-          - [Not, on_false]
+          - [Not, [on_false]]
         on_false:
-          - [Not, on_true]
+          - [Not, [on_true]]
     result:
       - [applied_operand, result]
 
@@ -43,7 +43,7 @@ And:
     applied_left:
       - [left]
       - on_true:
-          - [And, right]
+          - [And, [right]]
         on_false:
           - ["False"]
     result:
@@ -60,7 +60,7 @@ Or:
       - on_true:
           - ["True"]
         on_false:
-          - [Or, right]
+          - [Or, [right]]
     result:
       - [applied_left, result]
 
@@ -82,7 +82,7 @@ test_and_true_true:
     right:
       - ["True"]
     observed:
-      - [test_and_true_true, result]
+      - [test_and_true_true, [result]]
       - on_true:
           a: {}
         on_false:
@@ -96,7 +96,7 @@ test_or_false_true:
     right:
       - ["True"]
     observed:
-      - [test_or_false_true, result]
+      - [test_or_false_true, [result]]
       - on_true:
           a: {}
         on_false:
@@ -114,7 +114,7 @@ Nat:
 Zero:
   - [Nat]
   - result:
-      - [Zero, zero]
+      - [Zero, [zero]]
 
 Succ:
   - [Nat]
@@ -123,11 +123,11 @@ Succ:
     applied_predecessor:
       - [predecessor]
       - successor:
-          - [Succ, successor]
+          - [Succ, [successor]]
         zero:
-          - [Succ, zero]
+          - [Succ, [zero]]
     applied_successor:
-      - [Succ, successor]
+      - [Succ, [successor]]
       - argument:
           - [applied_predecessor, result]
     result:
@@ -142,13 +142,13 @@ Add:
     applied_addend:
       - [addend]
       - successor:
-          - [Add, successor]
+          - [Add, [successor]]
         zero:
-          - [Add, zero]
+          - [Add, [zero]]
     applied_augend:
       - [augend]
       - successor:
-          - [Add, successor]
+          - [Add, [successor]]
         zero:
           - [applied_addend, result]
     result:

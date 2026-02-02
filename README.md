@@ -185,6 +185,39 @@ MIXIN 支持以下文件格式的源码表示：
 
   继承里，除了第一段以外的后几段可以在继承的 mixin 中寻找属性。
 
+### Qualified This 语法
+
+当需要访问外层 mixin 的动态 `self`（类似 Java 的 `Outer.this`）时，使用显式的 qualified this 语法：
+
+```yaml
+- [OuterMixin, [property, path]]
+```
+
+这是一个两元素数组：第一个元素是字符串（外层作用域的 `selfName`），第二个元素是非空字符串数组（在该作用域的动态 `self` 上导航的路径）。
+
+**示例**：
+
+```yaml
+NatAdd:
+  - [types, Nat]
+  - augend:
+      - [types, Nat]
+    addend:
+      - [types, Nat]
+    _applied_addend:
+      - [NatAdd, [addend]]          # Qualified this: NatAdd.self.addend
+      - successor:
+          - [NatAdd, [successor]]   # Qualified this: NatAdd.self.successor
+        zero:
+          - [NatAdd, [zero]]        # Qualified this: NatAdd.self.zero
+    result:
+      - [_applied_addend, result]   # 普通变量引用（不是 qualified this）
+```
+
+**何时使用**：
+- 当目标属性是通过继承获得的，且在当前作用域中被同名属性遮蔽时，必须使用 qualified this。
+- 如果目标属性可以在当前词法域中直接访问（作为自身属性或通过外层作用域），则直接使用 `[property]` 或 `[property, subproperty]` 即可。
+
 ## 示例代码
 
 ### `math.mixin.yaml`
