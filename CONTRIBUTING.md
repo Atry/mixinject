@@ -82,3 +82,186 @@ TeXLive packages are declared in `modules/texlive.nix`. Note that package names 
 - **Do not use single-letter variable names.** Use descriptive names that convey the purpose of the variable.
 - **Do not use abbreviated or truncated English words** (e.g., `expr` for `expression`, `env` for `environment`, `val` for `value`). Write out the full word. The fact that an abbreviation is widely used in the industry does not justify its use here.
 - **Exception:** established notations that are part of a fixed formal system are permitted, but these are limited to very few cases (e.g., `T` for a type variable in a typing judgment, `Γ` for a typing context). When in doubt, spell it out.
+
+### MIXIN File Naming Conventions
+
+In `.mixin.yaml` files, the following naming conventions apply:
+
+| Concept | Case | Examples |
+|---------|------|----------|
+| Module / namespace | `snake_case` | `boolean`, `nat`, `arithmetic`, `algorithms` |
+| Type / class / trait | `PascalCase` | `Boolean`, `Nat`, `BinNat`, `Semigroup` |
+| Constructor / value | `PascalCase` | `True`, `False`, `Zero`, `Succ`, `ListNil` |
+| Operation / function | `PascalCase` | `BooleanAnd`, `NatAdd`, `PolyEquality` |
+| Implementation binding | `PascalCase` | `NatAddSemigroup`, `BooleanOrSemigroup` |
+| Data field / parameter | `snake_case` | `element_type`, `left`, `right`, `on_true` |
+| Temporary variable | `_snake_case` | `_applied_addend`, `_applied_augend`, `_applied_left` |
+
+**Qualified `this`** is a reference of the form `[MixinName, property]` where `MixinName` is the name of the mixin currently being defined. It resolves through dynamic `self`, meaning `property` is looked up on the fully composed evaluation — not just the mixin's own definition. The mixin name in a qualified `this` must be `PascalCase` to avoid name shadowing:
+
+```yaml
+# [NatAdd, addend] is a qualified this — NatAdd refers to the mixin being defined
+# [NatAdd, successor] is also qualified this — successor is inherited from Nat
+NatAdd:
+  - [stdlib, types, Nat]
+  - augend:
+      - [stdlib, types, Nat]
+    addend:
+      - [stdlib, types, Nat]
+    _applied_addend:                   # Temporary variable (not qualified this)
+      - [NatAdd, addend]              # ← Qualified this: NatAdd.addend
+      - successor:
+          - [NatAdd, successor]       # ← Qualified this: NatAdd.successor
+    result:
+      - [_applied_addend, result]     # ← Just a variable reference, not qualified this
+
+# WRONG: lowercase mixin name — prone to shadowing
+nat_add:
+  - [stdlib, types, Nat]
+  - result:
+      - [nat_add, addend]   # "nat_add" can be shadowed by a property named "nat_add"
+```
+
+The risk: if any ancestor in the scope chain has a property matching the lowercase name (e.g., `result`, `argument`, `nat_add`), the reference resolves to the wrong binding. PascalCase names like `NatAdd` are distinctive enough to avoid accidental collisions with `snake_case` data fields.
+
+## MIXIN Design Patterns
+
+The following patterns are established by the stdlib (`stdlib/stdlib.mixin.yaml`) and test suite.
+
+### Pattern 1: Church Encoding via Observer Interfaces
+
+Types are defined as observer interfaces with holes (`{}`). Values are constructors that select which observer branch to return.
+
+```yaml
+# Type definition: the observer interface
+Boolean:
+  on_true: {}
+  on_false: {}
+  result: {}
+
+# Constructor: selects on_true branch
+"True":
+  - [stdlib, types, Boolean]
+  - result:
+      - ["True", on_true]       # Dynamic self — resolves to caller's on_true
+
+# Constructor: selects on_false branch
+"False":
+  - [stdlib, types, Boolean]
+  - result:
+      - ["False", on_false]
+```
+
+The key insight: `["True", on_true]` uses dynamic `self`. When `True` is composed with observer arguments, `on_true` resolves to the composed evaluation's `on_true`, not `True`'s own definition.
+
+### Pattern 2: Church Encoding Fold (Non-Recursive Arithmetic)
+
+Church numerals encode iteration in their structure. Arithmetic operations delegate recursion to the numeral itself rather than using explicit self-references. This avoids infinite evaluation trees.
+
+```yaml
+# add(augend, addend)(successor, zero) = augend(successor, addend(successor, zero))
+NatAdd:
+  - [stdlib, types, Nat]              # Inherits successor/zero observer interface
+  - augend:
+      - [stdlib, types, Nat]
+    addend:
+      - [stdlib, types, Nat]
+    _applied_addend:                   # Temporary: fold addend with the caller's successor/zero
+      - [NatAdd, addend]              # Qualified this
+      - successor:
+          - [NatAdd, successor]       # Qualified this
+        zero:
+          - [NatAdd, zero]            # Qualified this
+    _applied_augend:                   # Temporary: fold augend, chaining after addend
+      - [NatAdd, augend]              # Qualified this
+      - successor:
+          - [NatAdd, successor]       # Qualified this
+        zero:
+          - [_applied_addend, result]  # Variable reference (not qualified this)
+    result:
+      - [_applied_augend, result]
+```
+
+This pattern works because Church numerals apply `successor` n times to `zero`. By chaining two folds, we get `successor^(a+b)(zero)` without any explicit recursion.
+
+### Pattern 3: Semigroup Abstraction (Multiple Algebras per Type)
+
+A single type can participate in multiple semigroups without newtypes or wrappers. Each semigroup pairs the type with a specific binary operation:
+
+```yaml
+# Abstract interface
+Semigroup:
+  element_type: {}
+  Combine:
+    left: {}
+    right: {}
+    result: {}
+
+# Nat participates in TWO semigroups:
+NatAddSemigroup:
+  - [stdlib, abstract, Semigroup]
+  - element_type:
+      - [stdlib, types, Nat]
+    Combine:
+      left:
+        - [stdlib, types, Nat]
+      right:
+        - [stdlib, types, Nat]
+      result:
+        - [stdlib, nat, arithmetic, NatAdd]
+        - augend:
+            - [NatAddSemigroup, Combine, left]
+          addend:
+            - [NatAddSemigroup, Combine, right]
+
+NatMultiplySemigroup:
+  - [stdlib, abstract, Semigroup]
+  - element_type:
+      - [stdlib, types, Nat]       # Same type, different operation
+    Combine:
+      left:
+        - [stdlib, types, Nat]
+      right:
+        - [stdlib, types, Nat]
+      result:
+        - [stdlib, nat, arithmetic, NatMultiply]
+        - multiplicand:
+            - [NatMultiplySemigroup, Combine, left]
+          multiplier:
+            - [NatMultiplySemigroup, Combine, right]
+```
+
+In Haskell, this requires `newtype` wrappers (`Sum`, `Product`). In MIXIN, the semigroup is a separate mixin that references the type — no wrapping needed.
+
+### Pattern 4: Polymorphic Operations via Parametrization
+
+Operations that work across types accept their type-specific behavior as a parameter:
+
+```yaml
+PolyEquality:
+  equality_operator: {}        # Hole: accepts BooleanEquality, NatEquality, etc.
+  left: {}
+  right: {}
+  result:
+    - [stdlib, algorithms, comparison, PolyEquality, equality_operator]
+    - left:
+        - [stdlib, algorithms, comparison, PolyEquality, left]
+      right:
+        - [stdlib, algorithms, comparison, PolyEquality, right]
+```
+
+Usage: compose `PolyEquality` with a concrete `equality_operator` to get type-specific equality without modifying `PolyEquality` itself.
+
+### Pattern 5: Expression Problem Solution
+
+New types and new operations are added independently via composition (`⊕`), without modifying existing code. See `tests/src/expression_problem.mixin.yaml` for the canonical demonstration:
+
+- **Base**: expression types (Literal, Addition) + evaluation operation
+- **WithDisplay**: new operation (display) for existing types
+- **WithNegation**: new type (Negation) + both operations
+- **Full**: `Base ⊕ WithDisplay ⊕ WithNegation` — free composition
+
+### Limitations
+
+- **Recursive definitions**: Self-referential operations (e.g., recursive equality for Nat, fold over lists) cause infinite evaluation trees during snapshot generation. Use the Church encoding fold pattern where possible. For truly recursive operations, fixpoint support or snapshot cycle detection is needed.
+- **Placeholder implementations**: `NatEquality`, `BinNatEquality`, `BinNatAdd`, `BinNatMultiply` are currently stubs. They return constant values because their correct implementations require recursive definitions.
