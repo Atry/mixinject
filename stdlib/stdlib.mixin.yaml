@@ -1,57 +1,71 @@
 boolean:
   Boolean:
     if:
-      Then: {}
-      Else: {}
-      return: {}
-    and:
-      other: [Boolean]
-      return: {}
-    or:
-      other: [Boolean]
-      return: {}
-    not:
+      then: {}
+      else: {}
       return: {}
   "True":
     - [Boolean]
     - if:
-        Then: {}
-        Else: {}
-        return: [Then]
-      and:
-        other: [Boolean]
-        return: [other]
-      or:
-        other: [Boolean]
-        return: ["True"]
-      not:
-        return: ["False"]
+        then: {}
+        else: {}
+        return: [then]
   "False":
     - [Boolean]
     - if:
-        Then: {}
-        Else: {}
-        return: [Else]
-      and:
-        other: [Boolean]
-        return: ["False"]
-      or:
-        other: [Boolean]
-        return: [other]
-      not:
-        return: ["True"]
+        then: {}
+        else: {}
+        return: [else]
+  not:
+    - operand:
+        - [Boolean]
+      _if:
+        - [operand, if]
+        - then:
+            - ["False"]
+          else:
+            - ["True"]
+      return:
+        - [_if, return]
+  and:
+    - left:
+        - [Boolean]
+      right:
+        - [Boolean]
+      _if:
+        - [left, if]
+        - then:
+            - [right]
+          else:
+            - ["False"]
+      return:
+        - [_if, return]
+  or:
+    - left:
+        - [Boolean]
+      right:
+        - [Boolean]
+      _if:
+        - [left, if]
+        - then:
+            - ["True"]
+          else:
+            - [right]
+      return:
+        - [_if, return]
 
 nat:
   - [boolean]
   - Nat:
-      is_zero:
-        return: {}
-      Succ:
-        - [Nat]
-        - is_zero:
-            return: [nat, ["False"]]
-          predecessor: {}
-    Zero:
+      - is_zero:
+          return: [nat, [Boolean]]
+  - "Zero":
       - [Nat]
       - is_zero:
           return: [nat, ["True"]]
+  - "Succ":
+      - [Nat]
+      - predecessor:
+          - [Nat]
+      - is_zero:
+          return: [nat, ["False"]]

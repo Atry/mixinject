@@ -97,6 +97,8 @@ In `.mixin.yaml` files, the following naming conventions apply:
 | Data field / parameter | `snake_case` | `element_type`, `left`, `right`, `on_true` |
 | Temporary variable | `_snake_case` | `_applied_addend`, `_applied_augend`, `_applied_left` |
 
+**Free functions vs. methods**: Prefer free functions over methods. A free function is defined at the module level, takes its arguments explicitly, and does not rely on dynamic dispatch through `self`. Use methods only when subtypes need to provide different implementations (i.e., when dynamic dispatch is required). For example, `is_zero` is a method on `Nat` because `Zero` and `Succ` implement it differently, but `add` should be a free function because its logic is uniform and does not vary by subtype.
+
 **Method / function `return` requirement**: Every method and function must have exactly one `return` member that holds its result. If a computation produces multiple named outputs, it is not a function — it is a type (class/trait) and must use `PascalCase`:
 
 ```yaml
