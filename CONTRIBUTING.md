@@ -147,34 +147,34 @@ This separation ensures that:
 - The dependency graph is explicit: each module's mixin list declares exactly which abstract interfaces it requires.
 - Modules remain testable in isolation: mock implementations of dependencies can be provided.
 
-**Qualified `this`** is a reference of the form `[MixinName, [property, path]]` where `MixinName` is the name of an enclosing mixin resolved via `selfName`. It resolves through dynamic `self`, meaning the path is navigated on the fully composed evaluation — not just the mixin's own definition. The mixin name in a qualified `this` must be `PascalCase` to avoid name shadowing:
+**Qualified `this`** is a reference that resolves through the dynamic `self` of an enclosing mixin (identified by `selfName`), navigating the fully composed evaluation — not just the mixin's own definition. The syntax is:
+
+```
+[SelfName, ~, path, segments...]
+```
+
+In YAML, `~` is `null`. In JSON, write `null`. This is analogous to Java's `Outer.this.path.segments`.
 
 ```yaml
-# [NatAdd, [addend]] is a qualified this — NatAdd refers to the mixin being defined
-# [NatAdd, [successor]] is also qualified this — successor is inherited from Nat
-NatAdd:
+# [Add, ~, addend] is a qualified this — Add refers to the enclosing mixin
+# [Add, ~, successor] is also qualified this — successor is inherited from Nat
+Add:
   - [types, Nat]
   - augend:
       - [types, Nat]
     addend:
       - [types, Nat]
     _applied_addend:                   # Temporary variable (not qualified this)
-      - [NatAdd, [addend]]            # ← Qualified this: NatAdd.self.addend
+      - [Add, ~, addend]              # ← Qualified this: Add.self.addend
       - successor:
-          - [NatAdd, [successor]]     # ← Qualified this: NatAdd.self.successor
-    result:
-      - [_applied_addend, result]     # ← Just a variable reference, not qualified this
-
-# WRONG: lowercase mixin name — prone to shadowing
-nat_add:
-  - [types, Nat]
-  - result:
-      - [nat_add, [addend]]   # "nat_add" can be shadowed by a property named "nat_add"
+          - [Add, ~, successor]       # ← Qualified this: Add.self.successor
+    return:
+      - [_applied_addend, return]     # ← Just a variable reference, not qualified this
 ```
 
-The risk: if any ancestor in the scope chain has a property matching the lowercase name (e.g., `result`, `argument`, `nat_add`), the reference resolves to the wrong binding. PascalCase names like `NatAdd` are distinctive enough to avoid accidental collisions with `snake_case` data fields.
+The old syntax `[SelfName, [path, segments]]` is **deprecated** and emits a warning. Convert all occurrences to the `~` syntax.
 
 **When to use qualified this vs. direct references**:
 - Use `[property]` or `[property, subproperty]` when the first segment is accessible in the current lexical scope.
-- Use `[MixinName, [property, path]]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).
-- For module-level references within the same module, prefer dropping the module prefix: `[types, Nat]` instead of `[stdlib, [types, Nat]]`.
+- Use `[SelfName, ~, property, path]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).
+- For module-level references within the same module, prefer dropping the module prefix: `[types, Nat]` instead of `[stdlib, ~, types, Nat]`.

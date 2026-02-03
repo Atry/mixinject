@@ -58,14 +58,14 @@ nat:
   - [boolean]
   - Nat:
       - is_zero:
-          return: [nat, [Boolean]]
+          return: [nat, ~, Boolean]
   - Zero:
       - [Nat]
       - is_zero:
-          return: [nat, ["True"]]
+          return: [nat, ~, "True"]
   - Succ:
       - [Nat]
       - predecessor:
           - [Nat]
       - is_zero:
-          return: [nat, ["False"]]
+          return: [nat, ~, "False"]

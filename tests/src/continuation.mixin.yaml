@@ -19,7 +19,7 @@ ComputeNormal:
       normal: {}
     result:
       output:
-        - [ComputeNormal, [value]]
+        - [ComputeNormal, ~, value]
 
 # Test: normal path (escape not invoked)
 # Expected: {output: {normal: {}}}
@@ -34,9 +34,9 @@ ComputeEscape:
   - value:
       early: {}
     result:
-      - [ComputeEscape, [escape]]
+      - [ComputeEscape, ~, escape]
       - output:
-          - [ComputeEscape, [value]]
+          - [ComputeEscape, ~, value]
 
 # Test: escape path (bypass normal result)
 # Expected: {escaped: {early: {}}}
@@ -45,7 +45,7 @@ test_escape_path:
   - escape:
       result:
         escaped:
-          - [test_escape_path, [result, output]]
+          - [test_escape_path, ~, result, output]
 
 # Example 2: Success/Failure Continuations
 
@@ -60,9 +60,9 @@ ChoiceSucceed:
   - value:
       ok: {}
     result:
-      - [ChoiceSucceed, [on_success]]
+      - [ChoiceSucceed, ~, on_success]
       - payload:
-          - [ChoiceSucceed, [value]]
+          - [ChoiceSucceed, ~, value]
 
 # Fails: invokes on_failure
 ChoiceFail:
@@ -70,9 +70,9 @@ ChoiceFail:
   - value:
       error: {}
     result:
-      - [ChoiceFail, [on_failure]]
+      - [ChoiceFail, ~, on_failure]
       - payload:
-          - [ChoiceFail, [value]]
+          - [ChoiceFail, ~, value]
 
 # Test: success continuation invoked
 # Expected: {success_handler: {ok: {}}}
@@ -81,7 +81,7 @@ test_success:
   - on_success:
       result:
         success_handler:
-          - [test_success, [result, payload]]
+          - [test_success, ~, result, payload]
     on_failure:
       result:
         failure_handler: {}
@@ -96,7 +96,7 @@ test_failure:
     on_failure:
       result:
         failure_handler:
-          - [test_failure, [result, payload]]
+          - [test_failure, ~, result, payload]
 
 # Example 3: Multiple Continuations (like exception handlers)
 
@@ -111,9 +111,9 @@ NormalExit:
   - data:
       completed: {}
     result:
-      - [NormalExit, [normal_exit]]
+      - [NormalExit, ~, normal_exit]
       - value:
-          - [NormalExit, [data]]
+          - [NormalExit, ~, data]
 
 # Takes the exception exit
 ExceptionExit:
@@ -121,9 +121,9 @@ ExceptionExit:
   - data:
       failed: {}
     result:
-      - [ExceptionExit, [exception_exit]]
+      - [ExceptionExit, ~, exception_exit]
       - value:
-          - [ExceptionExit, [data]]
+          - [ExceptionExit, ~, data]
 
 # Test: normal exit taken
 # Expected: {normal: {completed: {}}}
@@ -132,7 +132,7 @@ test_normal_exit:
   - normal_exit:
       result:
         normal:
-          - [test_normal_exit, [result, value]]
+          - [test_normal_exit, ~, result, value]
     exception_exit:
       result:
         exceptional: {}
@@ -147,7 +147,7 @@ test_exception_exit:
     exception_exit:
       result:
         exceptional:
-          - [test_exception_exit, [result, value]]
+          - [test_exception_exit, ~, result, value]
 
 # Analysis:
 #

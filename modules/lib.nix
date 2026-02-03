@@ -145,10 +145,21 @@ in
               }
             else if builtins.isList ast then
               let
-                # Explicit qualified this syntax: [SelfName, [path, segments]]
+                astLength = builtins.length ast;
+
+                # Qualified this syntax: [SelfName, null, path, segments...]
+                # In YAML, write [SelfName,, path, segments] or [SelfName, ~, path, segments].
+                # Analogous to Java's Outer.this.path.segments.
+                isNewQualifiedThis =
+                  astLength >= 2
+                  && builtins.isString (builtins.head ast)
+                  && builtins.elemAt ast 1 == null
+                  && builtins.all builtins.isString (lib.drop 2 ast);
+
+                # Deprecated qualified this syntax: [SelfName, [path, segments]]
                 # The path segments list can be empty, resolving to the self at that scope level.
                 isExplicitQualifiedThis =
-                  builtins.length ast == 2
+                  astLength == 2
                   && builtins.isString (builtins.head ast)
                   && builtins.isList (builtins.elemAt ast 1)
                   && builtins.all builtins.isString (builtins.elemAt ast 1);
@@ -156,12 +167,25 @@ in
                 # An inheritance is a list of strings
                 isInheritance = ast != [ ] && builtins.all builtins.isString ast;
               in
-              if isExplicitQualifiedThis then
+              if isNewQualifiedThis then
+                let
+                  qualifiedSelfName = builtins.head ast;
+                  pathSegments = lib.drop 2 ast;
+                  resolved = resolveQualifiedThis outerSymbolTable qualifiedSelfName;
+                  evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) resolved pathSegments;
+                in
+                {
+                  inheritances = evaluation.ownMixins;
+                  primitives = [ ];
+                  ownProperties = { };
+                }
+              else if isExplicitQualifiedThis then
                 let
                   lexicalVariableName = builtins.head ast;
                   pathSegments = builtins.elemAt ast 1;
-                  resolved = resolveQualifiedThis outerSymbolTable lexicalVariableName
-                  ;
+                  resolved = builtins.trace
+                    "WARNING: Deprecated qualified this syntax [${lexicalVariableName}, [${builtins.concatStringsSep ", " pathSegments}]] in ${sourceFile}. Use [${lexicalVariableName},, ${builtins.concatStringsSep ", " pathSegments}] instead."
+                    (resolveQualifiedThis outerSymbolTable lexicalVariableName);
                   evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) resolved pathSegments;
                 in
                 {

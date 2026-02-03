@@ -25,20 +25,20 @@ Base:
       right: {}
   evaluation:
     Literal:
-      - [Base, [expression, Literal]]
+      - [Base, ~, expression, Literal]
       - outcome:
-          - [Literal, [magnitude]]
+          - [Literal, ~, magnitude]
     Addition:
-      - [Base, [expression, Addition]]
+      - [Base, ~, expression, Addition]
       - left:
           outcome: {}
         right:
           outcome: {}
         outcome:
           left:
-            - [Addition, [left, outcome]]
+            - [Addition, ~, left, outcome]
           right:
-            - [Addition, [right, outcome]]
+            - [Addition, ~, right, outcome]
 
 # ============================================================
 # Component 2: Display operation (new operation, Base untouched)
@@ -50,7 +50,7 @@ WithDisplay:
       - [Base, expression, Literal]
       - representation:
           literal:
-            - [Literal, [magnitude]]
+            - [Literal, ~, magnitude]
     Addition:
       - [Base, expression, Addition]
       - left:
@@ -60,9 +60,9 @@ WithDisplay:
         representation:
           addition:
             left:
-              - [Addition, [left, representation]]
+              - [Addition, ~, left, representation]
             right:
-              - [Addition, [right, representation]]
+              - [Addition, ~, right, representation]
 
 # ============================================================
 # Component 3: Negation case (new case, Base and Display untouched)
@@ -74,20 +74,20 @@ WithNegation:
       operand: {}
   evaluation:
     Negation:
-      - [WithNegation, [expression, Negation]]
+      - [WithNegation, ~, expression, Negation]
       - operand:
           outcome: {}
         outcome:
           negated:
-            - [Negation, [operand, outcome]]
+            - [Negation, ~, operand, outcome]
   display:
     Negation:
-      - [WithNegation, [expression, Negation]]
+      - [WithNegation, ~, expression, Negation]
       - operand:
           representation: {}
         representation:
           negation:
-            - [Negation, [operand, representation]]
+            - [Negation, ~, operand, representation]
 
 # ============================================================
 # Compose all components: Base ⊕ WithDisplay ⊕ WithNegation
