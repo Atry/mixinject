@@ -59,11 +59,11 @@ nat:
   - Nat:
       - is_zero:
           return: [nat, [Boolean]]
-  - "Zero":
+  - Zero:
       - [Nat]
       - is_zero:
           return: [nat, ["True"]]
-  - "Succ":
+  - Succ:
       - [Nat]
       - predecessor:
           - [Nat]
