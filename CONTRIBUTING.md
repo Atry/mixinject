@@ -172,8 +172,6 @@ Add:
       - [_applied_addend, return]     # ← Just a variable reference, not qualified this
 ```
 
-The old syntax `[SelfName, [path, segments]]` is **deprecated** and emits a warning. Convert all occurrences to the `~` syntax.
-
 **When to use qualified this vs. direct references**:
 - Use `[property]` or `[property, subproperty]` when the first segment is accessible in the current lexical scope.
 - Use `[SelfName, ~, property, path]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).

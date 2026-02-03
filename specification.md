@@ -603,10 +603,10 @@ In this example:
 When a reference needs to access the dynamic `self` of an enclosing mixin (analogous to `Outer.this` in Java), MIXIN provides an explicit **qualified this** syntax:
 
 ```yaml
-- [OuterMixin, [property, path]]
+- [OuterMixin, ~, property, path]
 ```
 
-This is a two-element array where the first element is a string (the `selfName` of an enclosing scope) and the second element is a non-empty array of strings (the path to navigate within that scope's dynamic `self`).
+This is an array where the first element is a string (the `selfName` of an enclosing scope), the second element is `null` (written as `~` in YAML), and the remaining elements are strings (the path to navigate within that scope's dynamic `self`). This is analogous to Java's `Outer.this.property.path`.
 
 **Semantics**: The evaluator walks the symbol table chain to find a scope whose `selfName` matches the first element, retrieves that scope's dynamic `self` (the fully composed evaluation), and then navigates the path segments through `allProperties`.
 
@@ -620,23 +620,23 @@ NatAdd:
     addend:
       - [types, Nat]
     _applied_addend:
-      - [NatAdd, [addend]]          # Qualified this: NatAdd.self.addend
+      - [NatAdd, ~, addend]         # Qualified this: NatAdd.self.addend
       - successor:
-          - [NatAdd, [successor]]   # Qualified this: NatAdd.self.successor
+          - [NatAdd, ~, successor]  # Qualified this: NatAdd.self.successor
         zero:
-          - [NatAdd, [zero]]        # Qualified this: NatAdd.self.zero
+          - [NatAdd, ~, zero]       # Qualified this: NatAdd.self.zero
     result:
       - [_applied_addend, result]   # Regular variable reference (not qualified this)
 ```
 
-In this example, `[NatAdd, [successor]]` accesses `successor` through NatAdd's dynamic `self`. This is necessary because `successor` is inherited from `Nat` and not directly accessible as a lexical variable within `_applied_addend`'s scope (where `successor` is shadowed by `_applied_addend`'s own property).
+In this example, `[NatAdd, ~, successor]` accesses `successor` through NatAdd's dynamic `self`. This is necessary because `successor` is inherited from `Nat` and not directly accessible as a lexical variable within `_applied_addend`'s scope (where `successor` is shadowed by `_applied_addend`'s own property).
 
 **When to use qualified this vs. direct references**:
 
 - Use a direct reference `[property]` or `[property, subproperty]` when the first segment is accessible in the current lexical scope (as an own property or via outer scopes).
-- Use qualified this `[Outer, [property, path]]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).
+- Use qualified this `[SelfName, ~, property, path]` when the property is only accessible through the dynamic `self` of an enclosing mixin (e.g., inherited properties that are shadowed in the current scope).
 
-**Distinction from inheritance references**: An inheritance reference is an all-string array like `[types, Nat]`. A qualified this reference is a two-element array where the second element is a nested list: `[NatAdd, [successor]]`. The evaluator distinguishes between these based on the structure of the array.
+**Distinction from inheritance references**: An inheritance reference is an all-string array like `[types, Nat]`. A qualified this reference contains a `null` delimiter after the self name: `[NatAdd, ~, successor]`. The evaluator distinguishes between these based on whether the second element is `null`.
 
 #### 5.2.5 Cross-Directory Inheritance
 
@@ -805,9 +805,9 @@ test_binding:
     - inner:
         field1: "value1"
     - early_binding:
-        - [test_binding, [my_mixin1, inner]] # Early binding to 'inner' in 'my_mixin1'
+        - [test_binding, ~, my_mixin1, inner] # Early binding to 'inner' in 'my_mixin1'
     - late_binding:
-        - [my_mixin1, [inner]] # Late binding to 'inner' in 'my_mixin1'
+        - [my_mixin1, ~, inner] # Late binding to 'inner' in 'my_mixin1'
     - late_binding_too:
         - [inner] # Late binding within the same mixin
 
@@ -837,7 +837,7 @@ test_binding:
 
 - **Behavior in Example**:
 
-  - `test_binding.my_mixin1.late_binding` inherits `[my_mixin1, inner]`. When inherited by `my_mixin2`, this inheritance dynamically resolves to `my_mixin2.inner`, which includes both `field1` and `field2`.
+  - `test_binding.my_mixin1.late_binding` inherits `[my_mixin1, ~, inner]`. When inherited by `my_mixin2`, this inheritance dynamically resolves to `my_mixin2.inner`, which includes both `field1` and `field2`.
 
   - Similarly, `test_binding.my_mixin1.late_binding_too` inherits `[inner]` within the same mixin. When inherited by `my_mixin2`, it also resolves to `my_mixin2.inner`, which now contains both `field1` and `field2`.
 

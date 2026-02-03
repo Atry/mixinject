@@ -150,42 +150,20 @@ in
                 # Qualified this syntax: [SelfName, null, path, segments...]
                 # In YAML, write [SelfName,, path, segments] or [SelfName, ~, path, segments].
                 # Analogous to Java's Outer.this.path.segments.
-                isNewQualifiedThis =
+                isQualifiedThis =
                   astLength >= 2
                   && builtins.isString (builtins.head ast)
                   && builtins.elemAt ast 1 == null
                   && builtins.all builtins.isString (lib.drop 2 ast);
 
-                # Deprecated qualified this syntax: [SelfName, [path, segments]]
-                # The path segments list can be empty, resolving to the self at that scope level.
-                isExplicitQualifiedThis =
-                  astLength == 2
-                  && builtins.isString (builtins.head ast)
-                  && builtins.isList (builtins.elemAt ast 1)
-                  && builtins.all builtins.isString (builtins.elemAt ast 1);
-
                 # An inheritance is a list of strings
                 isInheritance = ast != [ ] && builtins.all builtins.isString ast;
               in
-              if isNewQualifiedThis then
+              if isQualifiedThis then
                 let
                   qualifiedSelfName = builtins.head ast;
                   pathSegments = lib.drop 2 ast;
                   resolved = resolveQualifiedThis outerSymbolTable qualifiedSelfName;
-                  evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) resolved pathSegments;
-                in
-                {
-                  inheritances = evaluation.ownMixins;
-                  primitives = [ ];
-                  ownProperties = { };
-                }
-              else if isExplicitQualifiedThis then
-                let
-                  lexicalVariableName = builtins.head ast;
-                  pathSegments = builtins.elemAt ast 1;
-                  resolved = builtins.trace
-                    "WARNING: Deprecated qualified this syntax [${lexicalVariableName}, [${builtins.concatStringsSep ", " pathSegments}]] in ${sourceFile}. Use [${lexicalVariableName},, ${builtins.concatStringsSep ", " pathSegments}] instead."
-                    (resolveQualifiedThis outerSymbolTable lexicalVariableName);
                   evaluation = builtins.foldl' (evaluation: segment: evaluation.allProperties.${segment}) resolved pathSegments;
                 in
                 {
