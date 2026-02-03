@@ -1,0 +1,57 @@
+boolean:
+  Boolean:
+    if:
+      Then: {}
+      Else: {}
+      return: {}
+    and:
+      other: [Boolean]
+      return: {}
+    or:
+      other: [Boolean]
+      return: {}
+    not:
+      return: {}
+  "True":
+    - [Boolean]
+    - if:
+        Then: {}
+        Else: {}
+        return: [Then]
+      and:
+        other: [Boolean]
+        return: [other]
+      or:
+        other: [Boolean]
+        return: ["True"]
+      not:
+        return: ["False"]
+  "False":
+    - [Boolean]
+    - if:
+        Then: {}
+        Else: {}
+        return: [Else]
+      and:
+        other: [Boolean]
+        return: ["False"]
+      or:
+        other: [Boolean]
+        return: [other]
+      not:
+        return: ["True"]
+
+nat:
+  - [boolean]
+  - Nat:
+      is_zero:
+        return: {}
+      Succ:
+        - [Nat]
+        - is_zero:
+            return: [nat, ["False"]]
+          predecessor: {}
+    Zero:
+      - [Nat]
+      - is_zero:
+          return: [nat, ["True"]]
