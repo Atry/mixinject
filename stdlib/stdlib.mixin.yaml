@@ -28,29 +28,29 @@ boolean:
       return:
         - [_if, return]
   and:
-    - left:
+    - operand0:
         - [Boolean]
-      right:
+      operand1:
         - [Boolean]
       _if:
-        - [left, if]
+        - [operand0, if]
         - then:
-            - [right]
+            - [operand1]
           else:
             - ["False"]
       return:
         - [_if, return]
   or:
-    - left:
+    - operand0:
         - [Boolean]
-      right:
+      operand1:
         - [Boolean]
       _if:
-        - [left, if]
+        - [operand0, if]
         - then:
             - ["True"]
           else:
-            - [right]
+            - [operand1]
       return:
         - [_if, return]
 
