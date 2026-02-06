@@ -1,25 +1,52 @@
-\documentclass[11pt]{article}
+%%
+%% Onward! submission using ACM SIGPLAN acmart format
+%%
+\documentclass[manuscript,anonymous,review,10pt]{acmart}
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{amsmath, amssymb, mathtools}
-\usepackage{xcolor}
-\usepackage[margin=1in]{geometry}
+\AtBeginDocument{%
+  \providecommand\BibTeX{{Bib\TeX}}}
 
-\newcommand{\Class}{\mathrm{Class}}
-\newcommand{\Mixin}{\mathrm{Mixin}}
-\newcommand{\Object}{\mathrm{Object}}
-\newcommand{\Constructor}{\mathrm{Constructor}}
-\newcommand{\eval}{\mathrm{evaluate}}
-\newcommand{\bind}{\mathrm{bind}}
-\newcommand{\dom}{\mathrm{dom}}
-\newcommand{\up}{\mathop{\uparrow}}
+%% Disable ACM-specific metadata for submission
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
 
-\title{MixinCalculus}
-\author{}
-\date{}
+\usepackage{mathtools}
+
+\DeclareMathOperator{\Class}{Class}
+\DeclareMathOperator{\Mixin}{Mixin}
+\DeclareMathOperator{\Object}{Object}
+\DeclareMathOperator{\Constructor}{Constructor}
+\DeclareMathOperator{\eval}{evaluate}
+\DeclareMathOperator{\bind}{bind}
+\DeclareMathOperator{\dom}{dom}
+\newcommand{\up}{\uparrow}
 
 \begin{document}
+
+\title{MixinCalculus}
+
+\author{Bo Yang}
+\affiliation{%
+  \institution{Figure AI Inc.}
+  \city{San Jose}
+  \state{California}
+  \country{USA}
+}
+\email{yang-bo@yang-bo.com}
+\thanks{This work was conducted independently prior to the author's employment at Figure AI.}
+
+\begin{abstract}
+MixinCalculus is a minimal computational model containing only mixin constructs
+and no scalar types. The only built-in operation is composition ($\oplus$),
+which is commutative, idempotent, and associative. References use De~Bruijn
+indices, where each record literal creates a new scope level. The observable
+behavior of a program is key presence at each node of the resulting recursive
+dictionary structure. We show that MixinCalculus subsumes the $\lambda$-calculus
+by providing a Church encoding of booleans and natural numbers, along with
+a systematic translation from $\lambda$-terms to MixinCalculus expressions.
+\end{abstract}
+
 \maketitle
 
 \section{Introduction}
@@ -345,5 +372,8 @@ with recursive merge are difficult to encode in pure $\lambda$-calculus.
     ($\lambda$-calculus $\subset$ MixinCalculus).
     The reverse embedding is non-trivial.
 \end{itemize}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{mixin-calculus}
 
 \end{document}
