@@ -53,8 +53,10 @@ which targets a fixed monad, MixinCalculus ANF supports dependency
 injection, making programs CPS-agnostic---the same code serves as either
 continuation-passing or direct-style depending on assembly.
 Records serve as tries, making MixinCalculus an immutable analogue of
-the RAM machine. This provides a computational foundation for declarative
-configuration languages and object-oriented composition mechanisms.
+the RAM machine. This establishes MixinCalculus as a computational model
+for declarative programming, with applications to configuration languages,
+mixin-based object systems, composable effect systems, and modular software
+architectures.
 \end{abstract}
 
 \begin{CCSXML}
@@ -683,6 +685,7 @@ empty API slots can be used in multiple contexts without modification:
 \begin{itemize}
   \item In synchronous code, fill slots with direct implementations
   \item In asynchronous code, fill slots with continuation handlers
+  \item In effect systems, compose with algebraic effect handlers~\cite{plotkin2003algebraic}
   \item In test code, fill slots with mock implementations
 \end{itemize}
 
@@ -820,6 +823,54 @@ Each scope level is given a name (e.g., $\mathrm{Succ}$),
 and $\up^1.\mathrm{successor}$ is written as
 $\mathrm{Succ}.\mathrm{successor}$,
 where the name is resolved by walking up the scope chain.
+
+\subsection{Relationship to Practical Systems}
+
+MixinCalculus provides a theoretical foundation for understanding several
+classes of declarative systems that have emerged independently in practice.
+
+\paragraph{Configuration languages.}
+The NixOS module system~\cite{dolstra2008nixos,nixosmodules}---whose
+recursive attribute merging motivated this work---can be understood as an
+implementation of MixinCalculus with additional features (type checking,
+error reporting, FFI to the Nix language). The module system's
+expressiveness stems from the properties proven in Section~4: composition
+is commutative, idempotent, and associative, dissolving the linearization
+problem. Other configuration languages exhibit similar patterns:
+Jsonnet~\cite{jsonnet} provides inheritance-based composition over JSON;
+CUE~\cite{cue2019} unifies types and values through lattice-based merging;
+Dhall~\cite{dhall2017} combines functional programming with configuration.
+All share MixinCalculus's core pattern: composition over recursive
+structures without explicit functions.
+
+\paragraph{Mixin-based object systems.}
+Scala traits~\cite{odersky2004overview}, Ruby mixins~\cite{flanagan2008ruby},
+and similar object-oriented mechanisms use symmetric composition to extend
+classes. Traditional mixin calculi~\cite{bracha1990mixin,scharli2003traits}
+face the linearization problem when composing mixins with conflicting
+fields. MixinCalculus dissolves this problem (Section~4) by eliminating
+scalar values: only key presence is observable, making composition
+naturally commutative. This explains why trait systems with
+conflict-resolution strategies (e.g., Scala's linearization) require
+additional machinery that MixinCalculus does not.
+
+\paragraph{Effect systems.}
+Algebraic effects with handlers~\cite{plotkin2003algebraic,pretnar2015introduction}
+and monad transformers structure computational effects through composition.
+The CPS-agnostic property (Section~5.3) shows how MixinCalculus naturally
+supports effect handler composition: empty API slots can be filled with
+effect handlers (CPS interpretation) or direct implementations (direct-style
+interpretation). This correspondence suggests that MixinCalculus may provide
+a foundation for understanding effect systems without requiring explicit
+monad machinery.
+
+\paragraph{Modular software architectures.}
+Plugin systems, component frameworks, and dependency injection frameworks
+enable software extensibility through declarative composition. The
+symmetric, associative nature of $\oplus$ (Section~4) explains why such
+systems work: components can be composed in any order without changing
+behavior. MixinCalculus formalizes the composition patterns that these
+systems implement ad hoc.
 
 \section{Future Work}
 
