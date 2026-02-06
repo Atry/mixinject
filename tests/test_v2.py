@@ -1817,33 +1817,6 @@ class TestParameter:
 class TestInstanceScopeV2Specific:
     """V2-specific instance scope tests."""
 
-    def test_static_scope_has_sentinel_kwargs(self) -> None:
-        """Static scopes have KwargsSentinel.STATIC as kwargs."""
-        from mixinject.runtime import KwargsSentinel
-
-        @scope
-        class Config:
-            @resource
-            def value() -> str:
-                return "static"
-
-        root = evaluate(Config)
-        assert root.kwargs is KwargsSentinel.STATIC
-
-    def test_instance_scope_has_dict_kwargs(self) -> None:
-        """Instance scopes have dict kwargs."""
-        from mixinject.runtime import KwargsSentinel
-
-        @scope
-        class Config:
-            @extern
-            def foo() -> str: ...
-
-        root = evaluate(Config)
-        instance = root(foo="bar")
-        assert not isinstance(instance.kwargs, KwargsSentinel)
-        assert instance.kwargs == {"foo": "bar"}
-
     def test_cannot_call_instance_again(self) -> None:
         """Cannot create instance from an instance scope."""
 
@@ -1855,7 +1828,7 @@ class TestInstanceScopeV2Specific:
         root = evaluate(Config)
         instance = root(foo="bar")
         with pytest.raises(
-            TypeError, match="Cannot create instance from an instance scope"
+            TypeError, match="'InstanceScope' object is not callable"
         ):
             instance(foo="baz")
 

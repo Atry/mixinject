@@ -6,47 +6,99 @@
 
 # Concrete Church numerals
 Zero:
-  - [stdlib, nat, Zero]
+  - [stdlib, Nat, Zero]
 
 One:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [Zero]
 
 Two:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [One]
 
 Three:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [Two]
 
 Four:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [Three]
 
 Five:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [Four]
 
 Six:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [Five]
 
 Seven:
-  - [stdlib, nat, Succ]
+  - [stdlib, Nat, Succ]
   - predecessor:
       - [Six]
 
 # Test: 3 + 4 = 7
 add_three_four:
-  - [stdlib, nat, add]
-  - operand0:
-      - [Three]
-    operand1:
+  - [Three, Addition]
+  - addend:
       - [Four]
+
+# =============================================================================
+# List tests
+# =============================================================================
+
+# Concrete lists
+EmptyList:
+  - [stdlib, list, Nil]
+
+ListOne:
+  - [stdlib, list, Cons]
+  - head: 1
+    tail:
+      - [EmptyList]
+
+ListTwo:
+  - [stdlib, list, Cons]
+  - head: 2
+    tail:
+      - [ListOne]
+
+ListThree:
+  - [stdlib, list, Cons]
+  - head: 3
+    tail:
+      - [ListTwo]
+
+# [3, 2, 1]
+list_321:
+  - [ListThree]
+
+ListA:
+  - [stdlib, list, Cons]
+  - head: "a"
+    tail:
+      - [EmptyList]
+
+ListB:
+  - [stdlib, list, Cons]
+  - head: "b"
+    tail:
+      - [ListA]
+
+# ["b", "a"]
+list_ba:
+  - [ListB]
+
+# Test: [3, 2, 1] ++ ["b", "a"] = [3, 2, 1, "b", "a"]
+concat_test:
+  - [stdlib, list, concat]
+  - operand0:
+      - [list_321]
+    operand1:
+      - [list_ba]

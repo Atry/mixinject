@@ -38,6 +38,7 @@ class KwargsSentinel(Enum):
     STATIC = auto()
     """No kwargs - this is a static scope (created via evaluate or nested scope access)."""
 
+
 if TYPE_CHECKING:
     from mixinject import (
         EndofunctionMergerSymbol,
@@ -285,16 +286,63 @@ class Mixin(HasDict):
         """
         if self.symbol.is_scope:
             # Scope: construct nested Scope
-            # Pass self as the outer_mixin for children of this scope
-            # Propagate kwargs to nested scope
-            return construct_scope(
-                symbol=self.symbol,
-                outer_mixin=self,
-                kwargs=self.kwargs,
-            )
+            return self._construct_scope()
         else:
             # Resource: merge patches and return value
             return self._evaluate_resource()
+
+    def _construct_scope(self) -> Scope:
+        """
+        Construct a Scope from this mixin.
+
+        Dynamically decides between StaticScope and InstanceScope based on kwargs:
+        - KwargsSentinel.STATIC: Returns StaticScope
+        - Mapping[str, object]: Returns InstanceScope
+        """
+        from mixinject import SymbolIndexSentinel
+
+        symbol = self.symbol
+
+        # Phase 1: Create all Mixin instances
+        all_mixins: dict["MixinSymbol", Mixin] = {
+            (child_symbol := symbol[key]): Mixin(
+                symbol=child_symbol,
+                outer=self,
+                lexical_outer_index=SymbolIndexSentinel.OWN,
+                kwargs=KwargsSentinel.STATIC if child_symbol.is_scope else self.kwargs,
+            )
+            for key in symbol
+        }
+
+        # Phase 2: Wire dependency references as attributes on each Mixin
+        for child_symbol, child_mixin in all_mixins.items():
+            dependency_symbols = child_symbol.same_scope_dependencies
+            for dependency_symbol in dependency_symbols:
+                other_mixin = next(
+                    other_mixin
+                    for other_symbol, other_mixin in all_mixins.items()
+                    if other_symbol.attribute_name == dependency_symbol.attribute_name
+                )
+                setattr(child_mixin, dependency_symbol.attribute_name, other_mixin)
+
+        # Phase 3: Build _children dict and trigger eager evaluation
+        children: dict["MixinSymbol", Mixin] = dict(all_mixins)
+        for child_symbol, child_mixin in children.items():
+            if child_symbol.is_eager:
+                _ = child_mixin.evaluated
+
+        # Phase 4: Create appropriate Scope subclass based on kwargs
+        if isinstance(self.kwargs, KwargsSentinel):
+            return StaticScope(
+                symbol=symbol,
+                _outer_mixin=self.outer,
+                _children=children,
+            )
+        else:
+            return InstanceScope(
+                symbol=symbol,
+                _children=children,
+            )
 
     def _evaluate_resource(self) -> object:
         """
@@ -357,8 +405,9 @@ class Mixin(HasDict):
                             for evaluator_index, evaluator in enumerate(
                                 super_evaluators
                             ):
-                                if evaluator_index != elected_getter_index and isinstance(
-                                    evaluator, Patcher
+                                if (
+                                    evaluator_index != elected_getter_index
+                                    and isinstance(evaluator, Patcher)
                                 ):
                                     yield from evaluator
 
@@ -389,7 +438,6 @@ class Mixin(HasDict):
                     f"Patcher-only resource '{key}' requires kwargs['{key}'] but it was not provided."
                 )
             base_value = self.kwargs[key]
-
             # Collect all patches and apply as endofunctions
             patches = generate_patches()
             return reduce(
@@ -408,11 +456,10 @@ class Mixin(HasDict):
         return merger_evaluator.merge(generate_patches())
 
 
-@final
-@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
-class Scope:
+@dataclass(kw_only=True, frozen=True, eq=False)
+class Scope(ABC):
     """
-    Frozen container for Mixin references.
+    Base class for frozen scope containers.
 
     Scope does NOT inherit from Mixin.
 
@@ -426,23 +473,13 @@ class Scope:
 
     Private resources (is_public=False) are NOT stored in _children.
     They exist only in _sibling_dependencies of Mixin instances that depend on them.
+
+    Subclasses:
+    - StaticScope: Created by evaluate() and nested scope access. Has __call__.
+    - InstanceScope: Created by StaticScope.__call__(**kwargs). Has kwargs field.
     """
 
     symbol: Final["MixinSymbol"]
-
-    _outer_mixin: Final["Mixin | OuterSentinel"]
-    """
-    The outer Mixin that this scope was constructed from.
-    Needed by __call__ to create instance scopes with the same outer context.
-    """
-
-    kwargs: Final["Mapping[str, object] | KwargsSentinel"]
-    """
-    Keyword arguments for instance scope support.
-
-    - KwargsSentinel.STATIC: This is a static scope (can call __call__ to create instance)
-    - Mapping[str, object]: This is an instance scope (cannot call __call__ again)
-    """
 
     _children: Final[Mapping["MixinSymbol", "Mixin"]]
     """
@@ -478,128 +515,54 @@ class Scope:
 
     def __dir__(self) -> list[str]:
         """Return list of accessible attribute names including resource names."""
-        # Get standard dataclass attributes
         base_attrs = set(super(Scope, self).__dir__())
-
-        # Add resource attribute names from PUBLIC children only
-        # Use .key which is the actual resource name (e.g., 'foo')
         for child_symbol in self._children:
             if child_symbol.is_public:
                 key = child_symbol.key
                 if isinstance(key, str):
                     base_attrs.add(key)
-
         return sorted(base_attrs)
 
-    def __call__(self, **kwargs: object) -> "Scope":
-        """
-        Create an instance scope with the given kwargs.
 
-        Instance scopes allow PATCHER_ONLY resources (declared with @extern)
-        to receive their base values from kwargs.
-
-        :param kwargs: Keyword arguments providing values for @extern resources.
-        :return: A new Scope instance with the provided kwargs.
-        :raises TypeError: If called on an instance scope (cannot create instance from instance).
-        """
-        from mixinject import OuterSentinel, SymbolIndexSentinel
-
-        if not isinstance(self.kwargs, KwargsSentinel):
-            raise TypeError("Cannot create instance from an instance scope")
-
-        # Create a new synthetic outer Mixin with instance kwargs.
-        # This is needed so that children can navigate up and find kwargs
-        # for PATCHER_ONLY resources. Without this, children would navigate
-        # to the original static outer Mixin which has KwargsSentinel.STATIC.
-        original_outer = self._outer_mixin
-        if isinstance(original_outer, OuterSentinel):
-            # Root scope: create synthetic root mixin with instance kwargs
-            synthetic_outer: Mixin | OuterSentinel = Mixin(
-                symbol=self.symbol,
-                outer=OuterSentinel.ROOT,
-                lexical_outer_index=SymbolIndexSentinel.OWN,
-                kwargs=kwargs,
-            )
-        else:
-            # Nested scope: create synthetic outer with same outer chain but instance kwargs
-            synthetic_outer = Mixin(
-                symbol=original_outer.symbol,
-                outer=original_outer.outer,
-                lexical_outer_index=original_outer.lexical_outer_index,
-                kwargs=kwargs,
-            )
-
-        return construct_scope(
-            symbol=self.symbol,
-            outer_mixin=synthetic_outer,
-            kwargs=kwargs,
-        )
-
-
-def construct_scope(
-    symbol: "MixinSymbol",
-    outer_mixin: "Mixin | OuterSentinel",
-    kwargs: "Mapping[str, object] | KwargsSentinel",
-) -> Scope:
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
+class StaticScope(Scope):
     """
-    Two-phase construction for Scope with circular dependency support.
+    Static scope created by evaluate() or nested scope access.
 
-    Phase 1: Create all Mixin instances (enables circular dependency references)
-    Phase 2: Wire _sibling_dependencies for dependency resolution
-    Phase 3: Build _children dict (excluding local, eager values stored)
-
-    :param symbol: The MixinSymbol for this scope.
-    :param outer_mixin: The parent scope's Mixin, or OuterSentinel.ROOT for root.
-    :param kwargs: Keyword arguments for instance scope (KwargsSentinel.STATIC for static).
-    :return: A Scope instance.
+    Can be called with kwargs to create an InstanceScope.
     """
-    from mixinject import SymbolIndexSentinel
 
-    # Phase 1: Create all Mixin instances
-    # outer_mixin is shared by all children (they're all in the same scope)
-    all_mixins: dict["MixinSymbol", Mixin] = {
-        (child_symbol := symbol[key]): Mixin(
-            symbol=child_symbol,
-            outer=outer_mixin,
+    _outer_mixin: Final["Mixin | OuterSentinel"]
+    """
+    The outer Mixin that this scope was constructed from.
+    Needed by __call__ to create instance scopes with the same outer context.
+    """
+
+    def __call__(self, **kwargs: object) -> "InstanceScope":
+        """Create an instance scope with the given kwargs."""
+        from mixinject import SymbolIndexSentinel
+
+        instance_mixin = Mixin(
+            symbol=self.symbol.instance,
+            outer=self._outer_mixin,
             lexical_outer_index=SymbolIndexSentinel.OWN,
             kwargs=kwargs,
         )
-        for key in symbol
-    }
+        result = instance_mixin.evaluated
+        assert isinstance(result, InstanceScope)
+        return result
 
-    # Phase 2: Wire dependency references as attributes on each Mixin
-    # Each Mixin gets its sibling dependencies stored as attributes via setattr
-    # Keyed by attribute_name (str) for future JIT optimization with make_dataclass
-    for child_symbol, mixin in all_mixins.items():
-        # Get dependency symbols from the symbol's same_scope_dependencies property
-        dependency_symbols = child_symbol.same_scope_dependencies
-        # Look up by attribute_name in all_mixins since dependency_symbol might be from
-        # a different branch in union mounts
-        for dependency_symbol in dependency_symbols:
-            other_mixin = next(
-                other_mixin
-                for other_symbol, other_mixin in all_mixins.items()
-                if other_symbol.attribute_name == dependency_symbol.attribute_name
-            )
-            setattr(mixin, dependency_symbol.attribute_name, other_mixin)
 
-    # Phase 3: Build _children dict (ALL children, including private)
-    # Private resources are accessible internally (for @extend navigation)
-    # but external access is blocked by is_public check in __getattr__/__getitem__
-    children: dict["MixinSymbol", Mixin] = dict(all_mixins)
+@final
+@dataclass(kw_only=True, slots=True, weakref_slot=True, frozen=True, eq=False)
+class InstanceScope(Scope):
+    """
+    Instance scope created by StaticScope.__call__(**kwargs).
 
-    # Trigger eager evaluation (result cached by @cached_property)
-    for child_symbol, mixin in children.items():
-        if child_symbol.is_eager:
-            _ = mixin.evaluated
-
-    # Phase 4: Create frozen Scope
-    return Scope(
-        symbol=symbol,
-        _outer_mixin=outer_mixin,
-        kwargs=kwargs,
-        _children=children,
-    )
+    Identified by type - does not expose kwargs field.
+    Cannot be called again (no __call__ method).
+    """
 
 
 # =============================================================================

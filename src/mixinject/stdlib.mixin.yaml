@@ -1,217 +1,25 @@
-# Standard library for mixinject (MIXIN dialect)
-#
-# Design: Single interface class per type with empty recursive fields.
-# This ensures finite symbol tree depth while maintaining compile-time path validation.
-#
-# Note: Uses strict lexical scoping. To reference inherited members,
-# use QualifiedThisReference: ["ScopeName", ~, "member", ...]
-
-# =============================================================================
-# Unit type
-# =============================================================================
-unit:
-  Unit: {}
-
-# =============================================================================
-# Boolean type with Church encoding
-# =============================================================================
-boolean:
-  # Interface with empty recursive fields
-  Boolean:
-    switch:
-      case_true:
-        return: {}
-      case_false:
-        return: {}
-      return: {}
-
-  "True":
-    - [Boolean]
-    - switch:
-        return: [switch, ~, case_true, return]
-
-  "False":
-    - [Boolean]
-    - switch:
-        return: [switch, ~, case_false, return]
-
-  not:
-    operand:
-      - [Boolean]
-    _invoke_switch:
-      - [operand, switch]
-      - case_true:
-          return: ["False"]
-        case_false:
-          return: ["True"]
-    return: [_invoke_switch, return]
-
-  and:
-    operand0:
-      - [Boolean]
-    operand1:
-      - [Boolean]
-    _invoke_switch:
-      - [operand0, switch]
-      - case_true:
-          return: [operand1]
-        case_false:
-          return: ["False"]
-    return: [_invoke_switch, return]
-
-  or:
-    operand0:
-      - [Boolean]
-    operand1:
-      - [Boolean]
-    _invoke_switch:
-      - [operand0, switch]
-      - case_true:
-          return: ["True"]
-        case_false:
-          return: [operand1]
-    return: [_invoke_switch, return]
-
-# =============================================================================
-# Option type (Maybe)
-# =============================================================================
-option:
-  Option:
-    switch:
-      case_some:
-        value: {}
-        return: {}
-      case_none:
-        return: {}
-      return: {}
-
-  Some:
-    - [Option]
-    - value: {}
-      switch:
-        return: [Some, ~, switch, case_some, return]
-
-  None:
-    - [Option]
-    - switch:
-        return: [None, ~, switch, case_none, return]
-
-# =============================================================================
-# Either type - tagged union
-# =============================================================================
-either:
-  Either:
-    switch:
-      case_left:
-        value: {}
-        return: {}
-      case_right:
-        value: {}
-        return: {}
-      return: {}
-
-  Left:
-    - [Either]
-    - value: {}
-      switch:
-        return: [Left, ~, switch, case_left, return]
-
-  Right:
-    - [Either]
-    - value: {}
-      switch:
-        return: [Right, ~, switch, case_right, return]
-
-# =============================================================================
-# Pair type - product
-# =============================================================================
-pair:
-  Pair:
-    first: {}
-    second: {}
-
-# =============================================================================
-# Natural numbers (Peano) with Church encoding
-# =============================================================================
-nat:
-  # Single interface - recursive fields are empty in the interface
-  Nat:
-    switch:
-      case_zero:
-        return: {}
-      case_succ:
-        predecessor: {} # Empty in interface - terminates recursion
-        return: {}
-      return: {}
-
+Nat:
   Zero:
-    - [Nat]
-    - switch:
-        return: [Zero, ~, switch, case_zero, return]
+    Visitors:
+      - ZeroVisitor: []
+        Visitor: [ZeroVisitor]
+    Addition:
+      addend: []
+      sum: [addend]
 
   Succ:
-    - [Nat]
-    - predecessor:
-        - [Nat] # Concrete type has predecessor inheriting Nat
-      switch:
-        _applied_predecessor:
-          - [Succ, ~, predecessor, switch]
-          - case_succ:
-              - [switch, ~, case_succ]
-            case_zero:
-              - [switch, ~, case_zero]
-        _applied_case_succ:
-          - [switch, ~, case_succ]
-          - predecessor:
-              - [_applied_predecessor, return]
-        return: [_applied_case_succ, return]
+    predecessor: []
 
-  add:
-    operand0:
-      - [Nat]
-    operand1:
-      - [Nat]
-    return:
-      - [Nat]
-      - switch:
-          _applied_operand1:
-            - [add, ~, operand1, switch]
-            - case_succ:
-                - [switch, ~, case_succ]
-              case_zero:
-                - [switch, ~, case_zero]
-          _applied_operand0:
-            - [add, ~, operand0, switch]
-            - case_succ:
-                - [switch, ~, case_succ]
-              case_zero:
-                return: [_applied_operand1, return]
-          return: [_applied_operand0, return]
+    Visitors:
+      - SuccVisitor: []
+        Visitor: [SuccVisitor]
 
-# =============================================================================
-# List type with Church encoding
-# =============================================================================
-list:
-  # Single interface - recursive fields are empty
-  List:
-    switch:
-      case_nil:
-        return: {}
-      case_cons:
-        head: {}
-        tail: {} # Empty in interface - terminates recursion
-        return: {}
-      return: {}
-
-  Nil:
-    - [List]
-    - switch:
-        return: [switch, ~, case_nil, return]
-
-  Cons:
-    - [List]
-    - head: {}
-      tail:
-        - [List] # Concrete type has tail inheriting List
-      switch:
-        return: [switch, ~, case_cons, return]
+    Addition:
+      addend: []
+      _increased_addend:
+        - [Succ]
+        - predecessor: [addend]
+      _recursive_addition:
+        - [predecessor, Addition]
+        - addend: [_increased_addend]
+      sum: [_recursive_addition, sum]
