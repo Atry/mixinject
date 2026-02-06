@@ -43,26 +43,245 @@ which is commutative, idempotent, and associative. References use De~Bruijn
 indices, where each record literal creates a new scope level. The observable
 behavior of a program is key presence at each node of the resulting recursive
 dictionary structure. We show that MixinCalculus subsumes the $\lambda$-calculus
-by providing a Church encoding of booleans and natural numbers, along with
-a systematic translation from $\lambda$-terms to MixinCalculus expressions.
+by providing a systematic translation from $\lambda$-terms to
+MixinCalculus expressions, and demonstrate that standard data types
+(booleans, natural numbers) can be encoded without scalars.
 \end{abstract}
+
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10003752.10010124.10010131.10010133</concept_id>
+       <concept_desc>Theory of computation~Denotational semantics</concept_desc>
+       <concept_significance>100</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10003752.10010124.10010125.10010128</concept_id>
+       <concept_desc>Theory of computation~Object oriented constructs</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10003752.10010124.10010125.10010127</concept_id>
+       <concept_desc>Theory of computation~Functional constructs</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10003752.10010124.10010125.10010129</concept_id>
+       <concept_desc>Theory of computation~Program schemes</concept_desc>
+       <concept_significance>100</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011039</concept_id>
+       <concept_desc>Software and its engineering~Formal language definitions</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011008.10011009.10011019</concept_id>
+       <concept_desc>Software and its engineering~Extensible languages</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011008.10011009.10011011</concept_id>
+       <concept_desc>Software and its engineering~Object oriented languages</concept_desc>
+       <concept_significance>100</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[100]{Theory of computation~Denotational semantics}
+\ccsdesc[500]{Theory of computation~Object oriented constructs}
+\ccsdesc[300]{Theory of computation~Functional constructs}
+\ccsdesc[100]{Theory of computation~Program schemes}
+\ccsdesc[500]{Software and its engineering~Formal language definitions}
+\ccsdesc[500]{Software and its engineering~Extensible languages}
+\ccsdesc[100]{Software and its engineering~Object oriented languages}
 
 \maketitle
 
 \section{Introduction}
 
-MixinCalculus is a minimal computational model extracted from the MIXIN language.
-It contains only mixin constructs and no scalar types.
-The only built-in operation is composition ($\oplus$).
-References use De Bruijn indices, where each $\{\ldots\}$ creates a new scope level.
+Declarative and configuration languages are ubiquitous in modern software
+engineering. Systems such as NixOS modules~\cite{dolstra2008nixos,nixosmodules},
+Jsonnet~\cite{jsonnet}, Hydra~\cite{hydra2023}, CUE~\cite{cue2019}, Dhall~\cite{dhall2017},
+Kustomize, and JSON Patch (RFC~6902) all provide mechanisms for composing
+structured data through inheritance or overlay. Among these, the NixOS
+module system stands out: its recursive attribute set merging with
+fixed-point semantics and deferred modules~\cite{nixosmodules} achieves
+remarkable expressiveness in practice, and the mechanism has been adopted
+well beyond NixOS itself---Home Manager~\cite{homemanager} manages user
+environments across platforms, nix-darwin~\cite{nixdarwin} brings
+declarative configuration to macOS, disko~\cite{disko} handles disk
+partitioning, flake-parts~\cite{flakeparts} structures Nix flakes,
+dream2nix~\cite{dream2nix} automates multi-language packaging,
+devenv~\cite{devenv} composes developer environments, and
+KubeNix~\cite{kubenix} and nixidy~\cite{nixidy} manage Kubernetes
+clusters---all built on the same module system. Yet no computational
+theory explains \emph{why} this mechanism is so powerful.
 
-The observable behavior of a MixinCalculus program is key presence at each node
-of the resulting recursive dictionary structure.
-Since there are no scalars, merge is both commutative and idempotent,
-making the result transparent to linearization order.
-Deduplication of inherited mixins is an implementation optimization, not a semantic distinction.
+The $\lambda$-calculus serves as the foundational computational model for
+functional programming. No analogous calculus exists for declarative
+programming. This gap matters because the two paradigms differ in
+fundamental ways. Configuration languages are inherently declarative:
+their values are \emph{immutable} and they have \emph{no first-class
+functions}. At first glance, Turing completeness appears incompatible
+with these constraints. The three classical models of computation each
+violate at least one of them:
 
-A mixin cannot inherit from itself or from its inner mixins.
+\begin{center}
+\begin{tabular}{lccc}
+  \textbf{Model} & \textbf{Turing complete} & \textbf{Immutable} & \textbf{No $\lambda$} \\
+  \hline
+  Turing Machine     & $\checkmark$ & $\times$     & $\checkmark$ \\
+  $\lambda$-calculus & $\checkmark$ & $\checkmark$ & $\times$ \\
+  RAM Machine        & $\checkmark$ & $\times$     & $\checkmark$ \\
+\end{tabular}
+\end{center}
+
+\noindent
+The Turing Machine and RAM Machine require mutable state;
+the $\lambda$-calculus requires first-class functions.
+There was no known computational model that is simultaneously
+Turing complete, immutable, and function-free. Yet the NixOS module
+system already demonstrates that this gap can be bridged in practice:
+its inheritance-based composition over recursive records, without
+explicit functions, is expressive enough to configure entire operating
+systems.
+
+Conventionally, the value domain of configuration languages is assumed
+to consist of finite, well-founded structures---initial algebras in the
+sense of universal algebra. We challenge this assumption: configuration
+values are better understood as lazily observable, possibly infinite
+structures---formally, F-coalgebras~\cite{rutten2000universal}---where
+semantics is determined by the observer and a finite prefix suffices
+for any finite observation. This is not merely a theoretical
+distinction: the \texttt{nixpkgs} package
+collection~\cite{dolstra2006purely}---over 100{,}000
+packages---is a lazy-evaluated F-coalgebra in practice, allowing any
+single package to be evaluated without materializing the entire set.
+
+This paper provides the missing theoretical foundation. We present
+\textbf{MixinCalculus}, a minimal calculus that distills the essence of
+this mechanism into three constructs---record literals, references,
+and composition ($\oplus$)---without functions or let-bindings.
+The key insight is that
+\emph{function application can be trivially translated into inheritance}:
+a $\lambda$-abstraction corresponds to a record with an
+$\mathrm{argument}$ slot and a $\mathrm{result}$ slot, and function
+application corresponds to composing the function record with a record
+that supplies the argument. This translation proves that MixinCalculus
+subsumes the $\lambda$-calculus and is therefore Turing complete.
+As a demonstration of this expressiveness, we port the Expression
+Problem~\cite{wadler1998expression} solution of Wang and
+Oliveira~\cite{wang2016trivially} from Scala (whose type system rests
+on the DOT calculus~\cite{amin2016dot}) to MixinCalculus. The resulting
+solution is even more concise than the original, despite MixinCalculus
+having only three primitives whereas DOT is a substantially larger
+system.
+
+A second insight concerns the linearization problem that has long plagued
+mixin-based systems~\cite{bracha1990mixin,c3linearization}. In traditional
+mixin or trait calculi~\cite{scharli2003traits,ducasse2006traits}, composing
+mixins that define the same field raises conflicts that must be resolved by
+a linearization order. In MixinCalculus, because there are no scalar values,
+the observable behavior at every node is solely \emph{key presence}---a set
+of labels. Composition ($\oplus$) is therefore commutative, idempotent, and
+associative. The linearization problem does not arise---not because it is
+resolved, but because it does not exist.
+
+Just as the $\lambda$-calculus uses three primitives (abstraction,
+application, variable) to serve as the foundation of functional
+programming, MixinCalculus uses three primitives (record, reference,
+composition) to serve as the foundation of declarative programming.
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item We present MixinCalculus, a minimal computational model for
+    declarative programming that contains only mixin constructs (record,
+    reference, composition) and no functions or scalar types.
+  \item We prove that composition ($\oplus$) is commutative, idempotent,
+    and associative, thereby dissolving the linearization problem
+    inherent in prior mixin and trait calculi.
+  \item We give a translation from the $\lambda$-calculus (with
+    De~Bruijn indices) to MixinCalculus, proving that MixinCalculus
+    subsumes the $\lambda$-calculus and is Turing complete.
+    As a corollary, standard data types (booleans, natural numbers)
+    can be Church-encoded without scalars (Appendix~\ref{app:church}).
+\end{itemize}
+
+\paragraph{Informal example.}
+The Expression Problem~\cite{wadler1998expression}
+asks how to extend a data type with both new cases and new operations,
+without modifying existing code.
+In a typed setting this additionally requires static type safety;
+MixinCalculus is untyped, so we focus on the extensibility aspect.
+Suppose a standard library provides a $\mathrm{binnat}$ module for
+binary natural arithmetic (see Appendix).
+We define an expression language with an evaluation operation:
+\begin{align*}
+  \{ \quad \mathrm{expression} &\mapsto \{
+    \mathrm{Constant} \mapsto \{\mathrm{magnitude} \mapsto \{\}\},\;
+    \mathrm{Addition} \mapsto \{\mathrm{left} \mapsto \{\},\;
+      \mathrm{right} \mapsto \{\}\}\}, \\[4pt]
+  \mathrm{evaluation} &\mapsto \{
+    \mathrm{Constant} \mapsto \up^1.\mathrm{expression}.\mathrm{Constant}
+      \oplus \{\mathrm{outcome} \mapsto \up^0.\mathrm{magnitude}\}, \\
+    &\qquad \mathrm{Addition} \mapsto
+      \up^1.\mathrm{expression}.\mathrm{Addition} \oplus \{ \\
+    &\qquad\qquad
+      \mathrm{left\_outcome} \mapsto \up^0.\mathrm{left}.\mathrm{outcome},\\
+    &\qquad\qquad
+      \mathrm{right\_outcome} \mapsto \up^0.\mathrm{right}.\mathrm{outcome},\\
+    &\qquad\qquad
+      \mathrm{sum} \mapsto \up^2.\mathrm{binnat}.\mathrm{Addition}
+        \oplus \{\mathrm{augend} \mapsto \up^1.\mathrm{left\_outcome},\;
+          \mathrm{addend} \mapsto \up^1.\mathrm{right\_outcome}\}, \\
+    &\qquad\qquad
+      \mathrm{outcome} \mapsto \up^0.\mathrm{sum}.\mathrm{outcome}\}\},\\[4pt]
+  \mathrm{binnat} &\mapsto \{
+    \mathrm{Addition} \mapsto
+      \{\mathrm{augend} \mapsto \{\},\;
+        \mathrm{addend} \mapsto \{\},\;
+        \mathrm{outcome} \mapsto \{\}\}\}
+  \quad \}
+\end{align*}
+A new operation (e.g., display) is added by defining a new
+module that inherits from the same $\mathrm{expression}$ schemas:
+\begin{align*}
+  \mathrm{display} \mapsto \{
+    \mathrm{Constant} &\mapsto \up^1.\mathrm{expression}.\mathrm{Constant}
+      \oplus \{\mathrm{representation} \mapsto \up^0.\mathrm{magnitude}\},\\
+    \mathrm{Addition} &\mapsto \up^1.\mathrm{expression}.\mathrm{Addition}
+      \oplus \{\mathrm{representation} \mapsto \{
+        \mathrm{left} \mapsto \up^1.\mathrm{left}.\mathrm{representation},\;
+        \mathrm{right} \mapsto \up^1.\mathrm{right}.\mathrm{representation}\}\}\}
+\end{align*}
+A new case (e.g., negation) is added with its operation handlers
+and an empty API for the arithmetic primitive:
+\begin{align*}
+  \mathrm{negation} &\mapsto \{
+    \mathrm{Negation} \mapsto
+      \{\mathrm{operand} \mapsto \{\}\}\}, \\
+  \mathrm{negation\_evaluation} &\mapsto \{
+    \mathrm{Negation} \mapsto
+      \up^1.\mathrm{negation}.\mathrm{Negation} \oplus \{\\
+    &\qquad
+      \mathrm{operand\_outcome} \mapsto \up^0.\mathrm{operand}.\mathrm{outcome},\\
+    &\qquad
+      \mathrm{negated} \mapsto \up^2.\mathrm{binnat}.\mathrm{Negation}
+        \oplus \{\mathrm{operand} \mapsto \up^1.\mathrm{operand\_outcome}\},\\
+    &\qquad
+      \mathrm{outcome} \mapsto \up^0.\mathrm{negated}.\mathrm{outcome}\}\}, \\
+  \mathrm{binnat} &\mapsto \{
+    \mathrm{Negation} \mapsto
+      \{\mathrm{operand} \mapsto \{\},\;
+        \mathrm{outcome} \mapsto \{\}\}\}
+\end{align*}
+All modules compose freely via $\oplus$; none requires modification of
+existing definitions.
+Note that $\mathrm{magnitude} \mapsto \{\}$ in $\mathrm{Constant}$
+resembles a type annotation but is purely structural in MixinCalculus:
+the evaluator works as long as the required fields appear somewhere in
+the composition chain, regardless of any schema declarations.
 
 \section{Syntax}
 
@@ -82,8 +301,17 @@ e \quad ::= \quad & \{\ell_1 \mapsto e_1,\; \ldots,\; \ell_n \mapsto e_n\}
 
 The $\mapsto$ in $\{\ell \mapsto e\}$ defines a mixin property, not a let-binding.
 There is no variable binding in MixinCalculus.
+In pursuit of a minimal computational model, MixinCalculus contains no
+scalar types. This does not limit computational power: just as the
+$\lambda$-calculus can encode booleans and natural numbers via Church
+encoding, so can MixinCalculus (Appendix~\ref{app:church}). Practical
+implementations built on MixinCalculus may include scalars and a
+foreign-function interface; this does not affect the analysis in this
+paper, as scalars can be treated as opaque sets whose composition
+remains commutative and idempotent.
 
 \paragraph{Scope levels.}
+The notation $\up^n$ follows De~Bruijn indices~\cite{debruijn1972lambda}.
 A new scope level is created at each $\{\ldots\}$ (record literal).
 The scope contains all properties of that mixin, including those introduced by $\oplus$.
 In particular, $\{a \mapsto \{\}\} \oplus \{b \mapsto \{\}\}$ is a single mixin whose scope
@@ -218,118 +446,6 @@ where $e$ is an expression and $\rho$ is a scope chain.
   MixinCalculus does not prohibit infinite trees.
 \end{itemize}
 
-\section{Church Booleans}
-
-All definitions live inside a single root mixin.
-References to sibling definitions use De Bruijn indices.
-
-\begin{align*}
-  \{ \quad \mathrm{Boolean} &\mapsto \{\mathrm{on\_true} \mapsto \{\},\;
-    \mathrm{on\_false} \mapsto \{\},\;
-    \mathrm{result} \mapsto \{\}\},
-  \\[6pt]
-  \mathrm{True} &\mapsto \up^0.\mathrm{Boolean} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{on\_true}\},
-  \\
-  \mathrm{False} &\mapsto \up^0.\mathrm{Boolean} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{on\_false}\},
-  \\[6pt]
-  \mathrm{Not} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
-    &\qquad \mathrm{operand} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{applied\_operand} \mapsto \up^0.\mathrm{operand} \oplus \{\\
-    &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{on\_false},\\
-    &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{on\_true}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_operand}.\mathrm{result}\},
-  \\[6pt]
-  \mathrm{And} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
-    &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
-    &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{right},\\
-    &\qquad\qquad \mathrm{on\_false} \mapsto \up^2.\mathrm{False}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\},
-  \\[6pt]
-  \mathrm{Or} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
-    &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
-    &\qquad\qquad \mathrm{on\_true} \mapsto \up^2.\mathrm{True},\\
-    &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{right}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\} \quad \}
-\end{align*}
-
-\paragraph{De Bruijn index explanation.}
-\begin{itemize}
-  \item At the top level of the root $\{\ldots\}$:
-    $\up^0$ refers to $\{\mathrm{Boolean}, \mathrm{True}, \mathrm{False},
-    \mathrm{Not}, \mathrm{And}, \mathrm{Or}\}$.
-  \item Inside True's $\{\mathrm{result} \mapsto \ldots\}$:
-    $\up^0$ refers to True's properties after merge with Boolean
-    (including $\mathrm{result}$, $\mathrm{on\_true}$, $\mathrm{on\_false}$).
-    $\up^1$ refers to the root scope.
-  \item Inside Not's $\{\mathrm{operand},\; \mathrm{applied\_operand},\; \mathrm{result},\; \ldots\}$:
-    $\up^0$ refers to Not's properties after merge.
-    $\up^1$ refers to the root scope.
-  \item Inside $\{\mathrm{on\_true},\; \mathrm{on\_false}\}$ nested in Not:
-    $\up^0$ refers to the inner record's properties.
-    $\up^1$ refers to Not's scope.
-    $\up^2$ refers to the root scope.
-\end{itemize}
-
-\paragraph{Worked example.}
-Consider the expression
-$\up^0.\mathrm{Not} \oplus \{\mathrm{operand} \mapsto \up^1.\mathrm{True}\}
-\oplus \{\mathrm{on\_true} \mapsto A,\; \mathrm{on\_false} \mapsto B\}$
-at the root scope level,
-where $A$ and $B$ are arbitrary expressions.
-The result is an object whose $\mathrm{result}$ key contains the same observable tree as $B$,
-because $\mathrm{Not}$ swaps $\mathrm{on\_true}$ and $\mathrm{on\_false}$,
-and $\mathrm{True}$ selects $\mathrm{on\_true}$,
-which after swapping becomes $B$.
-
-\section{Church Naturals}
-
-\begin{align*}
-  \{ \quad \mathrm{Nat} &\mapsto \{\mathrm{successor} \mapsto \{\mathrm{argument} \mapsto \{\},\;
-    \mathrm{result} \mapsto \{\}\},\;
-    \mathrm{zero} \mapsto \{\},\;
-    \mathrm{result} \mapsto \{\}\},
-  \\[6pt]
-  \mathrm{Zero} &\mapsto \up^0.\mathrm{Nat} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{zero}\},
-  \\[6pt]
-  \mathrm{Succ} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
-    &\qquad \mathrm{predecessor} \mapsto \up^1.\mathrm{Nat},\\
-    &\qquad \mathrm{applied\_predecessor} \mapsto \up^0.\mathrm{predecessor} \oplus \{\\
-    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
-    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
-    &\qquad \mathrm{applied\_successor} \mapsto \up^0.\mathrm{successor} \oplus \{\\
-    &\qquad\qquad \mathrm{argument} \mapsto \up^1.\mathrm{applied\_predecessor}.\mathrm{result}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_successor}.\mathrm{result}\},
-  \\[6pt]
-  \mathrm{Add} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
-    &\qquad \mathrm{augend} \mapsto \up^1.\mathrm{Nat},\\
-    &\qquad \mathrm{addend} \mapsto \up^1.\mathrm{Nat},\\
-    &\qquad \mathrm{applied\_addend} \mapsto \up^0.\mathrm{addend} \oplus \{\\
-    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
-    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
-    &\qquad \mathrm{applied\_augend} \mapsto \up^0.\mathrm{augend} \oplus \{\\
-    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
-    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{applied\_addend}.\mathrm{result}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_augend}.\mathrm{result}\} \quad \}
-\end{align*}
-
-\paragraph{Concrete example.}
-At the root scope level,
-$\mathrm{one} \mapsto \up^0.\mathrm{Succ} \oplus \{\mathrm{predecessor} \mapsto \up^1.\mathrm{Zero}\}$.
-Applying this with a Peano-style successor and zero:
-$\up^0.\mathrm{one} \oplus \{\mathrm{successor} \mapsto S,\; \mathrm{zero} \mapsto Z\}$
-produces an object whose $\mathrm{result}$ key contains the same observable tree as
-$S \oplus \{\mathrm{argument} \mapsto Z.\mathrm{result}\}.\mathrm{result}$,
-i.e., successor applied once to zero.
-Here $S$ and $Z$ are arbitrary expressions representing
-a successor operation and a zero value respectively.
-
 \section{Translation from $\lambda$-Calculus}
 
 The following translation maps $\lambda$-calculus with De Bruijn indices
@@ -373,7 +489,178 @@ with recursive merge are difficult to encode in pure $\lambda$-calculus.
     The reverse embedding is non-trivial.
 \end{itemize}
 
+\section{Future Work}
+
+\paragraph{Typed Mixin Calculus.}
+MixinCalculus as presented here is untyped. A natural next step is to
+develop a \emph{Typed Mixin Calculus} (TMC) that adds a type system
+while preserving the declarative character of the calculus.
+The key observation is that type systems are themselves a form of
+declarative programming: one declares types to guide meta-computation
+(type checking, type inference) without specifying operational steps.
+Since MixinCalculus demonstrates that declarative programming can be
+Turing complete, applying this insight to the type level yields a type
+system built from the same mixin primitives.
+TMC would relate to the DOT calculus~\cite{amin2016dot} in a manner
+analogous to how MixinCalculus relates to the $\lambda$-calculus:
+TMC can be viewed as DOT without $\lambda$, retaining
+path-dependent types while replacing functions with inheritance-based
+composition.
+
+A key difference concerns the interpretation of structural annotations.
+In untyped MixinCalculus, writing $\mathrm{magnitude} \mapsto \{\}$ in
+a schema (as in the informal example of Section~1) is purely
+documentary---it defines a structural slot but imposes no constraint.
+The expression $\mathrm{outcome} \mapsto \up^0.\mathrm{magnitude}$
+succeeds as long as $\mathrm{magnitude}$ exists somewhere in the
+composition chain, regardless of any schema declaration.
+TMC would enforce such annotations statically, rejecting programs at
+compile time where the declared structure does not match the actual
+composition.
+
+\paragraph{Mechanized proofs.}
+The properties of MixinCalculus (commutativity, idempotence,
+associativity of $\oplus$, and the correctness of the $\lambda$-calculus
+translation) are amenable to formalization in a proof assistant such as
+Coq or Agda.
+
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{mixin-calculus}
+
+\appendix
+
+\section{Church Encoding of Standard Types}
+\label{app:church}
+
+This appendix demonstrates that standard data types can be encoded in
+MixinCalculus without scalar types, using Church encoding. These
+encodings serve as a proof of concept that a standard library can be
+built entirely within MixinCalculus. Each encoding is presented as a
+module mixin. In practical implementations, more efficient
+representations (e.g., binary naturals) or FFI to host language
+primitives would typically be used.
+
+\subsection{Boolean Module}
+
+The boolean module contains a schema ($\mathrm{Boolean}$), constructors
+($\mathrm{True}$, $\mathrm{False}$), and operations ($\mathrm{Not}$,
+$\mathrm{And}$, $\mathrm{Or}$). All definitions are siblings within a
+single module mixin; references use De~Bruijn indices accordingly.
+
+\begin{align*}
+  \{ \quad \mathrm{boolean} \mapsto \{ \quad
+  \mathrm{Boolean} &\mapsto \{\mathrm{on\_true} \mapsto \{\},\;
+    \mathrm{on\_false} \mapsto \{\},\;
+    \mathrm{result} \mapsto \{\}\},
+  \\[6pt]
+  \mathrm{True} &\mapsto \up^0.\mathrm{Boolean} \oplus
+    \{\mathrm{result} \mapsto \up^0.\mathrm{on\_true}\},
+  \\
+  \mathrm{False} &\mapsto \up^0.\mathrm{Boolean} \oplus
+    \{\mathrm{result} \mapsto \up^0.\mathrm{on\_false}\},
+  \\[6pt]
+  \mathrm{Not} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
+    &\qquad \mathrm{operand} \mapsto \up^1.\mathrm{Boolean},\\
+    &\qquad \mathrm{applied\_operand} \mapsto \up^0.\mathrm{operand} \oplus \{\\
+    &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{on\_false},\\
+    &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{on\_true}\},\\
+    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_operand}.\mathrm{result}\},
+  \\[6pt]
+  \mathrm{And} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
+    &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
+    &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
+    &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
+    &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{right},\\
+    &\qquad\qquad \mathrm{on\_false} \mapsto \up^2.\mathrm{False}\},\\
+    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\},
+  \\[6pt]
+  \mathrm{Or} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
+    &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
+    &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
+    &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
+    &\qquad\qquad \mathrm{on\_true} \mapsto \up^2.\mathrm{True},\\
+    &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{right}\},\\
+    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\}
+  \quad \} \quad \}
+\end{align*}
+
+\paragraph{De Bruijn index explanation.}
+Within the $\mathrm{boolean}$ module:
+\begin{itemize}
+  \item At the top level of the module $\{\ldots\}$:
+    $\up^0$ refers to $\{\mathrm{Boolean}, \mathrm{True}, \mathrm{False},
+    \mathrm{Not}, \mathrm{And}, \mathrm{Or}\}$.
+  \item Inside True's $\{\mathrm{result} \mapsto \ldots\}$:
+    $\up^0$ refers to True's properties after merge with Boolean
+    (including $\mathrm{result}$, $\mathrm{on\_true}$, $\mathrm{on\_false}$).
+    $\up^1$ refers to the module scope.
+  \item Inside Not's $\{\mathrm{operand},\; \mathrm{applied\_operand},\; \mathrm{result},\; \ldots\}$:
+    $\up^0$ refers to Not's properties after merge.
+    $\up^1$ refers to the module scope.
+  \item Inside $\{\mathrm{on\_true},\; \mathrm{on\_false}\}$ nested in Not:
+    $\up^0$ refers to the inner record's properties.
+    $\up^1$ refers to Not's scope.
+    $\up^2$ refers to the module scope.
+\end{itemize}
+
+\paragraph{Worked example.}
+Consider the expression
+$\up^0.\mathrm{boolean}.\mathrm{Not} \oplus \{\mathrm{operand} \mapsto \up^1.\mathrm{boolean}.\mathrm{True}\}
+\oplus \{\mathrm{on\_true} \mapsto A,\; \mathrm{on\_false} \mapsto B\}$
+at the root scope level,
+where $A$ and $B$ are arbitrary expressions.
+The result is an object whose $\mathrm{result}$ key contains the same observable tree as $B$,
+because $\mathrm{Not}$ swaps $\mathrm{on\_true}$ and $\mathrm{on\_false}$,
+and $\mathrm{True}$ selects $\mathrm{on\_true}$,
+which after swapping becomes $B$.
+
+\subsection{Natural Number Module}
+
+The natural number module contains a schema ($\mathrm{Nat}$),
+constructors ($\mathrm{Zero}$, $\mathrm{Succ}$), and an operation
+($\mathrm{Add}$).
+
+\begin{align*}
+  \{ \quad \mathrm{natural} \mapsto \{ \quad
+  \mathrm{Nat} &\mapsto \{\mathrm{successor} \mapsto \{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \{\}\},\;
+    \mathrm{zero} \mapsto \{\},\;
+    \mathrm{result} \mapsto \{\}\},
+  \\[6pt]
+  \mathrm{Zero} &\mapsto \up^0.\mathrm{Nat} \oplus
+    \{\mathrm{result} \mapsto \up^0.\mathrm{zero}\},
+  \\[6pt]
+  \mathrm{Succ} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
+    &\qquad \mathrm{predecessor} \mapsto \up^1.\mathrm{Nat},\\
+    &\qquad \mathrm{applied\_predecessor} \mapsto \up^0.\mathrm{predecessor} \oplus \{\\
+    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
+    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
+    &\qquad \mathrm{applied\_successor} \mapsto \up^0.\mathrm{successor} \oplus \{\\
+    &\qquad\qquad \mathrm{argument} \mapsto \up^1.\mathrm{applied\_predecessor}.\mathrm{result}\},\\
+    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_successor}.\mathrm{result}\},
+  \\[6pt]
+  \mathrm{Add} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
+    &\qquad \mathrm{augend} \mapsto \up^1.\mathrm{Nat},\\
+    &\qquad \mathrm{addend} \mapsto \up^1.\mathrm{Nat},\\
+    &\qquad \mathrm{applied\_addend} \mapsto \up^0.\mathrm{addend} \oplus \{\\
+    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
+    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
+    &\qquad \mathrm{applied\_augend} \mapsto \up^0.\mathrm{augend} \oplus \{\\
+    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
+    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{applied\_addend}.\mathrm{result}\},\\
+    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_augend}.\mathrm{result}\}
+  \quad \} \quad \}
+\end{align*}
+
+\paragraph{Concrete example.}
+At the root scope level,
+$\mathrm{one} \mapsto \up^0.\mathrm{natural}.\mathrm{Succ} \oplus \{\mathrm{predecessor} \mapsto \up^1.\mathrm{natural}.\mathrm{Zero}\}$.
+Applying this with a Peano-style successor and zero:
+$\up^0.\mathrm{one} \oplus \{\mathrm{successor} \mapsto S,\; \mathrm{zero} \mapsto Z\}$
+produces an object whose $\mathrm{result}$ key contains the same observable tree as
+$S \oplus \{\mathrm{argument} \mapsto Z.\mathrm{result}\}.\mathrm{result}$,
+i.e., successor applied once to zero.
+Here $S$ and $Z$ are arbitrary expressions representing
+a successor operation and a zero value respectively.
 
 \end{document}
