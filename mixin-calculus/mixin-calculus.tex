@@ -4,7 +4,7 @@
 \documentclass[manuscript,anonymous,review,10pt]{acmart}
 
 \AtBeginDocument{%
-  \providecommand\BibTeX{{Bib\TeX}}}
+\providecommand\BibTeX{{Bib\TeX}}}
 
 %% Disable ACM-specific metadata for submission
 \settopmatter{printacmref=false}
@@ -42,67 +42,67 @@
 \thanks{This work was conducted independently prior to the author's employment at Figure AI.}
 
 \begin{abstract}
-Just as the $\lambda$-calculus uses three primitives (abstraction,
-application, variable) as the foundation of functional programming,
-MixinCalculus uses three primitives (record, reference, composition)
-as the foundation of declarative programming. Unlike the $\lambda$-calculus,
-which requires first-class functions, or Turing machines, which require
-mutable state, MixinCalculus is purely declarative and function-free,
-yet Turing complete. Composition ($\oplus$) is commutative, idempotent,
-and associative---the linearization problem familiar from traditional
-mixin and trait systems simply does not arise. We demonstrate Turing
-completeness by giving a straightforward translation from the
-$\lambda$-calculus into MixinCalculus, showing that function application
-is derivable from symmetric mixin composition.
-Programs are inherently in A-normal form; unlike compiler-internal ANF
-which targets a fixed monad, MixinCalculus ANF supports dependency
-injection, making programs CPS-agnostic---the same code serves as either
-continuation-passing or direct-style depending on assembly.
-Records serve as tries, making MixinCalculus an immutable analogue of
-the RAM machine. These observations suggest MixinCalculus as a computational model
-for declarative programming, with applications to configuration languages,
-mixin-based object systems, composable effect systems, and modular software
-architectures.
+  Just as the $\lambda$-calculus uses three primitives (abstraction,
+  application, variable) as the foundation of functional programming,
+  MixinCalculus uses three primitives (record, reference, composition)
+  as the foundation of declarative programming. Unlike the $\lambda$-calculus,
+  which requires first-class functions, or Turing machines, which require
+  mutable state, MixinCalculus is purely declarative and function-free,
+  yet Turing complete. Composition ($\oplus$) is commutative, idempotent,
+  and associative---the linearization problem familiar from traditional
+  mixin and trait systems simply does not arise. We demonstrate Turing
+  completeness by giving a straightforward translation from the
+  $\lambda$-calculus into MixinCalculus, showing that function application
+  is derivable from symmetric mixin composition.
+  Programs are inherently in A-normal form; unlike compiler-internal ANF
+  which targets a fixed monad, MixinCalculus ANF supports dependency
+  injection, making programs CPS-agnostic---the same code serves as either
+  continuation-passing or direct-style depending on assembly.
+  Records serve as tries, making MixinCalculus an immutable analogue of
+  the RAM machine. These observations suggest MixinCalculus as a computational model
+  for declarative programming, with applications to configuration languages,
+  mixin-based object systems, composable effect systems, and modular software
+  architectures.
 \end{abstract}
 
 \begin{CCSXML}
-<ccs2012>
-   <concept>
-       <concept_id>10003752.10010124.10010131.10010133</concept_id>
-       <concept_desc>Theory of computation~Denotational semantics</concept_desc>
-       <concept_significance>100</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10003752.10010124.10010125.10010128</concept_id>
-       <concept_desc>Theory of computation~Object oriented constructs</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10003752.10010124.10010125.10010127</concept_id>
-       <concept_desc>Theory of computation~Functional constructs</concept_desc>
-       <concept_significance>300</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10003752.10010124.10010125.10010129</concept_id>
-       <concept_desc>Theory of computation~Program schemes</concept_desc>
-       <concept_significance>100</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10011007.10011006.10011039</concept_id>
-       <concept_desc>Software and its engineering~Formal language definitions</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10011007.10011006.10011008.10011009.10011019</concept_id>
-       <concept_desc>Software and its engineering~Extensible languages</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10011007.10011006.10011008.10011009.10011011</concept_id>
-       <concept_desc>Software and its engineering~Object oriented languages</concept_desc>
-       <concept_significance>100</concept_significance>
-       </concept>
- </ccs2012>
+  <ccs2012>
+  <concept>
+  <concept_id>10003752.10010124.10010131.10010133</concept_id>
+  <concept_desc>Theory of computation~Denotational semantics</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10003752.10010124.10010125.10010128</concept_id>
+  <concept_desc>Theory of computation~Object oriented constructs</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10003752.10010124.10010125.10010127</concept_id>
+  <concept_desc>Theory of computation~Functional constructs</concept_desc>
+  <concept_significance>300</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10003752.10010124.10010125.10010129</concept_id>
+  <concept_desc>Theory of computation~Program schemes</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011006.10011039</concept_id>
+  <concept_desc>Software and its engineering~Formal language definitions</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011006.10011008.10011009.10011019</concept_id>
+  <concept_desc>Software and its engineering~Extensible languages</concept_desc>
+  <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+  <concept_id>10011007.10011006.10011008.10011009.10011011</concept_id>
+  <concept_desc>Software and its engineering~Object oriented languages</concept_desc>
+  <concept_significance>100</concept_significance>
+  </concept>
+  </ccs2012>
 \end{CCSXML}
 
 \ccsdesc[100]{Theory of computation~Denotational semantics}
@@ -145,13 +145,13 @@ with these constraints. The three classical models of computation each
 violate at least one of them:
 
 \begin{center}
-\begin{tabular}{lccc}
-  \textbf{Model} & \textbf{Turing complete} & \textbf{Immutable} & \textbf{No $\lambda$} \\
-  \hline
-  Turing Machine     & $\checkmark$ & $\times$     & $\checkmark$ \\
-  $\lambda$-calculus & $\checkmark$ & $\checkmark$ & $\times$ \\
-  RAM Machine        & $\checkmark$ & $\times$     & $\checkmark$ \\
-\end{tabular}
+  \begin{tabular}{lccc}
+    \textbf{Model} & \textbf{Turing complete} & \textbf{Immutable} & \textbf{No $\lambda$} \\
+    \hline
+    Turing Machine     & $\checkmark$ & $\times$     & $\checkmark$ \\
+    $\lambda$-calculus & $\checkmark$ & $\checkmark$ & $\times$ \\
+    RAM Machine        & $\checkmark$ & $\times$     & $\checkmark$ \\
+  \end{tabular}
 \end{center}
 
 \noindent
@@ -281,29 +281,29 @@ binary natural arithmetic (see Appendix).
 We define an expression language with an evaluation operation:
 \begin{align*}
   \{ \quad \mathrm{expression} &\mapsto \{
-    \mathrm{Constant} \mapsto \{\mathrm{magnitude} \mapsto \{\}\},\;
-    \mathrm{Addition} \mapsto \{\mathrm{left} \mapsto \{\},\;
-      \mathrm{right} \mapsto \{\}\}\}, \\[4pt]
-  \mathrm{evaluation} &\mapsto \{
-    \mathrm{Constant} \mapsto \up^1.\mathrm{expression}.\mathrm{Constant}
+      \mathrm{Constant} \mapsto \{\mathrm{magnitude} \mapsto \{\}\},\;
+      \mathrm{Addition} \mapsto \{\mathrm{left} \mapsto \{\},\;
+    \mathrm{right} \mapsto \{\}\}\}, \\[4pt]
+    \mathrm{evaluation} &\mapsto \{
+      \mathrm{Constant} \mapsto \up^1.\mathrm{expression}.\mathrm{Constant}
       \oplus \{\mathrm{outcome} \mapsto \up^0.\mathrm{magnitude}\}, \\
-    &\qquad \mathrm{Addition} \mapsto
+      &\qquad \mathrm{Addition} \mapsto
       \up^1.\mathrm{expression}.\mathrm{Addition} \oplus \{ \\
-    &\qquad\qquad
-      \mathrm{left\_outcome} \mapsto \up^0.\mathrm{left}.\mathrm{outcome},\\
-    &\qquad\qquad
-      \mathrm{right\_outcome} \mapsto \up^0.\mathrm{right}.\mathrm{outcome},\\
-    &\qquad\qquad
-      \mathrm{sum} \mapsto \up^2.\mathrm{binnat}.\mathrm{Addition}
+        &\qquad\qquad
+        \mathrm{left\_outcome} \mapsto \up^0.\mathrm{left}.\mathrm{outcome},\\
+        &\qquad\qquad
+        \mathrm{right\_outcome} \mapsto \up^0.\mathrm{right}.\mathrm{outcome},\\
+        &\qquad\qquad
+        \mathrm{sum} \mapsto \up^2.\mathrm{binnat}.\mathrm{Addition}
         \oplus \{\mathrm{augend} \mapsto \up^1.\mathrm{left\_outcome},\;
-          \mathrm{addend} \mapsto \up^1.\mathrm{right\_outcome}\}, \\
-    &\qquad\qquad
-      \mathrm{outcome} \mapsto \up^0.\mathrm{sum}.\mathrm{outcome}\}\},\\[4pt]
-  \mathrm{binnat} &\mapsto \{
-    \mathrm{Addition} \mapsto
+        \mathrm{addend} \mapsto \up^1.\mathrm{right\_outcome}\}, \\
+        &\qquad\qquad
+    \mathrm{outcome} \mapsto \up^0.\mathrm{sum}.\mathrm{outcome}\}\},\\[4pt]
+    \mathrm{binnat} &\mapsto \{
+      \mathrm{Addition} \mapsto
       \{\mathrm{augend} \mapsto \{\},\;
         \mathrm{addend} \mapsto \{\},\;
-        \mathrm{outcome} \mapsto \{\}\}\}
+    \mathrm{outcome} \mapsto \{\}\}\}
   \quad \}
 \end{align*}
 A new operation (e.g., display) is added by defining a new
@@ -311,32 +311,32 @@ module that inherits from the same $\mathrm{expression}$ schemas:
 \begin{align*}
   \mathrm{display} \mapsto \{
     \mathrm{Constant} &\mapsto \up^1.\mathrm{expression}.\mathrm{Constant}
-      \oplus \{\mathrm{representation} \mapsto \up^0.\mathrm{magnitude}\},\\
+    \oplus \{\mathrm{representation} \mapsto \up^0.\mathrm{magnitude}\},\\
     \mathrm{Addition} &\mapsto \up^1.\mathrm{expression}.\mathrm{Addition}
-      \oplus \{\mathrm{representation} \mapsto \{
+    \oplus \{\mathrm{representation} \mapsto \{
         \mathrm{left} \mapsto \up^1.\mathrm{left}.\mathrm{representation},\;
-        \mathrm{right} \mapsto \up^1.\mathrm{right}.\mathrm{representation}\}\}\}
+  \mathrm{right} \mapsto \up^1.\mathrm{right}.\mathrm{representation}\}\}\}
 \end{align*}
 A new case (e.g., negation) is added with its operation handlers
 and an empty API for the arithmetic primitive:
 \begin{align*}
   \mathrm{negation} &\mapsto \{
     \mathrm{Negation} \mapsto
-      \{\mathrm{operand} \mapsto \{\}\}\}, \\
+  \{\mathrm{operand} \mapsto \{\}\}\}, \\
   \mathrm{negation\_evaluation} &\mapsto \{
     \mathrm{Negation} \mapsto
-      \up^1.\mathrm{negation}.\mathrm{Negation} \oplus \{\\
-    &\qquad
+    \up^1.\mathrm{negation}.\mathrm{Negation} \oplus \{\\
+      &\qquad
       \mathrm{operand\_outcome} \mapsto \up^0.\mathrm{operand}.\mathrm{outcome},\\
-    &\qquad
+      &\qquad
       \mathrm{negated} \mapsto \up^2.\mathrm{binnat}.\mathrm{Negation}
-        \oplus \{\mathrm{operand} \mapsto \up^1.\mathrm{operand\_outcome}\},\\
-    &\qquad
-      \mathrm{outcome} \mapsto \up^0.\mathrm{negated}.\mathrm{outcome}\}\}, \\
+      \oplus \{\mathrm{operand} \mapsto \up^1.\mathrm{operand\_outcome}\},\\
+      &\qquad
+  \mathrm{outcome} \mapsto \up^0.\mathrm{negated}.\mathrm{outcome}\}\}, \\
   \mathrm{binnat} &\mapsto \{
     \mathrm{Negation} \mapsto
-      \{\mathrm{operand} \mapsto \{\},\;
-        \mathrm{outcome} \mapsto \{\}\}\}
+    \{\mathrm{operand} \mapsto \{\},\;
+  \mathrm{outcome} \mapsto \{\}\}\}
 \end{align*}
 All modules compose freely via $\oplus$; none requires modification of
 existing definitions.
@@ -359,12 +359,12 @@ Let $n$ denote a non-negative integer (scope depth).
 Let $k$ denote a non-negative integer (path length).
 
 \begin{align*}
-e \quad ::= \quad & \{\ell_1 \mapsto e_1,\; \ldots,\; \ell_n \mapsto e_n\}
-    && \text{(record, } n \ge 0\text{)} \\
+  e \quad ::= \quad & \{\ell_1 \mapsto e_1,\; \ldots,\; \ell_n \mapsto e_n\}
+  && \text{(record, } n \ge 0\text{)} \\
   \mid\quad & \up^n.\ell_1.\ell_2\ldots\ell_k
-    && \text{(reference, } k \ge 0\text{)} \\
+  && \text{(reference, } k \ge 0\text{)} \\
   \mid\quad & e_1 \oplus e_2
-    && \text{(composition)}
+  && \text{(composition)}
 \end{align*}
 
 The $\mapsto$ in $\{\ell \mapsto e\}$ defines a mixin property, not a let-binding.
@@ -431,7 +431,7 @@ The scope chain $\rho$ is an ordered list of $\Mixin$ values,
 with index~0 being the innermost scope:
 \[
   \rho = [\Mixin_0, \Mixin_1, \ldots]
-       = [(\Class_0, \Object_0),\; (\Class_1, \Object_1),\; \ldots]
+  = [(\Class_0, \Object_0),\; (\Class_1, \Object_1),\; \ldots]
 \]
 
 \section{Semantics}
@@ -483,36 +483,36 @@ $\bind : (e, \rho) \to \Class$,
 where $e$ is an expression and $\rho$ is a scope chain.
 
 \begin{itemize}
-\item \textbf{Record:}
-  $\bind(\{\ell_1 \mapsto e_1, \ldots, \ell_n \mapsto e_n\},\; \rho) = \Class_{\mathrm{record}}$
-  where
-  \[
-    \Class_{\mathrm{record}}(\ell_i) = \bigl[\lambda \Object_{\mathrm{self}}.\;
+  \item \textbf{Record:}
+    $\bind(\{\ell_1 \mapsto e_1, \ldots, \ell_n \mapsto e_n\},\; \rho) = \Class_{\mathrm{record}}$
+    where
+    \[
+      \Class_{\mathrm{record}}(\ell_i) = \bigl[\lambda \Object_{\mathrm{self}}.\;
       \bind(e_i,\; (\Class_{\mathrm{record}}, \Object_{\mathrm{self}}) :: \rho)\bigr]
-  \]
-  Each label gets a singleton list with one constructor.
-  The constructor captures the scope chain $\rho$ and $\Class_{\mathrm{record}}$.
+    \]
+    Each label gets a singleton list with one constructor.
+    The constructor captures the scope chain $\rho$ and $\Class_{\mathrm{record}}$.
 
-\item \textbf{Composition:}
-  $\bind(e_1 \oplus e_2,\; \rho) = \bind(e_1, \rho) \oplus \bind(e_2, \rho)$
+  \item \textbf{Composition:}
+    $\bind(e_1 \oplus e_2,\; \rho) = \bind(e_1, \rho) \oplus \bind(e_2, \rho)$
 
-\item \textbf{Reference:}
-  $\bind(\up^n.\ell_1.\ell_2\ldots\ell_k,\; \rho)$ with $k \ge 0$:
+  \item \textbf{Reference:}
+    $\bind(\up^n.\ell_1.\ell_2\ldots\ell_k,\; \rho)$ with $k \ge 0$:
 
-  Let $(\Class_n, \Object_n) = \rho(n)$, the $n$-th entry in the scope chain.
-  \begin{align*}
-    \text{if } k = 0 &: \quad \text{result} = \Class_n \\
-    \text{if } k \ge 1 &: \quad
+    Let $(\Class_n, \Object_n) = \rho(n)$, the $n$-th entry in the scope chain.
+    \begin{align*}
+      \text{if } k = 0 &: \quad \text{result} = \Class_n \\
+      \text{if } k \ge 1 &: \quad
       (\Class_{\ell_1}, \Object_{\ell_1}) = \Object_n(\ell_1),\;\;
       \ldots,\;\;
       (\Class_{\ell_k}, \Object_{\ell_k}) = \Object_{\ell_{k-1}}(\ell_k) \\
       & \quad\;\; \text{result} = \Class_{\ell_k}
-  \end{align*}
-  Navigate through the $\Object$ chain by successive label projections,
-  then return the $\Class$ at the final node.
-  When $k = 0$, the reference inherits the entire enclosing scope's $\Class$,
-  which may produce an infinitely deep tree.
-  MixinCalculus does not prohibit infinite trees.
+    \end{align*}
+    Navigate through the $\Object$ chain by successive label projections,
+    then return the $\Class$ at the final node.
+    When $k = 0$, the reference inherits the entire enclosing scope's $\Class$,
+    which may produce an infinitely deep tree.
+    MixinCalculus does not prohibit infinite trees.
 \end{itemize}
 
 \section{Relationship to Other Computational Models}
@@ -526,13 +526,13 @@ mapping a $\lambda$-term to a MixinCalculus expression $e$.
 
 \medskip
 \begin{center}
-\begin{tabular}{l@{\qquad$\longrightarrow$\qquad}l}
-  $n$ (variable) & $\up^n.\mathrm{argument}$ \\
-  $\lambda.\, e$ (abstraction) &
+  \begin{tabular}{l@{\qquad$\longrightarrow$\qquad}l}
+    $n$ (variable) & $\up^n.\mathrm{argument}$ \\
+    $\lambda.\, e$ (abstraction) &
     $\{\mathrm{argument} \mapsto \{\},\; \mathrm{result} \mapsto \mathcal{T}(e)\}$ \\
-  $e_1\; e_2$ (application) &
+    $e_1\; e_2$ (application) &
     $\mathcal{T}(e_1) \oplus \{\mathrm{argument} \mapsto \mathcal{T}(e_2)\}$
-\end{tabular}
+  \end{tabular}
 \end{center}
 \medskip
 
@@ -617,10 +617,10 @@ When $\mathrm{process}$ is injected from outside, the computation passes
 its intermediate result to an external handler:
 \begin{align*}
   &\mathrm{Step} \oplus \{ \\
-  &\quad \mathrm{input} \mapsto \{\mathrm{data} \mapsto \{\}\},\; \\
-  &\quad \mathrm{process} \mapsto \{ \\
-  &\qquad \mathrm{result} \mapsto \{\mathrm{handled} \mapsto \{\}\} \\
-  &\quad \} \\
+    &\quad \mathrm{input} \mapsto \{\mathrm{data} \mapsto \{\}\},\; \\
+    &\quad \mathrm{process} \mapsto \{ \\
+      &\qquad \mathrm{result} \mapsto \{\mathrm{handled} \mapsto \{\}\} \\
+    &\quad \} \\
   &\}
 \end{align*}
 The $\mathrm{process}$ slot acts as a continuation: it receives the
@@ -630,8 +630,8 @@ result and determines what happens next. This is CPS-style programming.
 Alternatively, $\mathrm{process}$ can be filled by local composition:
 \begin{align*}
   &\mathrm{Step} \oplus \{ \\
-  &\quad \mathrm{input} \mapsto \{\mathrm{data} \mapsto \{\}\},\; \\
-  &\quad \mathrm{process.result} \mapsto \{\mathrm{computed} \mapsto \{\}\} \\
+    &\quad \mathrm{input} \mapsto \{\mathrm{data} \mapsto \{\}\},\; \\
+    &\quad \mathrm{process.result} \mapsto \{\mathrm{computed} \mapsto \{\}\} \\
   &\}
 \end{align*}
 Here $\mathrm{process}$ is implemented directly within the composition.
@@ -819,20 +819,20 @@ models are ``the same'' is whether they make the same problems easy
 and the same problems hard. As shown in Section~5, they do not:
 
 \begin{center}
-\begin{tabular}{lll}
-  \textbf{System} & \textbf{Expression Problem} & \textbf{Random-access memory} \\
-  \hline
-  $\lambda$-calculus
+  \begin{tabular}{lll}
+    \textbf{System} & \textbf{Expression Problem} & \textbf{Random-access memory} \\
+    \hline
+    $\lambda$-calculus
     & Object algebras~\cite{oliveira2012extensibility},
     & Explicit trie encoding \\
     & finally tagless~\cite{carette2009finally} & \\
-  SKI combinators
+    SKI combinators
     & Same difficulty as $\lambda$
     & Same difficulty as $\lambda$ \\
-  MixinCalculus
+    MixinCalculus
     & Direct composition ($\oplus$)
     & Records \emph{are} tries \\
-\end{tabular}
+  \end{tabular}
 \end{center}
 
 \noindent
@@ -974,7 +974,7 @@ trie whose nesting mirrors the bit structure of $k$.
 For example, inserting at key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$:
 \[
   \mathrm{trie}' = \mathrm{trie} \oplus
-    \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto \{\mathrm{value} \mapsto v\}\}\}
+  \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto \{\mathrm{value} \mapsto v\}\}\}
 \]
 Each composition creates a new immutable trie; the original is unchanged.
 
@@ -1001,8 +1001,8 @@ A Selector declares the trie shape and a result slot:
     \mathrm{trie} \mapsto \{
       \mathrm{value} \mapsto \{\},\;
       \mathrm{at\_odd} \mapsto \{\},\;
-      \mathrm{at\_even} \mapsto \{\}\},\;
-    \mathrm{result} \mapsto \{\}\}
+    \mathrm{at\_even} \mapsto \{\}\},\;
+  \mathrm{result} \mapsto \{\}\}
 \]
 Three observer callbacks build Selectors bottom-up. These callbacks
 ($\mathrm{on\_zero}$, $\mathrm{on\_odd}$, $\mathrm{on\_even}$) are
@@ -1013,7 +1013,7 @@ The $\mathrm{on\_zero}$ callback returns a Selector that reads
 $.\mathrm{value}$ from the trie:
 \[
   \mathrm{lookup\_on\_zero} \mapsto \up^0.\mathrm{Selector} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{trie}.\mathrm{value}\}
+  \{\mathrm{result} \mapsto \up^0.\mathrm{trie}.\mathrm{value}\}
 \]
 The $\mathrm{on\_odd}$ callback takes a Selector
 (via the $\mathrm{argument}/\mathrm{result}$ encoding of
@@ -1023,11 +1023,11 @@ $.\mathrm{at\_odd}$, then delegates to the argument Selector:
   \mathrm{lookup\_on\_odd} &\mapsto \{
     \mathrm{argument} \mapsto \up^1.\mathrm{Selector},\;
     \mathrm{result} \mapsto \up^1.\mathrm{Selector} \oplus \{\\
-    &\qquad
+      &\qquad
       \mathrm{applied} \mapsto \up^1.\mathrm{argument} \oplus
-        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd}\},\\
-    &\qquad
-      \mathrm{result} \mapsto \up^0.\mathrm{applied}.\mathrm{result}\}\}
+      \{\mathrm{trie} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd}\},\\
+      &\qquad
+  \mathrm{result} \mapsto \up^0.\mathrm{applied}.\mathrm{result}\}\}
 \end{align*}
 The $\mathrm{on\_even}$ callback is symmetric, navigating to
 $.\mathrm{at\_even}$ instead.
@@ -1041,11 +1041,11 @@ callbacks to obtain a Selector, then applies it to the trie:
     &\quad \mathrm{applied\_key} \mapsto \up^0.\mathrm{key} \oplus \{
       \mathrm{on\_zero} \mapsto \up^1.\mathrm{lookup\_on\_zero},\;
       \mathrm{on\_odd} \mapsto \up^1.\mathrm{lookup\_on\_odd},\;
-      \mathrm{on\_even} \mapsto \up^1.\mathrm{lookup\_on\_even}\},\\
+    \mathrm{on\_even} \mapsto \up^1.\mathrm{lookup\_on\_even}\},\\
     &\quad \mathrm{applied\_selector} \mapsto
-      \up^0.\mathrm{applied\_key}.\mathrm{result} \oplus
-        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie\_input}\},\\
-    &\quad \mathrm{result} \mapsto \up^0.\mathrm{applied\_selector}.\mathrm{result}\}
+    \up^0.\mathrm{applied\_key}.\mathrm{result} \oplus
+    \{\mathrm{trie} \mapsto \up^1.\mathrm{trie\_input}\},\\
+  &\quad \mathrm{result} \mapsto \up^0.\mathrm{applied\_selector}.\mathrm{result}\}
 \end{align*}
 For example, looking up key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$
 folds into a Selector that navigates
@@ -1066,16 +1066,16 @@ A Rebuilder declares the trie shape on both its input and output:
 \[
   \mathrm{Rebuilder} \mapsto \{
     \mathrm{trie} \mapsto \{\mathrm{value}, \mathrm{at\_odd}, \mathrm{at\_even}\},\;
-    \mathrm{result} \mapsto \{\mathrm{value}, \mathrm{at\_odd}, \mathrm{at\_even}\}\}
+  \mathrm{result} \mapsto \{\mathrm{value}, \mathrm{at\_odd}, \mathrm{at\_even}\}\}
 \]
 Three observer callbacks build Rebuilders bottom-up.
 The $\mathrm{on\_zero}$ callback returns a Rebuilder that copies the
 subtries but omits the value:
 \[
   \mathrm{delete\_on\_zero} \mapsto \up^0.\mathrm{Rebuilder} \oplus
-    \{\mathrm{result} \mapsto \{
+  \{\mathrm{result} \mapsto \{
       \mathrm{at\_odd} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd},\;
-      \mathrm{at\_even} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_even}\}\}
+  \mathrm{at\_even} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_even}\}\}
 \]
 The $\mathrm{result}.\mathrm{value}$ slot inherits only the empty
 declaration from $\mathrm{Rebuilder}$, effectively deleting the entry.
@@ -1088,15 +1088,15 @@ $\mathrm{at\_odd}$ with the recursively rebuilt subtrie:
   \mathrm{delete\_on\_odd} &\mapsto \{
     \mathrm{argument} \mapsto \up^1.\mathrm{Rebuilder},\;
     \mathrm{result} \mapsto \up^1.\mathrm{Rebuilder} \oplus \{\\
-    &\qquad
+      &\qquad
       \mathrm{applied} \mapsto \up^1.\mathrm{argument} \oplus
-        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd}\},\\
-    &\qquad
+      \{\mathrm{trie} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd}\},\\
+      &\qquad
       \mathrm{result} \mapsto \{
         \mathrm{value} \mapsto \up^2.\mathrm{trie}.\mathrm{value},\;
         \mathrm{at\_odd} \mapsto \up^0.\mathrm{applied}.\mathrm{result},\;
         \mathrm{at\_even} \mapsto \up^2.\mathrm{trie}.\mathrm{at\_even}
-      \}\}\}
+  \}\}\}
 \end{align*}
 The $\mathrm{on\_even}$ callback is symmetric.
 
@@ -1109,11 +1109,11 @@ callbacks to obtain a Rebuilder, then applies it to the trie:
     &\quad \mathrm{applied\_key} \mapsto \up^0.\mathrm{key} \oplus \{
       \mathrm{on\_zero} \mapsto \up^1.\mathrm{delete\_on\_zero},\;
       \mathrm{on\_odd} \mapsto \up^1.\mathrm{delete\_on\_odd},\;
-      \mathrm{on\_even} \mapsto \up^1.\mathrm{delete\_on\_even}\},\\
+    \mathrm{on\_even} \mapsto \up^1.\mathrm{delete\_on\_even}\},\\
     &\quad \mathrm{applied\_rebuilder} \mapsto
-      \up^0.\mathrm{applied\_key}.\mathrm{result} \oplus
-        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie\_input}\},\\
-    &\quad \mathrm{result} \mapsto \up^0.\mathrm{applied\_rebuilder}.\mathrm{result}\}
+    \up^0.\mathrm{applied\_key}.\mathrm{result} \oplus
+    \{\mathrm{trie} \mapsto \up^1.\mathrm{trie\_input}\},\\
+  &\quad \mathrm{result} \mapsto \up^0.\mathrm{applied\_rebuilder}.\mathrm{result}\}
 \end{align*}
 Since composition is idempotent, the empty scaffolding left by the
 Rebuilder schema merges harmlessly with any subsequent insertions.
@@ -1127,10 +1127,10 @@ In ANF style:
 \begin{align*}
   \mathrm{deleted} &\mapsto \up^n.\mathrm{Delete} \oplus \{
     \mathrm{key} \mapsto k,\;
-    \mathrm{trie\_input} \mapsto \mathrm{trie}\}\\
+  \mathrm{trie\_input} \mapsto \mathrm{trie}\}\\
   \mathrm{result} &\mapsto \up^0.\mathrm{deleted}.\mathrm{result} \oplus
-    \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto
-      \{\mathrm{value} \mapsto v\}\}\}
+  \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto
+  \{\mathrm{value} \mapsto v\}\}\}
 \end{align*}
 where the second line uses key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$
 as a concrete example.
@@ -1165,38 +1165,38 @@ single module mixin; references use De~Bruijn indices accordingly.
 
 \begin{align*}
   \{ \quad \mathrm{boolean} \mapsto \{ \quad
-  \mathrm{Boolean} &\mapsto \{\mathrm{on\_true} \mapsto \{\},\;
-    \mathrm{on\_false} \mapsto \{\},\;
-    \mathrm{result} \mapsto \{\}\},
-  \\[6pt]
-  \mathrm{True} &\mapsto \up^0.\mathrm{Boolean} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{on\_true}\},
-  \\
-  \mathrm{False} &\mapsto \up^0.\mathrm{Boolean} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{on\_false}\},
-  \\[6pt]
-  \mathrm{Not} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
-    &\qquad \mathrm{operand} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{applied\_operand} \mapsto \up^0.\mathrm{operand} \oplus \{\\
-    &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{on\_false},\\
-    &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{on\_true}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_operand}.\mathrm{result}\},
-  \\[6pt]
-  \mathrm{And} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
-    &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
-    &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{right},\\
-    &\qquad\qquad \mathrm{on\_false} \mapsto \up^2.\mathrm{False}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\},
-  \\[6pt]
-  \mathrm{Or} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
-    &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
-    &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
-    &\qquad\qquad \mathrm{on\_true} \mapsto \up^2.\mathrm{True},\\
-    &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{right}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\}
+      \mathrm{Boolean} &\mapsto \{\mathrm{on\_true} \mapsto \{\},\;
+        \mathrm{on\_false} \mapsto \{\},\;
+      \mathrm{result} \mapsto \{\}\},
+      \\[6pt]
+      \mathrm{True} &\mapsto \up^0.\mathrm{Boolean} \oplus
+      \{\mathrm{result} \mapsto \up^0.\mathrm{on\_true}\},
+      \\
+      \mathrm{False} &\mapsto \up^0.\mathrm{Boolean} \oplus
+      \{\mathrm{result} \mapsto \up^0.\mathrm{on\_false}\},
+      \\[6pt]
+      \mathrm{Not} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
+        &\qquad \mathrm{operand} \mapsto \up^1.\mathrm{Boolean},\\
+        &\qquad \mathrm{applied\_operand} \mapsto \up^0.\mathrm{operand} \oplus \{\\
+          &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{on\_false},\\
+        &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{on\_true}\},\\
+      &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_operand}.\mathrm{result}\},
+      \\[6pt]
+      \mathrm{And} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
+        &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
+        &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
+        &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
+          &\qquad\qquad \mathrm{on\_true} \mapsto \up^1.\mathrm{right},\\
+        &\qquad\qquad \mathrm{on\_false} \mapsto \up^2.\mathrm{False}\},\\
+      &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\},
+      \\[6pt]
+      \mathrm{Or} &\mapsto \up^0.\mathrm{Boolean} \oplus \{\\
+        &\qquad \mathrm{left} \mapsto \up^1.\mathrm{Boolean},\\
+        &\qquad \mathrm{right} \mapsto \up^1.\mathrm{Boolean},\\
+        &\qquad \mathrm{applied\_left} \mapsto \up^0.\mathrm{left} \oplus \{\\
+          &\qquad\qquad \mathrm{on\_true} \mapsto \up^2.\mathrm{True},\\
+        &\qquad\qquad \mathrm{on\_false} \mapsto \up^1.\mathrm{right}\},\\
+      &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_left}.\mathrm{result}\}
   \quad \} \quad \}
 \end{align*}
 
@@ -1238,33 +1238,33 @@ constructors ($\mathrm{Zero}$, $\mathrm{Succ}$), and an operation
 
 \begin{align*}
   \{ \quad \mathrm{natural} \mapsto \{ \quad
-  \mathrm{Nat} &\mapsto \{\mathrm{successor} \mapsto \{\mathrm{argument} \mapsto \{\},\;
-    \mathrm{result} \mapsto \{\}\},\;
-    \mathrm{zero} \mapsto \{\},\;
-    \mathrm{result} \mapsto \{\}\},
-  \\[6pt]
-  \mathrm{Zero} &\mapsto \up^0.\mathrm{Nat} \oplus
-    \{\mathrm{result} \mapsto \up^0.\mathrm{zero}\},
-  \\[6pt]
-  \mathrm{Succ} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
-    &\qquad \mathrm{predecessor} \mapsto \up^1.\mathrm{Nat},\\
-    &\qquad \mathrm{applied\_predecessor} \mapsto \up^0.\mathrm{predecessor} \oplus \{\\
-    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
-    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
-    &\qquad \mathrm{applied\_successor} \mapsto \up^0.\mathrm{successor} \oplus \{\\
-    &\qquad\qquad \mathrm{argument} \mapsto \up^1.\mathrm{applied\_predecessor}.\mathrm{result}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_successor}.\mathrm{result}\},
-  \\[6pt]
-  \mathrm{Add} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
-    &\qquad \mathrm{augend} \mapsto \up^1.\mathrm{Nat},\\
-    &\qquad \mathrm{addend} \mapsto \up^1.\mathrm{Nat},\\
-    &\qquad \mathrm{applied\_addend} \mapsto \up^0.\mathrm{addend} \oplus \{\\
-    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
-    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
-    &\qquad \mathrm{applied\_augend} \mapsto \up^0.\mathrm{augend} \oplus \{\\
-    &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
-    &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{applied\_addend}.\mathrm{result}\},\\
-    &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_augend}.\mathrm{result}\}
+      \mathrm{Nat} &\mapsto \{\mathrm{successor} \mapsto \{\mathrm{argument} \mapsto \{\},\;
+        \mathrm{result} \mapsto \{\}\},\;
+        \mathrm{zero} \mapsto \{\},\;
+      \mathrm{result} \mapsto \{\}\},
+      \\[6pt]
+      \mathrm{Zero} &\mapsto \up^0.\mathrm{Nat} \oplus
+      \{\mathrm{result} \mapsto \up^0.\mathrm{zero}\},
+      \\[6pt]
+      \mathrm{Succ} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
+        &\qquad \mathrm{predecessor} \mapsto \up^1.\mathrm{Nat},\\
+        &\qquad \mathrm{applied\_predecessor} \mapsto \up^0.\mathrm{predecessor} \oplus \{\\
+          &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
+        &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
+        &\qquad \mathrm{applied\_successor} \mapsto \up^0.\mathrm{successor} \oplus \{\\
+        &\qquad\qquad \mathrm{argument} \mapsto \up^1.\mathrm{applied\_predecessor}.\mathrm{result}\},\\
+      &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_successor}.\mathrm{result}\},
+      \\[6pt]
+      \mathrm{Add} &\mapsto \up^0.\mathrm{Nat} \oplus \{\\
+        &\qquad \mathrm{augend} \mapsto \up^1.\mathrm{Nat},\\
+        &\qquad \mathrm{addend} \mapsto \up^1.\mathrm{Nat},\\
+        &\qquad \mathrm{applied\_addend} \mapsto \up^0.\mathrm{addend} \oplus \{\\
+          &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
+        &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{zero}\},\\
+        &\qquad \mathrm{applied\_augend} \mapsto \up^0.\mathrm{augend} \oplus \{\\
+          &\qquad\qquad \mathrm{successor} \mapsto \up^1.\mathrm{successor},\\
+        &\qquad\qquad \mathrm{zero} \mapsto \up^1.\mathrm{applied\_addend}.\mathrm{result}\},\\
+      &\qquad \mathrm{result} \mapsto \up^0.\mathrm{applied\_augend}.\mathrm{result}\}
   \quad \} \quad \}
 \end{align*}
 
