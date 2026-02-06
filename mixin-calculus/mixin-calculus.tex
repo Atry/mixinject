@@ -37,15 +37,20 @@
 \thanks{This work was conducted independently prior to the author's employment at Figure AI.}
 
 \begin{abstract}
-MixinCalculus is a minimal computational model containing only mixin constructs
-and no scalar types. The only built-in operation is composition ($\oplus$),
-which is commutative, idempotent, and associative. References use De~Bruijn
-indices, where each record literal creates a new scope level. The observable
-behavior of a program is key presence at each node of the resulting recursive
-dictionary structure. We show that MixinCalculus subsumes the $\lambda$-calculus
-by providing a systematic translation from $\lambda$-terms to
-MixinCalculus expressions, and demonstrate that standard data types
-(booleans, natural numbers) can be encoded without scalars.
+Just as the $\lambda$-calculus uses three primitives (abstraction,
+application, variable) as the foundation of functional programming,
+MixinCalculus uses three primitives (record, reference, composition)
+as the foundation of declarative programming. Unlike the $\lambda$-calculus,
+which requires first-class functions, or Turing machines, which require
+mutable state, MixinCalculus is purely declarative and function-free,
+yet Turing complete. Composition ($\oplus$) is commutative, idempotent,
+and associative, dissolving the linearization problem in traditional
+mixin and trait systems. We prove Turing completeness by systematically
+translating the $\lambda$-calculus into MixinCalculus, demonstrating
+that function application is derivable from symmetric mixin composition.
+Records serve as tries, making MixinCalculus an immutable analogue of
+the RAM machine. This provides a computational foundation for declarative
+configuration languages and object-oriented composition mechanisms.
 \end{abstract}
 
 \begin{CCSXML}
@@ -170,6 +175,18 @@ $\mathrm{argument}$ slot and a $\mathrm{result}$ slot, and function
 application corresponds to composing the function record with a record
 that supplies the argument. This translation proves that MixinCalculus
 subsumes the $\lambda$-calculus and is therefore Turing complete.
+Crucially, this translation exhibits a profound \emph{asymmetry}:
+while embedding the $\lambda$-calculus into MixinCalculus is trivial,
+the reverse is non-trivial because MixinCalculus provides primitive
+operations---self-referential records, open recursion, symmetric
+composition---that have no direct counterparts in the $\lambda$-calculus.
+Moreover, MixinCalculus naturally encodes random-access memory:
+records are tries, and composition is trie union, yielding an
+immutable analogue of the RAM machine
+(Section~\ref{sec:trie}).
+This asymmetry demonstrates that MixinCalculus is not merely a
+syntactic variant of the $\lambda$-calculus but captures fundamentally
+different computational patterns.
 As a demonstration of this expressiveness, we port the Expression
 Problem~\cite{wadler1998expression} solution of Wang and
 Oliveira~\cite{wang2016trivially} from Scala (whose type system rests
@@ -208,7 +225,7 @@ composition) to serve as the foundation of declarative programming.
     can be Church-encoded without scalars (Appendix~\ref{app:church}).
 \end{itemize}
 
-\paragraph{Informal example.}
+\paragraph{Informal example.}\label{sec:expression-problem}
 The Expression Problem~\cite{wadler1998expression}
 asks how to extend a data type with both new cases and new operations,
 without modifying existing code.
@@ -446,7 +463,9 @@ where $e$ is an expression and $\rho$ is a scope chain.
   MixinCalculus does not prohibit infinite trees.
 \end{itemize}
 
-\section{Translation from $\lambda$-Calculus}
+\section{Relationship to Other Computational Models}
+
+\subsection{Translation from $\lambda$-Calculus}
 
 The following translation maps $\lambda$-calculus with De Bruijn indices
 to MixinCalculus.
@@ -469,25 +488,346 @@ The result of an application is accessed via $.\mathrm{result}$.
 Nested applications require ANF-style naming of intermediate results.
 
 The translation from $\lambda$-calculus to MixinCalculus is straightforward.
-The reverse direction is non-trivial because self-referential records
-with recursive merge are difficult to encode in pure $\lambda$-calculus.
+The reverse direction is non-trivial, as we discuss next.
+
+\subsection{Expressive Asymmetry}
+
+The translation above consists of three simple rules. This simplicity
+is significant: the full computational power of the $\lambda$-calculus
+embeds into MixinCalculus with minimal overhead.
+
+The reverse direction---encoding MixinCalculus in pure
+$\lambda$-calculus---is fundamentally more difficult. The denotational
+semantics in Section~4 already demonstrates this complexity: defining
+the meaning of MixinCalculus required a metalanguage with fixed points,
+higher-order functions, and recursive domains. This sophistication is
+not accidental---it reflects three features that have no direct
+counterpart in the $\lambda$-calculus:
+
+\begin{enumerate}
+  \item \textbf{Self-referential fixed-point records.}
+    The $\eval$ function constructs $\Object_{\mathrm{self}}$, which
+    appears in its own definition. In the $\lambda$-calculus, encoding
+    this requires explicit fixed-point combinators (e.g., the Y
+    combinator) combined with records encoded as functions---a
+    construction that obscures the declarative intent.
+
+  \item \textbf{Open recursion with symmetric composition.}
+    The operator $\oplus$ merges constructors from independent sources,
+    all called with the same $\Object_{\mathrm{self}}$. Encoding this in
+    the $\lambda$-calculus requires maintaining an extensible dictionary
+    of methods that can be merged from multiple directions. Cook's
+    denotational semantics of inheritance~\cite{cook1989denotational}
+    devoted an entire dissertation to formalizing this pattern in a
+    functional setting.
+
+  \item \textbf{Commutative, idempotent merge.}
+    Composition in MixinCalculus is symmetric:
+    $e_1 \oplus e_2$ and $e_2 \oplus e_1$ produce the same observable
+    result. In the $\lambda$-calculus, function composition
+    $(f \circ g)$ is neither commutative nor idempotent, and simulating
+    these properties requires additional machinery.
+\end{enumerate}
+
+\noindent
+This asymmetry reveals that MixinCalculus is not simply the
+$\lambda$-calculus in disguise. Rather, MixinCalculus provides
+primitive operations for computational patterns that are
+\emph{derivable but complex} in the $\lambda$-calculus.
+
+\subsection{Records as Tries: The RAM Machine Connection}
+\label{sec:trie}
+
+A record $\{\ell_1 \mapsto e_1,\; \ldots,\; \ell_n \mapsto e_n\}$ is
+a trie node: each label selects a child subtree. Nested records form a
+trie whose depth corresponds to key length. Composition ($\oplus$) is
+trie union: merging two records combines their children recursively.
+
+This observation yields an immutable analogue of random-access memory.
+Index the trie by binary natural numbers using three labels---$\mathrm{value}$
+for the stored entry at a node, $\mathrm{at\_odd}$ and $\mathrm{at\_even}$
+for the two children corresponding to the bit structure of the key:
+\begin{align*}
+  \mathrm{Zero} &\;\longrightarrow\; \mathrm{value} \\
+  \mathrm{Odd}(n) &\;\longrightarrow\; \mathrm{at\_odd},\;\text{then path for } n \\
+  \mathrm{Even}(n) &\;\longrightarrow\; \mathrm{at\_even},\;\text{then path for } n
+\end{align*}
+The fundamental operations on random-access memory---write, read,
+and delete---correspond directly to MixinCalculus primitives:
+
+\paragraph{Write (insertion).}
+Inserting an entry with value $v$ at key $k$ is composing a singleton
+trie whose nesting mirrors the bit structure of $k$.
+For example, inserting at key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$:
+\[
+  \mathrm{trie}' = \mathrm{trie} \oplus
+    \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto \{\mathrm{value} \mapsto v\}\}\}
+\]
+Each composition creates a new immutable trie; the original is unchanged.
+
+\paragraph{Read (static lookup).}
+When the key is known statically, retrieving the entry at key $k$ is
+reference-path navigation: the reference follows the same label
+sequence that was used for insertion. For the same key~$5$:
+\[
+  \up^n.\mathrm{trie}.\mathrm{at\_odd}.\mathrm{at\_even}.\mathrm{value}
+\]
+where $n$ is the appropriate De~Bruijn index.
+The reference mechanism traverses the nested record structure---which
+\emph{is} the trie---returning the $\Class$ at the final node.
+
+\paragraph{Read (dynamic lookup).}
+When the key is a BinNat value constructed at runtime via
+$\mathrm{Zero}$, $\mathrm{Odd}$, and $\mathrm{Even}$, the lookup
+path must be computed dynamically. This is achieved by folding the
+BinNat key into a \emph{Selector}---a mixin that, given a trie,
+navigates to the appropriate node and returns the stored entry.
+A Selector declares the trie shape and a result slot:
+\[
+  \mathrm{Selector} \mapsto \{
+    \mathrm{trie} \mapsto \{
+      \mathrm{value} \mapsto \{\},\;
+      \mathrm{at\_odd} \mapsto \{\},\;
+      \mathrm{at\_even} \mapsto \{\}\},\;
+    \mathrm{result} \mapsto \{\}\}
+\]
+Three observer callbacks build Selectors bottom-up.
+The $\mathrm{on\_zero}$ callback returns a Selector that reads
+$.\mathrm{value}$ from the trie:
+\[
+  \mathrm{lookup\_on\_zero} \mapsto \up^0.\mathrm{Selector} \oplus
+    \{\mathrm{result} \mapsto \up^0.\mathrm{trie}.\mathrm{value}\}
+\]
+The $\mathrm{on\_odd}$ callback takes a Selector
+(via the $\mathrm{argument}/\mathrm{result}$ encoding of
+Section~5.1) and returns a new Selector that navigates to
+$.\mathrm{at\_odd}$, then delegates to the argument Selector:
+\begin{align*}
+  \mathrm{lookup\_on\_odd} &\mapsto \{
+    \mathrm{argument} \mapsto \up^1.\mathrm{Selector},\;
+    \mathrm{result} \mapsto \up^1.\mathrm{Selector} \oplus \{\\
+    &\qquad
+      \mathrm{applied} \mapsto \up^1.\mathrm{argument} \oplus
+        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd}\},\\
+    &\qquad
+      \mathrm{result} \mapsto \up^0.\mathrm{applied}.\mathrm{result}\}\}
+\end{align*}
+The $\mathrm{on\_even}$ callback is symmetric, navigating to
+$.\mathrm{at\_even}$ instead.
+
+The $\mathrm{Lookup}$ combinator folds a BinNat key with these
+callbacks to obtain a Selector, then applies it to the trie:
+\begin{align*}
+  \mathrm{Lookup} &\mapsto \{\\
+    &\quad \mathrm{key} \mapsto \up^1.\mathrm{BinNat},\\
+    &\quad \mathrm{trie\_input} \mapsto \{\},\\
+    &\quad \mathrm{applied\_key} \mapsto \up^0.\mathrm{key} \oplus \{
+      \mathrm{on\_zero} \mapsto \up^1.\mathrm{lookup\_on\_zero},\;
+      \mathrm{on\_odd} \mapsto \up^1.\mathrm{lookup\_on\_odd},\;
+      \mathrm{on\_even} \mapsto \up^1.\mathrm{lookup\_on\_even}\},\\
+    &\quad \mathrm{applied\_selector} \mapsto
+      \up^0.\mathrm{applied\_key}.\mathrm{result} \oplus
+        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie\_input}\},\\
+    &\quad \mathrm{result} \mapsto \up^0.\mathrm{applied\_selector}.\mathrm{result}\}
+\end{align*}
+For example, looking up key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$
+folds into a Selector that navigates
+$.\mathrm{at\_odd}.\mathrm{at\_even}.\mathrm{value}$---the same path
+as the static reference, but computed from the key value.
+The entire construction uses only composition ($\oplus$) and
+references; no additional primitives are needed.
+
+\paragraph{Delete.}
+Since composition is additive---it can only merge properties, never
+remove them---deletion cannot be expressed as a single composition.
+Instead, deletion \emph{reconstructs} the trie, copying every subtrie
+except at the targeted key.
+
+We fold the BinNat key into a \emph{Rebuilder}---a mixin that, given
+an input trie, produces a new trie as its result.
+A Rebuilder declares the trie shape on both its input and output:
+\[
+  \mathrm{Rebuilder} \mapsto \{
+    \mathrm{trie} \mapsto \{\mathrm{value}, \mathrm{at\_odd}, \mathrm{at\_even}\},\;
+    \mathrm{result} \mapsto \{\mathrm{value}, \mathrm{at\_odd}, \mathrm{at\_even}\}\}
+\]
+Three observer callbacks build Rebuilders bottom-up.
+The $\mathrm{on\_zero}$ callback returns a Rebuilder that copies the
+subtries but omits the value:
+\[
+  \mathrm{delete\_on\_zero} \mapsto \up^0.\mathrm{Rebuilder} \oplus
+    \{\mathrm{result} \mapsto \{
+      \mathrm{at\_odd} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd},\;
+      \mathrm{at\_even} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_even}\}\}
+\]
+The $\mathrm{result}.\mathrm{value}$ slot inherits only the empty
+declaration from $\mathrm{Rebuilder}$, effectively deleting the entry.
+
+The $\mathrm{on\_odd}$ callback takes a Rebuilder (the recursive
+result for the subtrie) and returns a new Rebuilder that preserves
+$\mathrm{value}$ and $\mathrm{at\_even}$, but replaces
+$\mathrm{at\_odd}$ with the recursively rebuilt subtrie:
+\begin{align*}
+  \mathrm{delete\_on\_odd} &\mapsto \{
+    \mathrm{argument} \mapsto \up^1.\mathrm{Rebuilder},\;
+    \mathrm{result} \mapsto \up^1.\mathrm{Rebuilder} \oplus \{\\
+    &\qquad
+      \mathrm{applied} \mapsto \up^1.\mathrm{argument} \oplus
+        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie}.\mathrm{at\_odd}\},\\
+    &\qquad
+      \mathrm{result} \mapsto \{
+        \mathrm{value} \mapsto \up^2.\mathrm{trie}.\mathrm{value},\;
+        \mathrm{at\_odd} \mapsto \up^0.\mathrm{applied}.\mathrm{result},\;
+        \mathrm{at\_even} \mapsto \up^2.\mathrm{trie}.\mathrm{at\_even}
+      \}\}\}
+\end{align*}
+The $\mathrm{on\_even}$ callback is symmetric.
+
+The $\mathrm{Delete}$ combinator folds a BinNat key with these
+callbacks to obtain a Rebuilder, then applies it to the trie:
+\begin{align*}
+  \mathrm{Delete} &\mapsto \{\\
+    &\quad \mathrm{key} \mapsto \up^1.\mathrm{BinNat},\\
+    &\quad \mathrm{trie\_input} \mapsto \{\},\\
+    &\quad \mathrm{applied\_key} \mapsto \up^0.\mathrm{key} \oplus \{
+      \mathrm{on\_zero} \mapsto \up^1.\mathrm{delete\_on\_zero},\;
+      \mathrm{on\_odd} \mapsto \up^1.\mathrm{delete\_on\_odd},\;
+      \mathrm{on\_even} \mapsto \up^1.\mathrm{delete\_on\_even}\},\\
+    &\quad \mathrm{applied\_rebuilder} \mapsto
+      \up^0.\mathrm{applied\_key}.\mathrm{result} \oplus
+        \{\mathrm{trie} \mapsto \up^1.\mathrm{trie\_input}\},\\
+    &\quad \mathrm{result} \mapsto \up^0.\mathrm{applied\_rebuilder}.\mathrm{result}\}
+\end{align*}
+Since composition is idempotent, the empty scaffolding left by the
+Rebuilder schema merges harmlessly with any subsequent insertions.
+
+\paragraph{Update.}
+Updating the entry at key $k$ to a new value $v$ combines deletion
+and insertion.  Because $\mathrm{Delete}$ is a combinator whose
+output lives in the \emph{result} property, one must first project
+out the rebuilt trie before composing with the new singleton.
+In ANF style:
+\begin{align*}
+  \mathrm{deleted} &\mapsto \up^n.\mathrm{Delete} \oplus \{
+    \mathrm{key} \mapsto k,\;
+    \mathrm{trie\_input} \mapsto \mathrm{trie}\}\\
+  \mathrm{result} &\mapsto \up^0.\mathrm{deleted}.\mathrm{result} \oplus
+    \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto
+      \{\mathrm{value} \mapsto v\}\}\}
+\end{align*}
+where the second line uses key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$
+as a concrete example.
+The projection $.\mathrm{result}$ is essential: $\mathrm{Delete}$
+carries internal scaffolding ($\mathrm{key}$, $\mathrm{trie\_input}$,
+$\mathrm{applied\_key}$, etc.), and only its $\mathrm{result}$
+property holds the rebuilt trie.  This intermediate projection
+prevents Update from being a single symmetric composition.
+
+\medskip
+\noindent
+In the $\lambda$-calculus, implementing a persistent trie with
+efficient union requires explicit data structure encodings
+(e.g., hash array mapped tries or finger trees). In MixinCalculus,
+records \emph{are} tries and composition \emph{is} trie union---no
+additional data structure is needed.%
+\footnote{A runnable implementation using YAML syntax has been tested;
+see the accompanying repository.}
+
+\subsection{Contrast with SKI Combinator Calculus}
+
+A natural question arises: is MixinCalculus merely another function-free
+reformulation of the $\lambda$-calculus, analogous to the SKI combinator
+calculus~\cite{schonfinkel1924,curry1958combinatory}?
+
+Like MixinCalculus, the SKI combinator calculus is function-free at the
+object level (no $\lambda$-abstractions), Turing complete, and minimal
+(three combinators). However, SKI is \emph{isomorphic} to the
+$\lambda$-calculus in terms of problem difficulty: the bracket
+abstraction algorithm translates between the two systems while
+preserving computational structure. Problems that are hard in the
+$\lambda$-calculus---such as the Expression
+Problem~(Section~\ref{sec:expression-problem})---remain equally hard
+in SKI.
+
+MixinCalculus, by contrast, exhibits a genuine shift in problem
+difficulty. The Expression Problem, which requires sophisticated
+encodings in $\lambda$-calculus-based systems---object
+algebras~\cite{oliveira2012extensibility}, finally tagless
+interpreters~\cite{carette2009finally}, or multi-parameter type
+classes---becomes direct and natural in MixinCalculus via $\oplus$.
+Similarly, random-access memory via immutable tries, which requires
+explicit data structure engineering in the $\lambda$-calculus, is
+simply the native record structure of MixinCalculus
+(Section~\ref{sec:trie}). This difference in problem difficulty
+demonstrates that MixinCalculus captures computational patterns that
+are \emph{fundamentally different} from those of the $\lambda$-calculus,
+not merely syntactic variants.
 
 \section{Discussion}
 
-\begin{itemize}
-  \item Commutativity and idempotence of $\oplus$ make MixinCalculus
-    transparent to linearization order.
-    Deduplication of inherited mixins is purely an optimization.
-  \item De Bruijn indices $\up^n$ are typically implemented as
-    qualified \textbf{self} references for readability.
-    Each scope level is given a name (e.g., $\mathrm{Succ}$),
-    and $\up^1.\mathrm{successor}$ is written as
-    $\mathrm{Succ}.\mathrm{successor}$,
-    where the name is resolved by walking up the scope chain.
-  \item MixinCalculus subsumes $\lambda$-calculus
-    ($\lambda$-calculus $\subset$ MixinCalculus).
-    The reverse embedding is non-trivial.
-\end{itemize}
+\subsection{Is MixinCalculus Just Functions in Disguise?}
+
+A skeptical reader might observe that the semantic domain uses
+$\Constructor = \Object \to \Class$, which is literally a function
+type in the metalanguage. Does this mean MixinCalculus is simply
+the $\lambda$-calculus with different syntax?
+
+This objection confuses the object language with the metalanguage.
+The semantic domain uses functions as a \emph{mathematical tool} to
+define the meaning of MixinCalculus expressions, just as set theory is
+used to define natural numbers without making arithmetic ``just set
+theory in disguise.'' The crucial question is not what appears in the
+denotational semantics, but what computational patterns are
+\emph{primitive} in the language itself.
+
+In MixinCalculus, the primitive operations are record construction,
+reference, and composition. Function application is \emph{derived}
+from these primitives (Section~5.1), not primitive itself.
+Indeed, the asymmetry demonstrated in Section~5.2 makes this concrete:
+embedding the $\lambda$-calculus into MixinCalculus requires only three
+simple rules, while the reverse direction requires the sophisticated
+machinery of Section~4. The real test of whether two computational
+models are ``the same'' is whether they make the same problems easy
+and the same problems hard. As shown in Section~5, they do not:
+
+\begin{center}
+\begin{tabular}{lll}
+  \textbf{System} & \textbf{Expression Problem} & \textbf{Random-access memory} \\
+  \hline
+  $\lambda$-calculus
+    & Object algebras~\cite{oliveira2012extensibility},
+    & Explicit trie encoding \\
+    & finally tagless~\cite{carette2009finally} & \\
+  SKI combinators
+    & Same difficulty as $\lambda$
+    & Same difficulty as $\lambda$ \\
+  MixinCalculus
+    & Direct composition ($\oplus$)
+    & Records \emph{are} tries \\
+\end{tabular}
+\end{center}
+
+\noindent
+The fact that MixinCalculus requires no additional machinery for either
+problem class---while the $\lambda$-calculus requires elaborate
+encodings for both---demonstrates that MixinCalculus captures
+fundamentally different computational primitives, not merely a
+syntactic reshuffling.
+
+\subsection{Properties of Composition}
+
+Commutativity and idempotence of $\oplus$ make MixinCalculus
+transparent to linearization order.
+Deduplication of inherited mixins is purely an optimization.
+
+\subsection{Implementation Considerations}
+
+De Bruijn indices $\up^n$ are typically implemented as
+qualified \textbf{self} references for readability.
+Each scope level is given a name (e.g., $\mathrm{Succ}$),
+and $\up^1.\mathrm{successor}$ is written as
+$\mathrm{Succ}.\mathrm{successor}$,
+where the name is resolved by walking up the scope chain.
 
 \section{Future Work}
 
