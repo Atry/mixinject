@@ -1,20 +1,11 @@
-"""Test multi-module composition with nested scopes and union mount merging.
+"""Test multi-module composition with overlapping class definitions.
 
-Minimal reproduction for a known bug where union mount merging doesn't propagate
-through nested lexical scopes. Module3.Nested2.Class4's inheritance chain should
-contain all 6 non-synthetic MixinSymbol entries from Module1 and Module2.
+Tests two scenarios:
+1. Flat structure (reproduction of original bug).
+2. Nested structure (reproduction of bug with nested scopes).
 
-Module1 defines: Class1, Class2 (2 definitions)
-Module2 defines: Class1, Class2, Nested1.Class3, Nested2.Class4 (4 definitions)
-Module3 inherits: [Module1], [Module2]
-
-Expected super chain for Module3.Nested2.Class4:
-  1. Module2.Nested2.Class4 (key=Class4)        — own definition
-  2. Module2.Class2 (key=Class2)                 — via [Class2] base
-  3. Module1.Class2 (key=Class2)                 — via union merge in Module3
-  4. Module1.Class1 (key=Class1)                 — via [Class1] base from Module1.Class2
-  5. Module2.Class1 (key=Class1)                 — via union merge in Module3
-  6. Module2.Nested1.Class3 (key=Class3)         — via [Nested1, Class3] base from Module2.Class1
+Both are minimal reproductions for known bugs where inheritance chains
+should contain all non-synthetic MixinSymbol entries from constituent modules.
 """
 
 from pathlib import Path
@@ -58,9 +49,54 @@ def multi_module_scope() -> Scope:
     return result
 
 
-@pytest.mark.xfail(reason="Known bug: inheritance chain missing some non-synthetic MixinSymbols")
-class TestMultiModuleComposition:
-    """Test that Module3.Nested2.Class4's super chain contains all 6 non-synthetic MixinSymbols."""
+@pytest.mark.xfail(reason="Known bug: inheritance chain missing some non-synthetic MixinSymbols (Flat)")
+class TestMultiModuleCompositionFlat:
+    """Test that Module3Flat.Class4's super chain contains all 6 non-synthetic MixinSymbols.
+
+    Module1 defines: Class1, Class2 (2 definitions)
+    Module2Flat defines: Class1, Class2, Class3, Class4 (4 definitions)
+    Module3Flat inherits: [Module1], [Module2Flat]
+
+    Expected super chain for Module3Flat.Class4:
+      1. Module2Flat.Class4
+      2. Module2Flat.Class2
+      3. Module1.Class2
+      4. Module1.Class1
+      5. Module2Flat.Class1
+      6. Module2Flat.Class3
+    """
+
+    def test_class4_super_chain_contains_all_classes(
+        self, multi_module_scope: Scope
+    ) -> None:
+        module3 = multi_module_scope.Module3Flat
+        assert isinstance(module3, Scope)
+
+        class4_symbol = module3.symbol["Class4"]
+        all_symbols = _collect_all_super_symbols(class4_symbol)
+
+        non_synthetic = {
+            symbol for symbol in all_symbols if symbol.key in CLASS_NAMES
+        }
+        non_synthetic_paths = sorted(
+            ".".join(str(segment) for segment in symbol.path)
+            for symbol in non_synthetic
+        )
+
+        assert len(non_synthetic) == 6, (
+            f"Expected 6 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
+            f"{non_synthetic_paths}"
+        )
+
+
+@pytest.mark.xfail(reason="Known bug: inheritance chain missing some non-synthetic MixinSymbols (Nested)")
+class TestMultiModuleCompositionNested:
+    """Test that Module3.Nested2.Class4's super chain contains all 6 non-synthetic MixinSymbols.
+
+    Module1 defines: Class1, Class2 (2 definitions)
+    Module2 defines: Class1, Class2, Nested1.Class3, Nested2.Class4 (4 definitions)
+    Module3 inherits: [Module1], [Module2]
+    """
 
     def test_class4_super_chain_contains_all_classes(
         self, multi_module_scope: Scope

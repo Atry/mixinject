@@ -11,3 +11,11 @@ Module2:
 Module3:
   - [Module1]
   - [Module2]
+Module2Flat:
+  Class1: [Class3]
+  Class2: []
+  Class3: []
+  Class4: [Class2]
+Module3Flat:
+  - [Module1]
+  - [Module2Flat]
