@@ -2946,7 +2946,46 @@ class ResolvedReference:
     target_symbol_bound: Final["MixinSymbol"]
     """The final resolved MixinSymbol (for compile-time type bound checking)."""
 
-    # V1 method get_mixin() removed - use get_mixin() instead
+    def get_symbol(
+        self,
+        symbol: "MixinSymbol",
+    ) -> "MixinSymbol":
+        """
+        Get the target MixinSymbol by navigating from symbol using both outer and lexical_outer.
+
+        This is the compile-time counterpart of :meth:`get_mixin`. The algorithm
+        follows two chains in parallel:
+
+        1. The **Structural Chain** (via ``outer``): The actual parent in the symbol tree.
+        2. The **Lexical Chain** (via ``lexical_outer``): The definition origin parent.
+
+        To resolve a reference with ``de_bruijn_index = n``:
+
+        1. Start with ``current = symbol.outer`` (the structural parent symbol).
+        2. Iterate ``n`` times using ``lexical_outer.outer`` to guide traversal.
+        3. Navigate through ``path`` using ``__getitem__``.
+
+        Isomorphic with :meth:`get_mixin`:
+        ``ref.get_symbol(mixin.symbol) is ref.get_mixin(mixin).symbol``
+
+        :param symbol: The MixinSymbol from which navigation starts.
+        :return: The resolved MixinSymbol.
+        """
+        current = symbol.outer
+
+        # Traverse up the lexical scope chain
+        current_lexical = symbol.lexical_outer
+        for _ in range(self.de_bruijn_index):
+            assert isinstance(current_lexical, MixinSymbol)
+            current = current_lexical.outer
+            current_lexical = current_lexical.lexical_outer
+
+        # Navigate through path using key-based lookup
+        assert isinstance(current, MixinSymbol)
+        for key in self.path:
+            current = current[key]
+
+        return current
 
     def get_mixin(
         self,
