@@ -932,7 +932,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         - AbsoluteReference `/qux` → ResolvedReference `../../qux` (from PWD)
 
         For RelativeReference: resolve path to MixinSymbol tuple.
-        For AbsoluteReference: de_bruijn_index = de_bruijn_index(self.lexical_outer) = de_bruijn_index(self) - 1.
+        For AbsoluteReference: de_bruijn_index = depth(self.lexical_outer) = depth(self) - 1.
         For LexicalReference: MIXIN-style lexical search with self-reference support.
         For FixtureReference: pytest-style search, skip if name == self.key.
 
@@ -947,16 +947,16 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 de_bruijn_index = rel_levels_up
                 hashable_path = rel_path
             case AbsoluteReference(path=path):
-                de_bruijn_index = 0
+                depth = 0
                 current: MixinSymbol = self
                 while True:
                     match current.lexical_outer:
                         case OuterSentinel.ROOT:
                             break
                         case MixinSymbol() as outer_symbol:
-                            de_bruijn_index += 1
+                            depth += 1
                             current = outer_symbol
-                de_bruijn_index = de_bruijn_index - 1
+                de_bruijn_index = depth - 1
                 hashable_path = path
             case LexicalReference(path=path):
                 # Strict lexical scoping: only search own definitions, not inherited.
@@ -1219,18 +1219,18 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 return InstanceSymbolSentinel.ALREADY_INSTANCE
 
     @property
-    def de_bruijn_index(self) -> int:
-        """Return the de_bruijn_index of this symbol in the scope hierarchy.
+    def depth(self) -> int:
+        """Return the depth of this symbol in the scope hierarchy.
 
         The de_bruijn_index represents the static nesting depth of the symbol:
-        - Root symbols (lexical_outer=OuterSentinel.ROOT) have de_bruijn_index 0.
-        - Nested symbols have de_bruijn_index = lexical_outer.de_bruijn_index + 1.
+        - Root symbols (lexical_outer=OuterSentinel.ROOT) have depth 0.
+        - Nested symbols have depth = lexical_outer.depth + 1.
         """
         match self.lexical_outer:
             case OuterSentinel.ROOT:
                 return 0
             case MixinSymbol() as outer_symbol:
-                return outer_symbol.de_bruijn_index + 1
+                return outer_symbol.depth + 1
 
     @cached_property
     def is_public(self):

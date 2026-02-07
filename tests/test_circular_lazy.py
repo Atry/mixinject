@@ -61,19 +61,19 @@ def test_circular_reference_lazy_evaluation():
     # Test circular reference with finite accesses
     # Each access should terminate despite the cycle
 
-    # Access de_bruijn_index 1: foo._1 should be bar
+    # Access depth 1: foo._1 should be bar
     assert foo._1 is bar
 
-    # Access de_bruijn_index 2: bar._1 should be foo
+    # Access depth 2: bar._1 should be foo
     assert bar._1 is foo
 
-    # Access de_bruijn_index 3: foo._1._1 should be foo (cycle detected)
+    # Access depth 3: foo._1._1 should be foo (cycle detected)
     assert foo._1._1 is foo
 
-    # Access de_bruijn_index 4: bar._1._1 should be bar (cycle detected)
+    # Access depth 4: bar._1._1 should be bar (cycle detected)
     assert bar._1._1 is bar
 
-    # Access de_bruijn_index 5: traversing the cycle
+    # Access depth 5: traversing the cycle
     assert foo._1._1._1 is bar
     assert foo._1._1._1._1 is foo
 

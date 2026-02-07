@@ -234,13 +234,13 @@ def test_succ_visitors_structure():
 # =============================================================================
 
 def count_church_numeral(num: Scope) -> int:
-    """Count the de_bruijn_index of a Church numeral by following predecessor chain."""
-    de_bruijn_index = 0
+    """Count the depth of a Church numeral by following predecessor chain."""
+    depth = 0
     current = num
     while hasattr(current, "predecessor"):
-        de_bruijn_index += 1
+        depth += 1
         current = current.predecessor
-    return de_bruijn_index
+    return depth
 
 
 def test_zero_addition():
@@ -257,7 +257,7 @@ def test_zero_addition():
     zero_addition = zero.Addition(addend=one)
     result = zero_addition.sum
 
-    # Result should be One (de_bruijn_index 1)
+    # Result should be One (depth 1)
     assert count_church_numeral(result) == 1
 
 
@@ -273,7 +273,7 @@ def test_one_plus_zero():
     one_addition = one.Addition(addend=zero)
     result = one_addition.sum
 
-    # Result should be One (de_bruijn_index 1)
+    # Result should be One (depth 1)
     assert count_church_numeral(result) == 1
 
 
@@ -295,7 +295,7 @@ def test_one_plus_one():
     one_addition = one.Addition(addend=one)
     result = one_addition.sum
 
-    # Result should be Two (de_bruijn_index 2)
+    # Result should be Two (depth 2)
     assert count_church_numeral(result) == 2
 
 
@@ -318,7 +318,7 @@ def test_two_plus_three():
     two_addition = two.Addition(addend=three)
     result = two_addition.sum
 
-    # Result should be Five (de_bruijn_index 5)
+    # Result should be Five (depth 5)
     assert count_church_numeral(result) == 5
 
 
@@ -342,7 +342,7 @@ def test_three_plus_four():
     three_addition = three.Addition(addend=four)
     result = three_addition.sum
 
-    # Result should be Seven (de_bruijn_index 7)
+    # Result should be Seven (depth 7)
     assert count_church_numeral(result) == 7
 
 
@@ -366,8 +366,8 @@ def traverse_symbol_tree_impl(
         symbol: Starting symbol
         visited: Set of visited symbol IDs (by id())
         key_path: Current path through the tree
-        max_depth: Maximum traversal de_bruijn_index to prevent infinite loops
-        current_depth: Current de_bruijn_index in traversal
+        max_depth: Maximum traversal depth to prevent infinite loops
+        current_depth: Current depth in traversal
 
     Returns:
         Number of unique symbols visited
@@ -378,7 +378,7 @@ def traverse_symbol_tree_impl(
     if current_depth > max_depth:
         path_str = ".".join(key_path)
         raise RecursionError(
-            f"Symbol tree de_bruijn_index exceeded {max_depth} at path: {path_str}"
+            f"Symbol tree depth exceeded {max_depth} at path: {path_str}"
         )
 
     symbol_id = id(symbol)
@@ -425,7 +425,7 @@ def traverse_symbol_tree(
 
 
 def test_nat_symbol_tree_terminates():
-    """Test that Nat symbol tree has finite de_bruijn_index.
+    """Test that Nat symbol tree has finite depth.
 
     This ensures compilation terminates and doesn't generate infinite symbol trees.
     """
@@ -434,7 +434,7 @@ def test_nat_symbol_tree_terminates():
     visited: set[int] = set()
     node_count = traverse_symbol_tree(nat, visited, max_depth=50)
 
-    # Verify traversal completed without hitting max de_bruijn_index
+    # Verify traversal completed without hitting max depth
     assert node_count > 0, "Nat should have at least some symbols"
 
     # Verify tree is reasonably sized (not infinite)
