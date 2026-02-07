@@ -928,11 +928,11 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
 
         Analogy with file paths:
         - self = current file `/foo/bar/baz`
-        - self.outer = PWD `/foo/bar/`
+        - self.lexical_outer = PWD `/foo/bar/`
         - AbsoluteReference `/qux` → ResolvedReference `../../qux` (from PWD)
 
         For RelativeReference: resolve path to MixinSymbol tuple.
-        For AbsoluteReference: de_bruijn_index = de_bruijn_index(self.outer) = de_bruijn_index(self) - 1.
+        For AbsoluteReference: de_bruijn_index = de_bruijn_index(self.lexical_outer) = de_bruijn_index(self) - 1.
         For LexicalReference: MIXIN-style lexical search with self-reference support.
         For FixtureReference: pytest-style search, skip if name == self.key.
 
@@ -1100,7 +1100,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         """
         Resolve a RelativeReference to a MixinSymbol using this symbol as starting point.
 
-        - Navigate up ``de_bruijn_index`` levels from this symbol via ``.outer``
+        - Navigate up ``de_bruijn_index`` levels from this symbol via ``.lexical_outer``
         - Then navigate down through ``path`` using ``symbol[key]``
 
         :param reference: The RelativeReference describing the path to the target symbol.
@@ -2660,8 +2660,8 @@ def _get_same_scope_dependencies_from_function(
     Get MixinSymbols that function depends on from the same scope (de_bruijn_index=0).
 
     Mirrors _compile_function_with_mixin logic for same-name skip:
-    - Normal parameters: search from symbol.outer (containing scope)
-    - Same-name parameters (param.name == symbol.key): search from symbol.outer.outer
+    - Normal parameters: search from symbol.lexical_outer (containing scope)
+    - Same-name parameters (param.name == symbol.key): search from symbol.lexical_outer.lexical_outer
 
     Only returns dependencies with effective de_bruijn_index=0 (same scope as symbol).
 
@@ -2686,7 +2686,7 @@ def _get_same_scope_dependencies_from_function(
         # Same-name skip logic (fixture reference semantics)
         # Mirrors _compile_function_with_mixin
         if param.name == symbol.key:
-            # Same-name: search from outer.outer, add 1 to de_bruijn_index
+            # Same-name: search from outer.lexical_outer, add 1 to de_bruijn_index
             if isinstance(outer.lexical_outer, OuterSentinel):
                 # Same-name at root level - not a sibling dependency
                 continue
@@ -2741,7 +2741,7 @@ def _compile_function_with_mixin(
         parameter: Parameter,
     ) -> tuple[str, ResolvedReference, int]:
         if parameter.name == name:
-            # Same-name dependency: start search from outer_symbol.outer (lexical)
+            # Same-name dependency: start search from outer_symbol.lexical_outer (lexical)
             match outer_symbol.lexical_outer:
                 case OuterSentinel.ROOT:
                     raise ValueError(
@@ -2918,10 +2918,10 @@ class LexicalReference:
     """
     A lexical reference following MIXIN spec resolution algorithm.
 
-    Resolution starts from self.outer (not self), so self[path[0]] is never resolved.
+    Resolution starts from self.lexical_outer (not self), so self[path[0]] is never resolved.
     This prevents infinite recursion when a symbol references its own name.
 
-    At each level (self.outer, self.outer.outer, ...), check:
+    At each level (self.lexical_outer, self.lexical_outer.lexical_outer, ...), check:
 
     1. Is path[0] BOTH a property AND the scope's key? → raise ValueError (ambiguous)
     2. Is path[0] a property of that level? → early binding, return full path
@@ -2933,34 +2933,34 @@ class LexicalReference:
 
     The returned RelativeReference has:
 
-    - de_bruijn_index: 0 means resolve from self.outer, 1 means self.outer.outer, etc.
+    - de_bruijn_index: 0 means resolve from self.lexical_outer, 1 means self.lexical_outer.lexical_outer, etc.
     - path: For property match, returns full path. For self-reference, returns path[1:].
 
     Examples:
         From symbol "inner" in scope A where A contains "target"::
 
             LexicalReference(path=("target",)):
-            - Level 0 (A = self.outer): "target" in A? YES
+            - Level 0 (A = self.lexical_outer): "target" in A? YES
             - → RelativeReference(de_bruijn_index=0, path=("target",))
 
         From symbol "inner" in scope A where A.key == "A"::
 
             LexicalReference(path=("A", "foo")):
-            - Level 0 (A = self.outer): "A" in A? NO, "A" == A.key? YES
+            - Level 0 (A = self.lexical_outer): "A" in A? NO, "A" == A.key? YES
             - → RelativeReference(de_bruijn_index=0, path=("foo",))  # path[1:], first segment dropped
 
         From symbol "foo" in scope Container where Container["foo"] exists::
 
             LexicalReference(path=("foo",)):
-            - Level 0 (Container = self.outer): "foo" in Container? YES
+            - Level 0 (Container = self.lexical_outer): "foo" in Container? YES
             - → RelativeReference(de_bruijn_index=0, path=("foo",))
-            - Note: self["foo"] would be the symbol itself, but we start from self.outer,
+            - Note: self["foo"] would be the symbol itself, but we start from self.lexical_outer,
               so Container["foo"] is found (not self).
 
         Ambiguous case (scope A has A.key == "A" AND A["A"] exists)::
 
             LexicalReference(path=("A", "bar")):
-            - Level 0 (A = self.outer): "A" in A? YES, "A" == A.key? YES
+            - Level 0 (A = self.lexical_outer): "A" in A? YES, "A" == A.key? YES
             - → raises ValueError: ambiguous reference
             - Note: Both property and self-reference match. This is disallowed to preserve
               future compatibility for choosing either semantic.
@@ -2975,7 +2975,7 @@ class FixtureReference:
     """
     A pytest-fixture-style reference with same-name skip semantics.
 
-    Resolution searches through self.outer, self.outer.outer, etc. for a symbol
+    Resolution searches through self.lexical_outer, self.lexical_outer.lexical_outer, etc. for a symbol
     containing a property with this name.
 
     Same-name skip semantics: When resolved from a symbol whose key matches this
@@ -2984,7 +2984,7 @@ class FixtureReference:
 
     The returned RelativeReference has:
 
-    - de_bruijn_index: 1 means found in self.outer, 2 means self.outer.outer, etc.
+    - de_bruijn_index: 1 means found in self.lexical_outer, 2 means self.lexical_outer.lexical_outer, etc.
       Note: de_bruijn_index starts at 1 (not 0) because we count iterations.
     - path: Always (name,) - a single-element tuple.
 
@@ -2992,14 +2992,14 @@ class FixtureReference:
         From symbol "foo" in scope A where A contains "bar"::
 
             FixtureReference(name="bar"):
-            - Level 1 (A = self.outer): "bar" in A? YES
+            - Level 1 (A = self.lexical_outer): "bar" in A? YES
             - → RelativeReference(de_bruijn_index=1, path=("bar",))
 
         From symbol "foo" in scope A where A["foo"] exists (same-name skip)::
 
             FixtureReference(name="foo"):
-            - Level 1 (A = self.outer): "foo" in A? YES, but self.key == "foo", skip
-            - Level 2 (A.outer): "foo" in A.outer? YES (if found)
+            - Level 1 (A = self.lexical_outer): "foo" in A? YES, but self.key == "foo", skip
+            - Level 2 (A.lexical_outer): "foo" in A.lexical_outer? YES (if found)
             - → RelativeReference(de_bruijn_index=2, path=("foo",))
     """
 
