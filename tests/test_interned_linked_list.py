@@ -5,16 +5,16 @@ import gc
 from mixinject import (
     MixinSymbol,
     Nested,
-    ScopeDefinition,
+    ObjectScopeDefinition,
 )
 
 
-def _empty_definition() -> ScopeDefinition:
+def _empty_definition() -> ObjectScopeDefinition:
     """Create a minimal empty scope definition for testing."""
-    return ScopeDefinition(bases=(), is_public=False, underlying=object())
+    return ObjectScopeDefinition(bases=(), is_public=False, underlying=object())
 
 
-def _root_symbol(definition: ScopeDefinition) -> MixinSymbol:
+def _root_symbol(definition: ObjectScopeDefinition) -> MixinSymbol:
     """Create a root scope symbol for testing."""
     return MixinSymbol(origin=(definition,))
 

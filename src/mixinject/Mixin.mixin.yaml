@@ -1,0 +1,164 @@
+Nat:
+  Nat: []
+  Zero:
+    - [Nat]
+  Successor:
+    - [Nat]
+    - predecessor: [Nat]
+
+NatVisitor:
+  - [Nat]
+  - Nat:
+      Visitor:
+        Visit: []
+    Zero:
+      Visitor:
+        - VisitZero: []
+          Visit: [VisitZero]
+
+    Successor:
+      predecessor: [Nat]
+
+      Visitor:
+        - VisitSuccessor: []
+          Visit: [VisitSuccessor]
+
+NatPlus:
+  - [Nat]
+  - Nat:
+      Plus:
+        sum: [Nat]
+    Zero:
+      Plus:
+        addend: [Nat]
+        sum: [addend]
+    Successor:
+      predecessor:
+        Plus:
+          sum: [Nat]
+      Plus:
+        addend: [Nat]
+        _increasedAddend:
+          - [Successor]
+          - predecessor: [addend]
+        _recursiveAddition:
+          - [Successor, ~, predecessor, Plus]
+          - addend: [_increasedAddend]
+        sum: [_recursiveAddition, sum]
+
+NatEquality:
+  - [NatVisitor]
+  - [Boolean]
+  - Nat:
+      Equal:
+        other: [Nat]
+        equal: [Boolean]
+    Zero:
+      Equal:
+        other: [Nat]
+        _OtherVisitor:
+          - [other, Visitor]
+          - VisitZero:
+              equal: [NatEquality, ~, "True"]
+            VisitSuccessor:
+              equal: [NatEquality, ~, "False"]
+            Visit:
+              equal: [NatEquality, ~, Boolean]
+        equal: [_OtherVisitor, Visit, equal]
+    Successor:
+      predecessor:
+        Equal:
+          equal: [Boolean]
+      Equal:
+        other:
+          - [Nat]
+          - predecessor: [Nat]
+        _recursiveEquality:
+          - [Successor, ~, predecessor, Equal]
+          - other: [other, predecessor]
+        _OtherVisitor:
+          - [other, Visitor]
+          - VisitZero:
+              equal: [NatEquality, ~, "False"]
+            VisitSuccessor:
+              equal: [_recursiveEquality, equal]
+            Visit:
+              equal: [Boolean]
+        equal: [_OtherVisitor, Visit, equal]
+
+Boolean:
+  Boolean: []
+  "True": [Boolean]
+  "False": [Boolean]
+
+BooleanVisitor:
+  - [Boolean]
+  - Boolean:
+      Visitor:
+        Visit: []
+    "True":
+      Visitor:
+        - VisitTrue: []
+          Visit: [VisitTrue]
+
+    "False":
+      Visitor:
+        - VisitFalse: []
+          Visit: [VisitFalse]
+
+BooleanNegation:
+  - [Boolean]
+  - Boolean:
+      not: [Boolean]
+    "True":
+      not: ["False"]
+    "False":
+      not: ["True"]
+
+BooleanEquality:
+  - [BooleanNegation]
+  - Boolean:
+      Equal:
+        other: [Boolean]
+        equal: [Boolean]
+    "True":
+      Equal:
+        other: [Boolean]
+        equal: [other]
+
+    "False":
+      Equal:
+        other: [Boolean]
+        equal: [other, not]
+
+BooleanAnd:
+  - [Boolean]
+  - Boolean:
+      And:
+        other: [Boolean]
+        and: [Boolean]
+    "True":
+      And:
+        other: [Boolean]
+        and: [other]
+
+    "False":
+      And:
+        other: [Boolean]
+        and: ["False"]
+
+BooleanOr:
+  - [Boolean]
+  - Boolean:
+      Or:
+        other: [Boolean]
+        or: [Boolean]
+    "True":
+      Or:
+        other: [Boolean]
+        or: ["True"]
+
+    "False":
+      Or:
+        other: [Boolean]
+        or: [other]

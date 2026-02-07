@@ -134,8 +134,8 @@ class Mixin(HasDict):
     - Then access the dependency from that Scope
     """
 
-    lexical_outer_index: Final["SymbolIndexSentinel | int"]
-    """Index for lexical scope resolution."""
+    lexical_outer: "Mixin | OuterSentinel"
+    """The lexical outer Mixin, or OuterSentinel.ROOT for root."""
 
     kwargs: Final["Mapping[str, object] | KwargsSentinel"]
     """
@@ -163,12 +163,12 @@ class Mixin(HasDict):
         Generate super Mixin instances following V1's algorithm.
 
         For each nested_index in symbol.strict_super_indices:
-        - OuterBaseIndex(i): Create child of outer's i-th super with lexical_outer_index=i
-        - OwnBaseIndex(i): Resolve own base reference using self.lexical_outer_index
+        - OuterBaseIndex(i): Create child of lexical_outer's i-th super
+        - OwnBaseIndex(i): Resolve own base reference using self.lexical_outer
         - OWN: Return self
 
         NOTE: Super mixins do NOT use _sibling_dependencies because their
-        lexical_outer_index != OWN. They always resolve dependencies via navigation.
+        lexical_outer is not self.outer. They always resolve dependencies via navigation.
         This is handled correctly in _evaluate_resource().
         """
         # Import here to avoid circular imports
@@ -177,27 +177,26 @@ class Mixin(HasDict):
         for nested_index in self.symbol.strict_super_indices.values():
             match nested_index.primary_index:
                 case OuterBaseIndex(index=index):
-                    # Get the i-th super mixin from our outer
+                    # Get the i-th super mixin from our lexical outer
+                    # (index is relative to symbol.outer's supers, which is
+                    # isomorphic to lexical_outer's supers)
                     assert isinstance(self.outer, Mixin)
-                    base_mixin = self.outer.get_super(index)
+                    base_mixin = self.lexical_outer.get_super(index)
                     # Find our symbol's counterpart in the base mixin's symbol
                     child_symbol = base_mixin.symbol[self.symbol.key]
-                    # Create with lexical_outer_index=index (points to base_mixin)
-                    # No _sibling_dependencies needed - super mixins resolve via navigation
                     direct_mixin = Mixin(
                         symbol=child_symbol,
                         outer=self.outer,  # Same outer as us
-                        lexical_outer_index=index,  # KEY: Different from OWN!
+                        lexical_outer=base_mixin,  # Direct reference to the base
                         kwargs=self.kwargs,  # Propagate kwargs from parent
                     )
 
                 case OwnBaseIndex(index=index):
                     # Resolve using our own base reference
                     resolved_reference = self.symbol.resolved_bases[index]
-                    # Pass OUR lexical_outer_index to the resolution
                     direct_mixin = resolved_reference.get_mixin(
                         outer=self,
-                        lexical_outer_index=self.lexical_outer_index,
+                        lexical_outer=self.lexical_outer,
                     )
 
                 case SymbolIndexSentinel.OWN:
@@ -221,25 +220,6 @@ class Mixin(HasDict):
             case int() as index:
                 return self.strict_super_mixins[index]
 
-    @property
-    def lexical_outer(self) -> "Mixin":
-        """
-        Get the lexical outer Mixin for dependency resolution.
-
-        - If lexical_outer_index is OWN: returns outer (or self for root)
-        - If lexical_outer_index is int: returns outer.strict_super_mixins[index]
-        """
-        from mixinject import SymbolIndexSentinel
-
-        match self.lexical_outer_index:
-            case SymbolIndexSentinel.OWN:
-                if isinstance(self.outer, Mixin):
-                    return self.outer
-                return self  # Root mixin
-            case int() as index:
-                assert isinstance(self.outer, Mixin)
-                return self.outer.strict_super_mixins[index]
-
     def resolve_dependency(self, ref: "ResolvedReference") -> "Mixin":
         """
         Resolve a dependency reference to a Mixin.
@@ -252,12 +232,10 @@ class Mixin(HasDict):
         :param ref: The resolved reference to resolve.
         :return: The target Mixin (call .evaluated for actual value).
         """
-        from mixinject import SymbolIndexSentinel
-
         # Only use sibling dependency attributes when BOTH conditions are met:
         # 1. levels_up == 0 (same scope dependency)
-        # 2. lexical_outer_index == OWN (we are a direct child, not a super mixin)
-        if ref.levels_up == 0 and self.lexical_outer_index is SymbolIndexSentinel.OWN:
+        # 2. lexical_outer is self.outer (we are a direct child, not a super mixin)
+        if ref.levels_up == 0 and self.lexical_outer is self.outer:
             # Direct child with same-scope dependency: use getattr
             # Sibling dependencies are stored as attributes on the Mixin instance
             attr_name = ref.target_symbol.attribute_name
@@ -267,12 +245,11 @@ class Mixin(HasDict):
                 return sibling_mixin
             # Fallback to navigation if not found as attribute (lazy scopes)
 
-        # Super mixins (lexical_outer_index != OWN) OR parent scope deps:
+        # Super mixins (lexical_outer != outer) OR parent scope deps:
         # Always resolve via navigation
-        # Pass OUR lexical_outer_index to follow the correct inheritance chain
         return ref.get_mixin(
             outer=self,
-            lexical_outer_index=self.lexical_outer_index,
+            lexical_outer=self.lexical_outer,
         )
 
     @cached_property
@@ -299,8 +276,6 @@ class Mixin(HasDict):
         - KwargsSentinel.STATIC: Returns StaticScope
         - Mapping[str, object]: Returns InstanceScope
         """
-        from mixinject import SymbolIndexSentinel
-
         symbol = self.symbol
 
         # Phase 1: Create all Mixin instances
@@ -308,7 +283,7 @@ class Mixin(HasDict):
             (child_symbol := symbol[key]): Mixin(
                 symbol=child_symbol,
                 outer=self,
-                lexical_outer_index=SymbolIndexSentinel.OWN,
+                lexical_outer=self,
                 kwargs=KwargsSentinel.STATIC if child_symbol.is_scope else self.kwargs,
             )
             for key in symbol
@@ -349,9 +324,9 @@ class Mixin(HasDict):
         Evaluate by resolving dependencies from _sibling_dependencies and outer.
 
         IMPORTANT: _sibling_dependencies is ONLY valid for direct children
-        (where lexical_outer_index=OWN). Super mixins have lexical_outer_index=int
-        and their levels_up=0 dependencies refer to siblings in the BASE scope,
-        not our scope. They must always resolve via navigation.
+        (where lexical_outer is self.outer). Super mixins have a different
+        lexical_outer and their levels_up=0 dependencies refer to siblings in
+        the BASE scope, not our scope. They must always resolve via navigation.
 
         This mirrors V1's Resource.evaluated logic exactly.
         """
@@ -492,8 +467,6 @@ class Scope(ABC):
 
     def __getattr__(self, name: str) -> object:
         """Access child by attribute name."""
-        if name.startswith("_"):
-            raise AttributeError(name)
         # Find symbol by key
         child_symbol = self.symbol.get(name)
         if child_symbol is None:
@@ -541,12 +514,10 @@ class StaticScope(Scope):
 
     def __call__(self, **kwargs: object) -> "InstanceScope":
         """Create an instance scope with the given kwargs."""
-        from mixinject import SymbolIndexSentinel
-
         instance_mixin = Mixin(
             symbol=self.symbol.instance,
             outer=self._outer_mixin,
-            lexical_outer_index=SymbolIndexSentinel.OWN,
+            lexical_outer=self._outer_mixin,
             kwargs=kwargs,
         )
         result = instance_mixin.evaluated
@@ -716,7 +687,6 @@ def evaluate(
         MixinSymbol,
         OuterSentinel,
         ScopeDefinition,
-        SymbolIndexSentinel,
         _parse_package,
     )
 
@@ -744,7 +714,7 @@ def evaluate(
     root_mixin = Mixin(
         symbol=root_symbol,
         outer=OuterSentinel.ROOT,
-        lexical_outer_index=SymbolIndexSentinel.OWN,
+        lexical_outer=OuterSentinel.ROOT,
         kwargs=KwargsSentinel.STATIC,  # Root is always static
     )
 

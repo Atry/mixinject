@@ -14,4 +14,4 @@ foo:
 
 bar:
   - [Tuple1]
-  - _1: foo
+  - _1: [foo]

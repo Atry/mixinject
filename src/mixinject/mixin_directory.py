@@ -18,9 +18,8 @@ from mixinject import (
     MixinSymbol,
     OuterSentinel,
     ScopeDefinition,
-    SymbolIndexSentinel,
 )
-from mixinject.mixin_parser import FileMixinDefinition, parse_mixin_file
+from mixinject.mixin_parser import parse_mixin_file
 
 if TYPE_CHECKING:
     from mixinject import runtime
@@ -35,7 +34,7 @@ class DirectoryMixinDefinition(ScopeDefinition):
     Recursively discovers *.mixin.yaml/json/toml files and subdirectories.
     """
 
-    underlying: Path  # type: ignore[assignment]
+    underlying: Path
     """The directory path."""
 
     @cached_property
@@ -87,13 +86,11 @@ class DirectoryMixinDefinition(ScopeDefinition):
         # Check for mixin file
         mixin_file = self._mixin_files.get(key)
         if mixin_file is not None:
-            parsed_definitions = parse_mixin_file(mixin_file)
             definitions.append(
                 _DirectoryMixinFileScopeDefinition(
                     bases=(),
                     is_public=self.is_public,
-                    underlying=parsed_definitions,
-                    source_file=mixin_file,
+                    underlying=mixin_file,
                 )
             )
 
@@ -119,20 +116,20 @@ class DirectoryMixinDefinition(ScopeDefinition):
 class _DirectoryMixinFileScopeDefinition(ScopeDefinition):
     """Internal scope definition for a parsed mixin file in a directory."""
 
-    underlying: Mapping[str, Sequence[FileMixinDefinition]]  # type: ignore[assignment]
-    source_file: Path
+    underlying: Path
 
     def __iter__(self) -> Iterator[Hashable]:
-        yield from self.underlying.keys()
+        yield from parse_mixin_file(self.underlying).keys()
 
     def __len__(self) -> int:
-        return len(self.underlying)
+        return len(parse_mixin_file(self.underlying))
 
     def __getitem__(self, key: Hashable) -> Sequence[Definition]:
         assert isinstance(key, str)
-        if key not in self.underlying:
+        parsed = parse_mixin_file(self.underlying)
+        if key not in parsed:
             raise KeyError(key)
-        return self.underlying[key]
+        return parsed[key]
 
 
 def evaluate_mixin_directory(directory: Path) -> "runtime.Scope":
@@ -157,7 +154,7 @@ def evaluate_mixin_directory(directory: Path) -> "runtime.Scope":
     root_mixin = runtime.Mixin(
         symbol=root_symbol,
         outer=OuterSentinel.ROOT,
-        lexical_outer_index=SymbolIndexSentinel.OWN,
+        lexical_outer=OuterSentinel.ROOT,
         kwargs=runtime.KwargsSentinel.STATIC,
     )
     result = root_mixin.evaluated

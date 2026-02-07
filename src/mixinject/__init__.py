@@ -2050,12 +2050,13 @@ class MultiplePatcherDefinition(PatcherDefinition[TPatch_co]):
 TSymbol = TypeVar("TSymbol", bound=MixinSymbol)
 
 
-@dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
+@dataclass(kw_only=True, frozen=True, eq=False)
 class ScopeDefinition(
     Mapping[Hashable, Sequence[Definition]],
     Definition,
+    ABC,
 ):
-    """Base class for scope definitions that create Scope instances from underlying objects.
+    """Abstract base for scope definitions that create Scope instances.
 
     Implements ``Mapping[Hashable, Sequence[Definition]]`` where each key maps to a
     sequence of definitions. The data structure supports multiple definitions per key,
@@ -2063,6 +2064,14 @@ class ScopeDefinition(
     returns one definition per key. Future versions may expose APIs for defining
     multiple same-name definitions within a single scope.
     """
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self)
+
+
+@dataclass(kw_only=True, frozen=True, eq=False)
+class ObjectScopeDefinition(ScopeDefinition):
+    """Scope definition that discovers children via dir()+getattr() on underlying object."""
 
     underlying: object
 
@@ -2074,9 +2083,6 @@ class ScopeDefinition(
                 continue
             if isinstance(val, Definition):
                 yield name
-
-    def __len__(self) -> int:
-        return sum(1 for _ in self)
 
     def __getitem__(self, key: Hashable) -> Sequence[Definition]:
         """Get Definitions by key name.
@@ -2093,8 +2099,27 @@ class ScopeDefinition(
 
 
 @final
+@dataclass(kw_only=True, frozen=True, slots=True, weakref_slot=True)
+class MappingScopeDefinition(ScopeDefinition):
+    """Scope definition backed by an explicit mapping of keys to definitions."""
+
+    underlying: Mapping[Hashable, Definition]
+
+    def __iter__(self) -> Iterator[Hashable]:
+        yield from self.underlying
+
+    def __len__(self) -> int:
+        return len(self.underlying)
+
+    def __getitem__(self, key: Hashable) -> Sequence[Definition]:
+        if key not in self.underlying:
+            raise KeyError(key)
+        return (self.underlying[key],)
+
+
+@final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
-class PackageScopeDefinition(ScopeDefinition):
+class PackageScopeDefinition(ObjectScopeDefinition):
     """A definition for packages that discovers submodules and *.mixin.* files via pkgutil."""
 
     underlying: ModuleType
@@ -2162,7 +2187,7 @@ class PackageScopeDefinition(ScopeDefinition):
                         )
                     else:
                         definitions.append(
-                            ScopeDefinition(bases=(), is_public=self.is_public, underlying=submod)
+                            ObjectScopeDefinition(bases=(), is_public=self.is_public, underlying=submod)
                         )
             except ImportError:
                 pass
@@ -2171,19 +2196,11 @@ class PackageScopeDefinition(ScopeDefinition):
         assert isinstance(key, str)
         mixin_file = self._mixin_files.get(key)
         if mixin_file is not None:
-            from mixinject.mixin_parser import parse_mixin_file
-
-            parsed_definitions = parse_mixin_file(mixin_file)
-            # A mixin file can define multiple top-level mixins
-            # Return all of them as a scope containing them
-            # Create a scope definition containing all mixins from the file
-            # The file becomes a "module-like" scope
             definitions.append(
                 _MixinFileScopeDefinition(
                     bases=(),
                     is_public=self.is_public,
-                    underlying=parsed_definitions,
-                    source_file=mixin_file,
+                    underlying=mixin_file,
                 )
             )
 
@@ -2198,26 +2215,29 @@ class PackageScopeDefinition(ScopeDefinition):
 class _MixinFileScopeDefinition(ScopeDefinition):
     """Internal scope definition for a parsed mixin file."""
 
-    underlying: Mapping[str, Sequence["FileMixinDefinition"]]  # type: ignore[assignment]
-    source_file: Path
+    underlying: Path
 
-    @override
     def __iter__(self) -> Iterator[Hashable]:
-        yield from self.underlying.keys()
+        yield from self._parsed.keys()
 
-    @override
     def __len__(self) -> int:
-        return len(self.underlying)
+        return len(self._parsed)
 
-    @override
     def __getitem__(self, key: Hashable) -> Sequence[Definition]:
         assert isinstance(key, str)
-        if key not in self.underlying:
+        parsed = self._parsed
+        if key not in parsed:
             raise KeyError(key)
-        return self.underlying[key]
+        return parsed[key]
+
+    @cached_property
+    def _parsed(self) -> Mapping[str, Sequence["FileMixinDefinition"]]:
+        from mixinject.mixin_parser import parse_mixin_file
+
+        return parse_mixin_file(self.underlying)
 
 
-def scope(c: object) -> ScopeDefinition:
+def scope(c: object) -> ObjectScopeDefinition:
     """
     Decorator that converts a class into a ScopeDefinition.
     Nested classes MUST be decorated with @scope to be included as sub-scopes.
@@ -2268,7 +2288,7 @@ def scope(c: object) -> ScopeDefinition:
             root.Combined.bar  # "foo_bar"
 
     """
-    return ScopeDefinition(bases=(), is_public=False, underlying=c)
+    return ObjectScopeDefinition(bases=(), is_public=False, underlying=c)
 
 
 TDefinition = TypeVar("TDefinition", bound=Definition)
@@ -2366,7 +2386,7 @@ def _parse_package(module: ModuleType) -> ScopeDefinition:
     # Modules are private by default; use modules_public=True in evaluate to make public
     if hasattr(module, "__path__"):
         return PackageScopeDefinition(bases=(), is_public=False, underlying=module)
-    return ScopeDefinition(bases=(), is_public=False, underlying=module)
+    return ObjectScopeDefinition(bases=(), is_public=False, underlying=module)
 
 
 Endofunction = Callable[[TResult], TResult]
@@ -2839,19 +2859,18 @@ class ResolvedReference:
     def get_mixin(
         self,
         outer: "runtime.Mixin",
-        lexical_outer_index: "SymbolIndexSentinel | int",
+        lexical_outer: "runtime.Mixin",
     ) -> "runtime.Mixin":
         """
         Get the target Mixin by navigating from outer using V2 semantics.
 
-        Similar to get_mixin but works with V2's frozen Scope.
         Uses key-based lookup at runtime to support merged scopes correctly.
 
         NOTE: This only handles non-local resources via navigation. Local resources
         at the same scope level are accessed via _sibling_dependencies, not navigation.
 
         :param outer: The Mixin from which navigation starts.
-        :param lexical_outer_index: The lexical outer index of the caller.
+        :param lexical_outer: The lexical outer Mixin of the caller.
         :return: The resolved Mixin (call .evaluated for actual value).
         """
         # Start from outer.outer (the parent scope where we search)
@@ -2860,14 +2879,12 @@ class ResolvedReference:
         else:
             current = outer  # Root case: stay at outer
 
-        current_lexical_index: SymbolIndexSentinel | int = lexical_outer_index
-
         # Traverse up the lexical scope chain
+        current_lexical: runtime.Mixin = lexical_outer
         for _ in range(self.levels_up):
-            base = current.get_super(current_lexical_index)
-            current_lexical_index = base.lexical_outer_index  # KEY: Chain the index!
-            assert isinstance(base.outer, runtime.Mixin)
-            current = base.outer
+            assert isinstance(current_lexical.outer, runtime.Mixin)
+            current = current_lexical.outer
+            current_lexical = current_lexical.lexical_outer
 
         # Navigate through path using key-based lookup
         # At this point, current is a Mixin that evaluates to a Scope

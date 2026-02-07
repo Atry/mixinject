@@ -4,7 +4,7 @@ import pytest
 
 from mixinject import (
     MixinSymbol,
-    ScopeDefinition,
+    ObjectScopeDefinition,
     LexicalReference,
     FixtureReference,
 )
@@ -14,10 +14,10 @@ F = FixtureReference
 
 
 def _make_scope_symbol(
-    children: dict[str, "ScopeDefinition"],
+    children: dict[str, "ObjectScopeDefinition"],
     bases: tuple = (),
-) -> "ScopeDefinition":
-    """Create a ScopeDefinition with specified child definitions."""
+) -> "ObjectScopeDefinition":
+    """Create a ObjectScopeDefinition with specified child definitions."""
 
     class TestUnderlying:
         pass
@@ -25,7 +25,7 @@ def _make_scope_symbol(
     underlying = TestUnderlying()
     for key, child_def in children.items():
         setattr(underlying, key, child_def)
-    return ScopeDefinition(bases=bases, is_public=False, underlying=underlying)
+    return ObjectScopeDefinition(bases=bases, is_public=False, underlying=underlying)
 
 
 class TestResolvedBases:
@@ -33,7 +33,7 @@ class TestResolvedBases:
 
     def test_root_symbol_with_empty_bases_returns_empty_tuple(self) -> None:
         """Root symbol with empty bases should return empty tuple."""
-        scope_def = ScopeDefinition(bases=(), is_public=False, underlying=object())
+        scope_def = ObjectScopeDefinition(bases=(), is_public=False, underlying=object())
         root_symbol = MixinSymbol(origin=(scope_def,))
         assert root_symbol.resolved_bases == ()
 
@@ -45,9 +45,9 @@ class TestLexicalReference:
         """LexicalReference finds property in outer scope, returns full path."""
         # Structure: root_symbol contains "target" as a child, target contains "foo"
         # inner_symbol references L(path=("target", "foo"))
-        foo_def = ScopeDefinition(bases=(), is_public=False, underlying=object())
+        foo_def = ObjectScopeDefinition(bases=(), is_public=False, underlying=object())
         target_def = _make_scope_symbol({"foo": foo_def})
-        inner_def = ScopeDefinition(
+        inner_def = ObjectScopeDefinition(
             bases=(L(path=("target", "foo")),),
             is_public=False,
             underlying=object(),
@@ -66,7 +66,7 @@ class TestLexicalReference:
 
     def test_lexical_reference_not_found_raises_lookup_error(self) -> None:
         """LexicalReference raises LookupError when first segment not found."""
-        inner_def = ScopeDefinition(
+        inner_def = ObjectScopeDefinition(
             bases=(L(path=("nonexistent",)),),
             is_public=False,
             underlying=object(),
@@ -79,7 +79,7 @@ class TestLexicalReference:
 
     def test_lexical_reference_empty_path_raises_value_error(self) -> None:
         """LexicalReference with empty path raises ValueError."""
-        inner_def = ScopeDefinition(
+        inner_def = ObjectScopeDefinition(
             bases=(L(path=()),),
             is_public=False,
             underlying=object(),
@@ -96,7 +96,7 @@ class TestFixtureReference:
 
     def test_fixture_reference_not_found_raises_lookup_error(self) -> None:
         """FixtureReference raises LookupError when name not found."""
-        inner_def = ScopeDefinition(
+        inner_def = ObjectScopeDefinition(
             bases=(F(name="nonexistent"),),
             is_public=False,
             underlying=object(),

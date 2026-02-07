@@ -1,104 +1,117 @@
-# Test fixture for Church arithmetic
-# Defines concrete numbers and addition tests
+# Composed namespace: NatPlus + NatEquality
+# Provides Zero/Successor with Plus and Equal operations, plus True/False
+NatArithmetic:
+  - [Mixin, NatPlus]
+  - [Mixin, NatEquality]
+  - [ffi, NatToPython]
+  - [ffi, BooleanToPython]
 
-# Import the nat module types (via inheritance path)
-# Note: These inherit from the stdlib nat types
-
+# =============================================================================
 # Concrete Church numerals
+# =============================================================================
+
 Zero:
-  - [stdlib, Nat, Zero]
+  - [NatArithmetic, Zero]
 
 One:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [Zero]
 
 Two:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [One]
 
 Three:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [Two]
 
 Four:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [Three]
 
 Five:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [Four]
 
 Six:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [Five]
 
 Seven:
-  - [stdlib, Nat, Succ]
+  - [NatArithmetic, Successor]
   - predecessor:
       - [Six]
 
-# Test: 3 + 4 = 7
-add_three_four:
-  - [Three, Addition]
+# =============================================================================
+# Addition tests
+# =============================================================================
+
+# 3 + 4
+threePlusFour:
+  - [Three, Plus]
   - addend:
       - [Four]
 
+# 5 + 2
+fivePlusTwo:
+  - [Five, Plus]
+  - addend:
+      - [Two]
+
+# 0 + 3
+zeroPlusThree:
+  - [Zero, Plus]
+  - addend:
+      - [Three]
+
 # =============================================================================
-# List tests
+# Direct equality tests (without addition)
 # =============================================================================
 
-# Concrete lists
-EmptyList:
-  - [stdlib, list, Nil]
+# 0 == 0
+zeroEqualsZero:
+  - [Zero, Equal]
+  - other:
+      - [Zero]
 
-ListOne:
-  - [stdlib, list, Cons]
-  - head: 1
-    tail:
-      - [EmptyList]
+# 3 == 3
+threeEqualsThree:
+  - [Three, Equal]
+  - other:
+      - [Three]
 
-ListTwo:
-  - [stdlib, list, Cons]
-  - head: 2
-    tail:
-      - [ListOne]
+# 3 == 4
+threeEqualsFour:
+  - [Three, Equal]
+  - other:
+      - [Four]
 
-ListThree:
-  - [stdlib, list, Cons]
-  - head: 3
-    tail:
-      - [ListTwo]
+# =============================================================================
+# Equality tests with addition results
+# =============================================================================
 
-# [3, 2, 1]
-list_321:
-  - [ListThree]
+# (3 + 4) == 7
+threePlusFourEqualsSeven:
+  - [Seven, Equal]
+  - other: [threePlusFour, sum]
 
-ListA:
-  - [stdlib, list, Cons]
-  - head: "a"
-    tail:
-      - [EmptyList]
+# (5 + 2) == 7
+fivePlusTwoEqualsSeven:
+  - [Seven, Equal]
+  - other: [fivePlusTwo, sum]
 
-ListB:
-  - [stdlib, list, Cons]
-  - head: "b"
-    tail:
-      - [ListA]
+# (5 + 2) == 2
+fivePlusTwoEqualsTwo:
+  - [Two, Equal]
+  - other: [fivePlusTwo, sum]
 
-# ["b", "a"]
-list_ba:
-  - [ListB]
-
-# Test: [3, 2, 1] ++ ["b", "a"] = [3, 2, 1, "b", "a"]
-concat_test:
-  - [stdlib, list, concat]
-  - operand0:
-      - [list_321]
-    operand1:
-      - [list_ba]
+# (0 + 3) == 3
+zeroPlusThreeEqualsThree:
+  - [Three, Equal]
+  - other: [zeroPlusThree, sum]
