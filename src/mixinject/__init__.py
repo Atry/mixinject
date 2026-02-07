@@ -1463,14 +1463,14 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         match self.outer:
             case MixinSymbol():
                 return {
-                    resolved_reference.target_symbol_bound: NestedSymbolIndex(
+                    resolved_reference.get_symbol(self): NestedSymbolIndex(
                         primary_index=OwnBaseIndex(index=own_base_index),
                         secondary_index=SymbolIndexSentinel.OWN,
                     )
                     for own_base_index, resolved_reference in enumerate(
                         self.resolved_bases
                     )
-                    if resolved_reference.target_symbol_bound.definitions
+                    if resolved_reference.get_symbol(self).definitions
                 }
             case _:
                 return {}
@@ -1497,7 +1497,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                     )
                     # Linearized strict super symbols of the extend reference
                     for secondary_index, symbol in enumerate(
-                        resolved_reference.target_symbol_bound.generate_strict_super()
+                        resolved_reference.get_symbol(self).generate_strict_super()
                     )
                     if symbol.definitions  # Only include symbols with definitions
                 }
@@ -2788,7 +2788,7 @@ def _get_same_scope_dependencies_from_function(
         effective_levels_up = resolved_reference.de_bruijn_index + extra_levels
         # Only include dependencies with de_bruijn_index=0 (same scope)
         if effective_levels_up == 0:
-            result.append(resolved_reference.target_symbol_bound)
+            result.append(resolved_reference.get_symbol(symbol))
 
     return tuple(result)
 

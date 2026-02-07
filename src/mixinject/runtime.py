@@ -251,7 +251,7 @@ class Mixin(HasDict):
         if ref.de_bruijn_index == 0 and self.lexical_outer is self.outer:
             # Direct child with same-scope dependency: use getattr
             # Sibling dependencies are stored as attributes on the Mixin instance
-            attr_name = ref.target_symbol_bound.attribute_name
+            attr_name = ref.get_symbol(self.symbol).attribute_name
             sibling_mixin = getattr(self, attr_name, None)
             if sibling_mixin is not None:
                 # Returns Mixin directly (caller will call .evaluated when needed)
