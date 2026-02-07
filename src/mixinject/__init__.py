@@ -932,19 +932,19 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         - AbsoluteReference `/qux` → ResolvedReference `../../qux` (from PWD)
 
         For RelativeReference: resolve path to MixinSymbol tuple.
-        For AbsoluteReference: levels_up = de_bruijn_index(self.outer) = de_bruijn_index(self) - 1.
+        For AbsoluteReference: de_bruijn_index = de_bruijn_index(self.outer) = de_bruijn_index(self) - 1.
         For LexicalReference: MIXIN-style lexical search with self-reference support.
         For FixtureReference: pytest-style search, skip if name == self.key.
 
         :param reference: The reference to convert.
         :return: A ResolvedReference for resolution from self.outer.
         """
-        levels_up: int
+        de_bruijn_index: int
         hashable_path: tuple[Hashable, ...]
 
         match reference:
-            case RelativeReference(levels_up=rel_levels_up, path=rel_path):
-                levels_up = rel_levels_up
+            case RelativeReference(de_bruijn_index=rel_levels_up, path=rel_path):
+                de_bruijn_index = rel_levels_up
                 hashable_path = rel_path
             case AbsoluteReference(path=path):
                 de_bruijn_index = 0
@@ -956,7 +956,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         case MixinSymbol() as outer_symbol:
                             de_bruijn_index += 1
                             current = outer_symbol
-                levels_up = de_bruijn_index - 1
+                de_bruijn_index = de_bruijn_index - 1
                 hashable_path = path
             case LexicalReference(path=path):
                 # Strict lexical scoping: only search own definitions, not inherited.
@@ -965,7 +965,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 if not path:
                     raise ValueError("LexicalReference path must not be empty")
                 first_segment = path[0]
-                levels_up = 0
+                de_bruijn_index = 0
                 current: MixinSymbol = self
 
                 while True:
@@ -978,10 +978,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                             # Strict lexical scope: only check own definitions
                             is_own_property = outer_symbol.has_own_key(first_segment)
 
-                            # Error on is_public=False resources when levels_up >= 1
+                            # Error on is_public=False resources when de_bruijn_index >= 1
                             # Private resources are only visible within their own scope
                             # Silently skipping would be surprising behavior for users
-                            if is_own_property and levels_up >= 1:
+                            if is_own_property and de_bruijn_index >= 1:
                                 child_symbol = outer_symbol.get(first_segment)
                                 if (
                                     child_symbol is not None
@@ -996,12 +996,12 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                                 hashable_path = path
                                 break
                             # Recurse to outer
-                            levels_up += 1
+                            de_bruijn_index += 1
                             current = outer_symbol
             case FixtureReference(name=name):
                 # Pytest fixture style: single name, same-name skips first match
                 skip_first = name == self.key
-                levels_up = 0
+                de_bruijn_index = 0
                 current: MixinSymbol = self
 
                 while True:
@@ -1009,10 +1009,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         case OuterSentinel.ROOT:
                             raise LookupError(f"FixtureReference '{name}' not found")
                         case MixinSymbol() as outer_symbol:
-                            levels_up += 1
+                            de_bruijn_index += 1
                             # Check if name exists in outer_symbol
                             if name in outer_symbol:
-                                # Error on is_public=False resources when levels_up >= 1
+                                # Error on is_public=False resources when de_bruijn_index >= 1
                                 # Private resources are only visible within their own scope
                                 # Silently skipping would be surprising behavior for users
                                 child_symbol = outer_symbol.get(name)
@@ -1020,7 +1020,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                                     child_symbol is not None
                                     and not child_symbol.is_public
                                 )
-                                if is_private and levels_up >= 1:
+                                if is_private and de_bruijn_index >= 1:
                                     raise LookupError(
                                         f"Cannot resolve '{name}': resource is not marked "
                                         f"as @public and is not accessible from nested scopes"
@@ -1037,7 +1037,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 # Walk up to find scope with matching key, then resolve through dynamic self
                 # This is partially compile-time: we find the scope, but path resolution
                 # happens at runtime through the scope's dynamic self
-                levels_up = 0
+                de_bruijn_index = 0
                 current: MixinSymbol = self
 
                 while True:
@@ -1052,7 +1052,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                                 # Path will be resolved at runtime through dynamic self
                                 hashable_path = path
                                 break
-                            levels_up += 1
+                            de_bruijn_index += 1
                             current = outer_symbol
             case _ as unreachable:
                 assert_never(unreachable)
@@ -1066,11 +1066,11 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             case MixinSymbol() as outer_symbol:
                 start_symbol = outer_symbol
 
-        for _ in range(levels_up):
+        for _ in range(de_bruijn_index):
             match start_symbol.lexical_outer:
                 case OuterSentinel.ROOT:
                     raise ValueError(
-                        f"Cannot navigate up {levels_up} levels: reached root"
+                        f"Cannot navigate up {de_bruijn_index} levels: reached root"
                     )
                 case MixinSymbol() as outer_symbol:
                     start_symbol = outer_symbol
@@ -1087,7 +1087,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             current_symbol = child_symbol
 
         return ResolvedReference(
-            levels_up=levels_up,
+            de_bruijn_index=de_bruijn_index,
             path=hashable_path,
             target_symbol=current_symbol,
         )
@@ -1100,7 +1100,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         """
         Resolve a RelativeReference to a MixinSymbol using this symbol as starting point.
 
-        - Navigate up ``levels_up`` levels from this symbol via ``.outer``
+        - Navigate up ``de_bruijn_index`` levels from this symbol via ``.outer``
         - Then navigate down through ``path`` using ``symbol[key]``
 
         :param reference: The RelativeReference describing the path to the target symbol.
@@ -1110,11 +1110,11 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         :raises TypeError: If intermediate or final resolved value is not of expected type.
         """
         current: MixinSymbol = self
-        for level in range(reference.levels_up):
+        for level in range(reference.de_bruijn_index):
             match current.lexical_outer:
                 case OuterSentinel.ROOT:
                     raise ValueError(
-                        f"Cannot navigate up {reference.levels_up} levels: "
+                        f"Cannot navigate up {reference.de_bruijn_index} levels: "
                         f"reached root at level {level}"
                     )
                 case MixinSymbol() as outer_scope:
@@ -1745,10 +1745,10 @@ class EvaluatorSymbol(Symbol):
     @abstractmethod
     def get_same_scope_dependencies(self) -> "Sequence[MixinSymbol]":
         """
-        Get MixinSymbols that this evaluator depends on from the same scope (levels_up=0).
+        Get MixinSymbols that this evaluator depends on from the same scope (de_bruijn_index=0).
 
         Concrete subclasses implement this by accessing self.definition.function
-        and analyzing its parameters. Only returns same-scope (levels_up=0) dependencies.
+        and analyzing its parameters. Only returns same-scope (de_bruijn_index=0) dependencies.
         """
         ...
 
@@ -2251,7 +2251,7 @@ def scope(c: object) -> ObjectScopeDefinition:
 
     Example - Using @extend to inherit from another scope::
 
-        @extend(RelativeReference(levels_up=1, path=("Base",)))
+        @extend(RelativeReference(de_bruijn_index=1, path=("Base",)))
         @scope
         class MyScope:
             @patch
@@ -2283,8 +2283,8 @@ def scope(c: object) -> ObjectScopeDefinition:
                         return f"{foo}_bar"
 
                 @extend(
-                    R(levels_up=0, path=("Branch1",)),
-                    R(levels_up=0, path=("Branch2",)),
+                    R(de_bruijn_index=0, path=("Branch1",)),
+                    R(de_bruijn_index=0, path=("Branch2",)),
                 )
                 @scope
                 class Combined:
@@ -2325,7 +2325,7 @@ def extend(
                 def value() -> int:
                     return 10
 
-            @extend(R(levels_up=0, path=("Base",)))
+            @extend(R(de_bruijn_index=0, path=("Base",)))
             @scope
             class Extended:
                 @patch
@@ -2357,8 +2357,8 @@ def extend(
             from mixinject import RelativeReference as R, extend, scope
 
             @extend(
-                R(levels_up=0, path=("branch1",)),
-                R(levels_up=0, path=("branch2",)),
+                R(de_bruijn_index=0, path=("branch1",)),
+                R(de_bruijn_index=0, path=("branch2",)),
             )
             @scope
             class combined:
@@ -2443,9 +2443,9 @@ def merge(
                     return f"tag2_{another_dependency}"
 
             @extend(
-                R(levels_up=0, path=("Branch0",)),
-                R(levels_up=0, path=("Branch1",)),
-                R(levels_up=0, path=("Branch2",)),
+                R(de_bruijn_index=0, path=("Branch0",)),
+                R(de_bruijn_index=0, path=("Branch1",)),
+                R(de_bruijn_index=0, path=("Branch2",)),
             )
             @scope
             class Combined:
@@ -2631,13 +2631,13 @@ def _get_param_resolved_reference(
     :return: ResolvedReference with pre-resolved symbol describing how to reach the parameter,
              or RelativeReferenceSentinel.NOT_FOUND if not found.
     """
-    levels_up = 0
+    de_bruijn_index = 0
     current: MixinSymbol = outer_symbol
     while True:
         if param_name in current:
             target_symbol = current[param_name]
             return ResolvedReference(
-                levels_up=levels_up,
+                de_bruijn_index=de_bruijn_index,
                 path=(param_name,),
                 target_symbol=target_symbol,
             )
@@ -2645,7 +2645,7 @@ def _get_param_resolved_reference(
             case OuterSentinel.ROOT:
                 return RelativeReferenceSentinel.NOT_FOUND
             case MixinSymbol() as outer_scope:
-                levels_up += 1
+                de_bruijn_index += 1
                 current = outer_scope
 
 
@@ -2657,13 +2657,13 @@ def _get_same_scope_dependencies_from_function(
     symbol: "MixinSymbol",
 ) -> tuple["MixinSymbol", ...]:
     """
-    Get MixinSymbols that function depends on from the same scope (levels_up=0).
+    Get MixinSymbols that function depends on from the same scope (de_bruijn_index=0).
 
     Mirrors _compile_function_with_mixin logic for same-name skip:
     - Normal parameters: search from symbol.outer (containing scope)
     - Same-name parameters (param.name == symbol.key): search from symbol.outer.outer
 
-    Only returns dependencies with effective levels_up=0 (same scope as symbol).
+    Only returns dependencies with effective de_bruijn_index=0 (same scope as symbol).
 
     :param function: The function whose parameters to analyze.
     :param symbol: The MixinSymbol that owns this function (for same-name skip).
@@ -2686,7 +2686,7 @@ def _get_same_scope_dependencies_from_function(
         # Same-name skip logic (fixture reference semantics)
         # Mirrors _compile_function_with_mixin
         if param.name == symbol.key:
-            # Same-name: search from outer.outer, add 1 to levels_up
+            # Same-name: search from outer.outer, add 1 to de_bruijn_index
             if isinstance(outer.lexical_outer, OuterSentinel):
                 # Same-name at root level - not a sibling dependency
                 continue
@@ -2701,9 +2701,9 @@ def _get_same_scope_dependencies_from_function(
         if resolved_reference is RelativeReferenceSentinel.NOT_FOUND:
             continue
 
-        # Effective levels_up accounts for same-name skip
-        effective_levels_up = resolved_reference.levels_up + extra_levels
-        # Only include dependencies with levels_up=0 (same scope)
+        # Effective de_bruijn_index accounts for same-name skip
+        effective_levels_up = resolved_reference.de_bruijn_index + extra_levels
+        # Only include dependencies with de_bruijn_index=0 (same scope)
         if effective_levels_up == 0:
             result.append(resolved_reference.target_symbol)
 
@@ -2836,7 +2836,7 @@ class RelativeReference:
     This is used to refer to resources in outer scopes.
     """
 
-    levels_up: Final[int]
+    de_bruijn_index: Final[int]
     """
     Number of levels to go up in the lexical scope.
     """
@@ -2854,7 +2854,7 @@ class ResolvedReference:
     The target_symbol provides compile-time access to the resolved symbol.
     """
 
-    levels_up: Final[int]
+    de_bruijn_index: Final[int]
     """Number of levels to go up in the lexical scope."""
 
     path: Final[tuple[Hashable, ...]]
@@ -2886,7 +2886,7 @@ class ResolvedReference:
 
         # Traverse up the lexical scope chain
         current_lexical = lexical_outer
-        for _ in range(self.levels_up):
+        for _ in range(self.de_bruijn_index):
             assert isinstance(current_lexical.outer, runtime.Mixin)
             current = current_lexical.outer
             current_lexical = current_lexical.lexical_outer
@@ -2933,7 +2933,7 @@ class LexicalReference:
 
     The returned RelativeReference has:
 
-    - levels_up: 0 means resolve from self.outer, 1 means self.outer.outer, etc.
+    - de_bruijn_index: 0 means resolve from self.outer, 1 means self.outer.outer, etc.
     - path: For property match, returns full path. For self-reference, returns path[1:].
 
     Examples:
@@ -2941,19 +2941,19 @@ class LexicalReference:
 
             LexicalReference(path=("target",)):
             - Level 0 (A = self.outer): "target" in A? YES
-            - → RelativeReference(levels_up=0, path=("target",))
+            - → RelativeReference(de_bruijn_index=0, path=("target",))
 
         From symbol "inner" in scope A where A.key == "A"::
 
             LexicalReference(path=("A", "foo")):
             - Level 0 (A = self.outer): "A" in A? NO, "A" == A.key? YES
-            - → RelativeReference(levels_up=0, path=("foo",))  # path[1:], first segment dropped
+            - → RelativeReference(de_bruijn_index=0, path=("foo",))  # path[1:], first segment dropped
 
         From symbol "foo" in scope Container where Container["foo"] exists::
 
             LexicalReference(path=("foo",)):
             - Level 0 (Container = self.outer): "foo" in Container? YES
-            - → RelativeReference(levels_up=0, path=("foo",))
+            - → RelativeReference(de_bruijn_index=0, path=("foo",))
             - Note: self["foo"] would be the symbol itself, but we start from self.outer,
               so Container["foo"] is found (not self).
 
@@ -2984,8 +2984,8 @@ class FixtureReference:
 
     The returned RelativeReference has:
 
-    - levels_up: 1 means found in self.outer, 2 means self.outer.outer, etc.
-      Note: levels_up starts at 1 (not 0) because we count iterations.
+    - de_bruijn_index: 1 means found in self.outer, 2 means self.outer.outer, etc.
+      Note: de_bruijn_index starts at 1 (not 0) because we count iterations.
     - path: Always (name,) - a single-element tuple.
 
     Examples:
@@ -2993,14 +2993,14 @@ class FixtureReference:
 
             FixtureReference(name="bar"):
             - Level 1 (A = self.outer): "bar" in A? YES
-            - → RelativeReference(levels_up=1, path=("bar",))
+            - → RelativeReference(de_bruijn_index=1, path=("bar",))
 
         From symbol "foo" in scope A where A["foo"] exists (same-name skip)::
 
             FixtureReference(name="foo"):
             - Level 1 (A = self.outer): "foo" in A? YES, but self.key == "foo", skip
             - Level 2 (A.outer): "foo" in A.outer? YES (if found)
-            - → RelativeReference(levels_up=2, path=("foo",))
+            - → RelativeReference(de_bruijn_index=2, path=("foo",))
     """
 
     name: str
@@ -3052,9 +3052,9 @@ def resource_reference_from_pure_path(path: PurePath) -> ResourceReference:
 
     Examples:
         >>> resource_reference_from_pure_path(PurePath("../foo/bar"))
-        RelativeReference(levels_up=1, path=('foo', 'bar'))
+        RelativeReference(de_bruijn_index=1, path=('foo', 'bar'))
         >>> resource_reference_from_pure_path(PurePath("../../config"))
-        RelativeReference(levels_up=2, path=('config',))
+        RelativeReference(de_bruijn_index=2, path=('config',))
         >>> resource_reference_from_pure_path(PurePath("/absolute/path"))
         AbsoluteReference(path=('absolute', 'path'))
         >>> resource_reference_from_pure_path(PurePath("foo/../bar"))
@@ -3072,9 +3072,9 @@ def resource_reference_from_pure_path(path: PurePath) -> ResourceReference:
     all_parts = path.parts
 
     if all_parts == (os.curdir,):
-        return RelativeReference(levels_up=0, path=())
+        return RelativeReference(de_bruijn_index=0, path=())
 
-    levels_up = 0
+    de_bruijn_index = 0
     remaining_parts: list[str] = []
     finished_pardir = False
 
@@ -3084,9 +3084,9 @@ def resource_reference_from_pure_path(path: PurePath) -> ResourceReference:
         elif part == os.pardir:
             if finished_pardir:
                 raise ValueError(f"Path is not normalized: {path}")
-            levels_up += 1
+            de_bruijn_index += 1
         else:
             finished_pardir = True
             remaining_parts.append(part)
 
-    return RelativeReference(levels_up=levels_up, path=tuple(remaining_parts))
+    return RelativeReference(de_bruijn_index=de_bruijn_index, path=tuple(remaining_parts))

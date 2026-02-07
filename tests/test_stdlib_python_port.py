@@ -112,7 +112,7 @@ class Nat:
                 pass
 
             @public
-            @extend(R(levels_up=0, path=("ZeroVisitor",)))
+            @extend(R(de_bruijn_index=0, path=("ZeroVisitor",)))
             @scope
             class Visitor:
                 """Result of visitor application (inherits from ZeroVisitor)."""
@@ -159,7 +159,7 @@ class Nat:
                 pass
 
             @public
-            @extend(R(levels_up=0, path=("SuccVisitor",)))
+            @extend(R(de_bruijn_index=0, path=("SuccVisitor",)))
             @scope
             class Visitor:
                 """Result of visitor application (inherits from SuccVisitor)."""

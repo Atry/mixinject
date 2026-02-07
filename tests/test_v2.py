@@ -415,8 +415,8 @@ class TestPatch:
                     return lambda x: x * 2
 
             @extend(
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Patcher",)),
+                R(de_bruijn_index=0, path=("Base",)),
+                R(de_bruijn_index=0, path=("Patcher",)),
             )
             @public
             @scope
@@ -449,9 +449,9 @@ class TestPatch:
                     return lambda x: x + 3
 
             @extend(
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Patch1",)),
-                R(levels_up=0, path=("Patch2",)),
+                R(de_bruijn_index=0, path=("Base",)),
+                R(de_bruijn_index=0, path=("Patch1",)),
+                R(de_bruijn_index=0, path=("Patch2",)),
             )
             @public
             @scope
@@ -482,8 +482,8 @@ class TestPatches:
                     return ((lambda x: x + 5), (lambda x: x + 3))
 
             @extend(
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Patcher",)),
+                R(de_bruijn_index=0, path=("Base",)),
+                R(de_bruijn_index=0, path=("Patcher",)),
             )
             @public
             @scope
@@ -544,9 +544,9 @@ class TestMerger:
                     return "tag2"
 
             @extend(
-                R(levels_up=0, path=("Base",)),
-                R(levels_up=0, path=("Provider1",)),
-                R(levels_up=0, path=("Provider2",)),
+                R(de_bruijn_index=0, path=("Base",)),
+                R(de_bruijn_index=0, path=("Provider1",)),
+                R(de_bruijn_index=0, path=("Provider2",)),
             )
             @public
             @scope
@@ -578,8 +578,8 @@ class TestUnionMount:
                     return "bar_value"
 
             @extend(
-                R(levels_up=0, path=("Namespace1",)),
-                R(levels_up=0, path=("Namespace2",)),
+                R(de_bruijn_index=0, path=("Namespace1",)),
+                R(de_bruijn_index=0, path=("Namespace2",)),
             )
             @public
             @scope
@@ -600,7 +600,7 @@ class TestUnionMount:
                 def base_value() -> str:
                     return "base"
 
-            @extend(R(levels_up=0, path=("Namespace1",)))
+            @extend(R(de_bruijn_index=0, path=("Namespace1",)))
             @public
             @scope
             class Namespace2:
@@ -648,9 +648,9 @@ class TestUnionMount:
                     return f"tag2_{another_dependency}"
 
             @extend(
-                R(levels_up=0, path=("branch0",)),
-                R(levels_up=0, path=("branch1",)),
-                R(levels_up=0, path=("branch2",)),
+                R(de_bruijn_index=0, path=("branch0",)),
+                R(de_bruijn_index=0, path=("branch1",)),
+                R(de_bruijn_index=0, path=("branch2",)),
             )
             @public
             @scope
@@ -685,8 +685,8 @@ class TestUnionMount:
                     return f"{foo}_bar"
 
             @extend(
-                R(levels_up=0, path=("branch1",)),
-                R(levels_up=0, path=("branch2",)),
+                R(de_bruijn_index=0, path=("branch1",)),
+                R(de_bruijn_index=0, path=("branch2",)),
             )
             @public
             @scope
@@ -783,7 +783,7 @@ class TestExtendNameResolution:
                 def base_value() -> int:
                     return 42
 
-            @extend(R(levels_up=0, path=("Base",)))
+            @extend(R(de_bruijn_index=0, path=("Base",)))
             @public
             @scope
             class Extended:
@@ -819,7 +819,7 @@ class TestScalaStylePathDependentTypes:
                 def i() -> int:
                     return 1
 
-                @extend(R(levels_up=1, path=("Base",)))
+                @extend(R(de_bruijn_index=1, path=("Base",)))
                 @scope
                 class MyInner:
                     @patch
@@ -833,7 +833,7 @@ class TestScalaStylePathDependentTypes:
                 def i() -> int:
                     return 2
 
-                @extend(R(levels_up=1, path=("Base",)))
+                @extend(R(de_bruijn_index=1, path=("Base",)))
                 @scope
                 class MyInner:
                     @patch
@@ -841,8 +841,8 @@ class TestScalaStylePathDependentTypes:
                         return lambda x: x + i
 
             @extend(
-                R(levels_up=0, path=("object1", "MyInner")),
-                R(levels_up=0, path=("object2", "MyInner")),
+                R(de_bruijn_index=0, path=("object1", "MyInner")),
+                R(de_bruijn_index=0, path=("object2", "MyInner")),
             )
             @public
             @scope
@@ -1253,7 +1253,7 @@ class TestSyntheticScopeCallable:
                     def value(arg: str) -> str:
                         return f"value_{arg}"
 
-            @extend(R(levels_up=0, path=("Base",)))
+            @extend(R(de_bruijn_index=0, path=("Base",)))
             @public
             @scope
             class Extended:
@@ -1359,7 +1359,7 @@ class TestExtendInstanceScopeProhibition:
             def my_instance(MyOuter: Scope) -> Scope:
                 return MyOuter(i=42)
 
-            @extend(R(levels_up=0, path=("my_instance",)))
+            @extend(R(de_bruijn_index=0, path=("my_instance",)))
             @public
             @scope
             class Extended:
@@ -1398,7 +1398,7 @@ class TestExtendInstanceScopeProhibition:
                 return MyOuter(i=42)
 
             # This fails because my_instance is a merger MixinSymbol, not a scope
-            @extend(R(levels_up=0, path=("my_instance", "MyInner")))
+            @extend(R(de_bruijn_index=0, path=("my_instance", "MyInner")))
             @scope
             class Invalid:
                 pass
@@ -1429,7 +1429,7 @@ class TestExtendInstanceScopeProhibition:
                     def base_value() -> int:
                         return 100
 
-                @extend(R(levels_up=0, path=("Inner2",)))
+                @extend(R(de_bruijn_index=0, path=("Inner2",)))
                 @public
                 @scope
                 class Inner1:
@@ -1466,7 +1466,7 @@ class TestExtendNonMixin:
 
             # Extending a Resource (not a Scope) with a patch
             # The resulting merged resource inherits is_public from base_value
-            @extend(R(levels_up=0, path=("base_value",)))
+            @extend(R(de_bruijn_index=0, path=("base_value",)))
             @patch
             def patched_value() -> Callable[[int], int]:
                 return lambda x: x + 1
@@ -1597,8 +1597,8 @@ class TestScopeDir:
                     return "bar"
 
             @extend(
-                R(levels_up=0, path=("Namespace1",)),
-                R(levels_up=0, path=("Namespace2",)),
+                R(de_bruijn_index=0, path=("Namespace1",)),
+                R(de_bruijn_index=0, path=("Namespace2",)),
             )
             @public
             @scope
@@ -1629,8 +1629,8 @@ class TestScopeDir:
                     return lambda s: s + "_patched"
 
             @extend(
-                R(levels_up=0, path=("Namespace1",)),
-                R(levels_up=0, path=("Namespace2",)),
+                R(de_bruijn_index=0, path=("Namespace1",)),
+                R(de_bruijn_index=0, path=("Namespace2",)),
             )
             @public
             @scope

@@ -10,35 +10,35 @@ class TestResourceReferenceFromPurePath:
 
     def test_relative_path_single_level_up(self) -> None:
         result = resource_reference_from_pure_path(PurePath("../foo/bar"))
-        assert result == RelativeReference(levels_up=1, path=("foo", "bar"))
+        assert result == RelativeReference(de_bruijn_index=1, path=("foo", "bar"))
 
     def test_relative_path_multiple_levels_up(self) -> None:
         result = resource_reference_from_pure_path(PurePath("../../config"))
-        assert result == RelativeReference(levels_up=2, path=("config",))
+        assert result == RelativeReference(de_bruijn_index=2, path=("config",))
 
     def test_relative_path_three_levels_up(self) -> None:
         result = resource_reference_from_pure_path(PurePath("../../../a/b/c"))
-        assert result == RelativeReference(levels_up=3, path=("a", "b", "c"))
+        assert result == RelativeReference(de_bruijn_index=3, path=("a", "b", "c"))
 
     def test_relative_path_no_levels_up(self) -> None:
         result = resource_reference_from_pure_path(PurePath("foo/bar"))
-        assert result == RelativeReference(levels_up=0, path=("foo", "bar"))
+        assert result == RelativeReference(de_bruijn_index=0, path=("foo", "bar"))
 
     def test_relative_path_single_part(self) -> None:
         result = resource_reference_from_pure_path(PurePath("foo"))
-        assert result == RelativeReference(levels_up=0, path=("foo",))
+        assert result == RelativeReference(de_bruijn_index=0, path=("foo",))
 
     def test_relative_path_pardir_only(self) -> None:
         result = resource_reference_from_pure_path(PurePath(".."))
-        assert result == RelativeReference(levels_up=1, path=())
+        assert result == RelativeReference(de_bruijn_index=1, path=())
 
     def test_relative_path_multiple_pardir_only(self) -> None:
         result = resource_reference_from_pure_path(PurePath("../.."))
-        assert result == RelativeReference(levels_up=2, path=())
+        assert result == RelativeReference(de_bruijn_index=2, path=())
 
     def test_curdir_returns_empty_parts(self) -> None:
         result = resource_reference_from_pure_path(PurePath("."))
-        assert result == RelativeReference(levels_up=0, path=())
+        assert result == RelativeReference(de_bruijn_index=0, path=())
 
     def test_absolute_path_unix_style(self) -> None:
         result = resource_reference_from_pure_path(PurePath("/absolute/path"))
@@ -82,8 +82,8 @@ class TestResourceReferenceFromPurePath:
 
     def test_empty_relative_path(self) -> None:
         result = resource_reference_from_pure_path(PurePath(""))
-        assert result == RelativeReference(levels_up=0, path=())
+        assert result == RelativeReference(de_bruijn_index=0, path=())
 
     def test_relative_path_with_pardir_then_parts(self) -> None:
         result = resource_reference_from_pure_path(PurePath("../../foo/bar/baz"))
-        assert result == RelativeReference(levels_up=2, path=("foo", "bar", "baz"))
+        assert result == RelativeReference(de_bruijn_index=2, path=("foo", "bar", "baz"))

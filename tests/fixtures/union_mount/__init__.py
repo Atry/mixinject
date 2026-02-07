@@ -5,9 +5,9 @@ from mixinject import extend, public, scope
 
 
 @extend(
-    R(levels_up=0, path=("branch0",)),
-    R(levels_up=0, path=("branch1",)),
-    R(levels_up=0, path=("branch2",)),
+    R(de_bruijn_index=0, path=("branch0",)),
+    R(de_bruijn_index=0, path=("branch1",)),
+    R(de_bruijn_index=0, path=("branch2",)),
 )
 @public
 @scope

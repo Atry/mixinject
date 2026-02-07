@@ -61,7 +61,7 @@ class TestLexicalReference:
         # "target" is found as property → full path returned
         resolved_bases = inner_symbol.resolved_bases
         assert len(resolved_bases) == 1
-        assert resolved_bases[0].levels_up == 0
+        assert resolved_bases[0].de_bruijn_index == 0
         assert resolved_bases[0].path == ("target", "foo")
 
     def test_lexical_reference_not_found_raises_lookup_error(self) -> None:

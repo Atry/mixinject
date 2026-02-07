@@ -233,9 +233,9 @@ class Mixin(HasDict):
         :return: The target Mixin (call .evaluated for actual value).
         """
         # Only use sibling dependency attributes when BOTH conditions are met:
-        # 1. levels_up == 0 (same scope dependency)
+        # 1. de_bruijn_index == 0 (same scope dependency)
         # 2. lexical_outer is self.outer (we are a direct child, not a super mixin)
-        if ref.levels_up == 0 and self.lexical_outer is self.outer:
+        if ref.de_bruijn_index == 0 and self.lexical_outer is self.outer:
             # Direct child with same-scope dependency: use getattr
             # Sibling dependencies are stored as attributes on the Mixin instance
             attr_name = ref.target_symbol.attribute_name
@@ -325,7 +325,7 @@ class Mixin(HasDict):
 
         IMPORTANT: _sibling_dependencies is ONLY valid for direct children
         (where lexical_outer is self.outer). Super mixins have a different
-        lexical_outer and their levels_up=0 dependencies refer to siblings in
+        lexical_outer and their de_bruijn_index=0 dependencies refer to siblings in
         the BASE scope, not our scope. They must always resolve via navigation.
 
         This mirrors V1's Resource.evaluated logic exactly.
