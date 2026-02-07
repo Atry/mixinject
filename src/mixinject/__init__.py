@@ -619,7 +619,7 @@ class Symbol(ABC):
 class Nested:
     """Represents a nested symbol that hasn't resolved its definitions yet."""
 
-    outer: "MixinSymbol"
+    lexical_outer: "MixinSymbol"
     key: Hashable
 
 
@@ -809,11 +809,11 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     )
 
     @property
-    def outer(self) -> "MixinSymbol | OuterSentinel":
+    def lexical_outer(self) -> "MixinSymbol | OuterSentinel":
         """Get the outer symbol, inferred from origin."""
         match self.origin:
-            case Nested(outer=outer):
-                return outer
+            case Nested(lexical_outer=lexical_outer):
+                return lexical_outer
             case _:
                 return OuterSentinel.ROOT
 
@@ -833,9 +833,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         current: MixinSymbol | OuterSentinel = self
         while isinstance(current, MixinSymbol):
             match current.origin:
-                case Nested(outer=outer, key=key):
+                case Nested(lexical_outer=lexical_outer, key=key):
                     segments.append(key)
-                    current = outer
+                    current = lexical_outer
                 case _:
                     break
         segments.reverse()
@@ -859,10 +859,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         Inherited definitions should be accessed via ``strict_super_indices``.
         """
         match self.origin:
-            case Nested(outer=outer, key=key):
+            case Nested(lexical_outer=lexical_outer, key=key):
                 return tuple(
                     inner_def
-                    for definition in outer.definitions
+                    for definition in lexical_outer.definitions
                     if isinstance(definition, ScopeDefinition)
                     for inner_def in (definition.get(key) or ())
                 )
@@ -950,7 +950,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 de_bruijn_index = 0
                 current: MixinSymbol = self
                 while True:
-                    match current.outer:
+                    match current.lexical_outer:
                         case OuterSentinel.ROOT:
                             break
                         case MixinSymbol() as outer_symbol:
@@ -969,7 +969,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 current: MixinSymbol = self
 
                 while True:
-                    match current.outer:
+                    match current.lexical_outer:
                         case OuterSentinel.ROOT:
                             raise LookupError(
                                 f"LexicalReference '{first_segment}' not found"
@@ -983,7 +983,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                             # Silently skipping would be surprising behavior for users
                             if is_own_property and levels_up >= 1:
                                 child_symbol = outer_symbol.get(first_segment)
-                                if child_symbol is not None and not child_symbol.is_public:
+                                if (
+                                    child_symbol is not None
+                                    and not child_symbol.is_public
+                                ):
                                     raise LookupError(
                                         f"Cannot resolve '{first_segment}': resource is not marked "
                                         f"as @public and is not accessible from nested scopes"
@@ -1002,7 +1005,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 current: MixinSymbol = self
 
                 while True:
-                    match current.outer:
+                    match current.lexical_outer:
                         case OuterSentinel.ROOT:
                             raise LookupError(f"FixtureReference '{name}' not found")
                         case MixinSymbol() as outer_symbol:
@@ -1014,7 +1017,8 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                                 # Silently skipping would be surprising behavior for users
                                 child_symbol = outer_symbol.get(name)
                                 is_private = (
-                                    child_symbol is not None and not child_symbol.is_public
+                                    child_symbol is not None
+                                    and not child_symbol.is_public
                                 )
                                 if is_private and levels_up >= 1:
                                     raise LookupError(
@@ -1037,7 +1041,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 current: MixinSymbol = self
 
                 while True:
-                    match current.outer:
+                    match current.lexical_outer:
                         case OuterSentinel.ROOT:
                             raise LookupError(
                                 f"QualifiedThisReference: scope '{self_name}' not found"
@@ -1056,14 +1060,14 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Resolve hashable path to MixinSymbol path at compile-time
         # Navigate to the starting point for path resolution
         start_symbol: MixinSymbol = self
-        match start_symbol.outer:
+        match start_symbol.lexical_outer:
             case OuterSentinel.ROOT:
                 pass
             case MixinSymbol() as outer_symbol:
                 start_symbol = outer_symbol
 
         for _ in range(levels_up):
-            match start_symbol.outer:
+            match start_symbol.lexical_outer:
                 case OuterSentinel.ROOT:
                     raise ValueError(
                         f"Cannot navigate up {levels_up} levels: reached root"
@@ -1107,7 +1111,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         """
         current: MixinSymbol = self
         for level in range(reference.levels_up):
-            match current.outer:
+            match current.lexical_outer:
                 case OuterSentinel.ROOT:
                     raise ValueError(
                         f"Cannot navigate up {reference.levels_up} levels: "
@@ -1193,7 +1197,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             raise KeyError(key)
 
         # Use Nested to create child symbol with lazy definition resolution
-        compiled_symbol = MixinSymbol(origin=Nested(outer=self, key=key))
+        compiled_symbol = MixinSymbol(origin=Nested(lexical_outer=self, key=key))
 
         # If definitions is empty and no bases from super, key doesn't exist
         if not compiled_symbol.definitions and not compiled_symbol.strict_super_indices:
@@ -1218,10 +1222,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     def de_bruijn_index(self) -> int:
         """Return the de_bruijn_index of this symbol in the scope hierarchy.
 
-        Root symbols (outer=OuterSentinel.ROOT) have de_bruijn_index 0.
+        Root symbols (lexical_outer=OuterSentinel.ROOT) have de_bruijn_index 0.
         Nested symbols have de_bruijn_index = outer.de_bruijn_index + 1.
         """
-        match self.outer:
+        match self.lexical_outer:
             case OuterSentinel.ROOT:
                 return 0
             case MixinSymbol() as outer_symbol:
@@ -1369,7 +1373,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     @cached_property
     def union_indices(self) -> Mapping["MixinSymbol", int]:
         """Collect base_indices from outer's strict super symbols."""
-        match (self.outer, self.key):
+        match (self.lexical_outer, self.key):
             case (MixinSymbol() as outer_scope, key) if not isinstance(
                 key, KeySentinel
             ):
@@ -1385,7 +1389,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Only symbols with definitions have bases to resolve
         if not self.definitions:
             return {}
-        match self.outer:
+        match self.lexical_outer:
             case MixinSymbol():
                 return {
                     resolved_reference.target_symbol: NestedSymbolIndex(
@@ -1408,7 +1412,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Only symbols with definitions have bases to resolve
         if not self.definitions:
             return {}
-        match self.outer:
+        match self.lexical_outer:
             case MixinSymbol():
                 return {
                     symbol: (
@@ -1801,7 +1805,7 @@ class FunctionalMergerSymbol(
         """Compiled function for V2 that takes Mixin and returns the aggregation function."""
         key = self.symbol.key
         assert isinstance(key, str), f"Merger key must be a string, got {type(key)}"
-        match self.symbol.outer:
+        match self.symbol.lexical_outer:
             case OuterSentinel.ROOT:
                 raise ValueError("Root symbols do not have compiled functions")
             case MixinSymbol() as outer_symbol:
@@ -1812,9 +1816,7 @@ class FunctionalMergerSymbol(
     def bind(
         self, mixin: "runtime.Mixin"
     ) -> "runtime.FunctionalMerger[TPatch_contra, TResult_co]":
-        return runtime.FunctionalMerger(
-            evaluator_getter=self, mixin=mixin
-        )
+        return runtime.FunctionalMerger(evaluator_getter=self, mixin=mixin)
 
     def get_same_scope_dependencies(self) -> "Sequence[MixinSymbol]":
         return _get_same_scope_dependencies_from_function(
@@ -1844,7 +1846,7 @@ class EndofunctionMergerSymbol(
         """Compiled function for V2 that takes Mixin and returns the base value."""
         key = self.symbol.key
         assert isinstance(key, str), f"Resource key must be a string, got {type(key)}"
-        match self.symbol.outer:
+        match self.symbol.lexical_outer:
             case OuterSentinel.ROOT:
                 raise ValueError("Root symbols do not have compiled functions")
             case MixinSymbol() as outer_scope:
@@ -1854,12 +1856,8 @@ class EndofunctionMergerSymbol(
                     key,
                 )
 
-    def bind(
-        self, mixin: "runtime.Mixin"
-    ) -> "runtime.EndofunctionMerger[TResult]":
-        return runtime.EndofunctionMerger(
-            evaluator_getter=self, mixin=mixin
-        )
+    def bind(self, mixin: "runtime.Mixin") -> "runtime.EndofunctionMerger[TResult]":
+        return runtime.EndofunctionMerger(evaluator_getter=self, mixin=mixin)
 
     def get_same_scope_dependencies(self) -> "Sequence[MixinSymbol]":
         return _get_same_scope_dependencies_from_function(
@@ -1883,7 +1881,7 @@ class SinglePatcherSymbol(PatcherSymbol[TPatch_co], Generic[TPatch_co]):
         """Compiled function for V2 that takes Mixin and returns the patch value."""
         key = self.symbol.key
         assert isinstance(key, str), f"Patch key must be a string, got {type(key)}"
-        match self.symbol.outer:
+        match self.symbol.lexical_outer:
             case OuterSentinel.ROOT:
                 raise ValueError("Root symbols do not have compiled functions")
             case MixinSymbol() as outer_scope:
@@ -1893,12 +1891,8 @@ class SinglePatcherSymbol(PatcherSymbol[TPatch_co], Generic[TPatch_co]):
                     key,
                 )
 
-    def bind(
-        self, mixin: "runtime.Mixin"
-    ) -> "runtime.SinglePatcher[TPatch_co]":
-        return runtime.SinglePatcher(
-            evaluator_getter=self, mixin=mixin
-        )
+    def bind(self, mixin: "runtime.Mixin") -> "runtime.SinglePatcher[TPatch_co]":
+        return runtime.SinglePatcher(evaluator_getter=self, mixin=mixin)
 
     def get_same_scope_dependencies(self) -> "Sequence[MixinSymbol]":
         return _get_same_scope_dependencies_from_function(
@@ -1922,7 +1916,7 @@ class MultiplePatcherSymbol(PatcherSymbol[TPatch_co], Generic[TPatch_co]):
         """Compiled function for V2 that takes Mixin and returns the patch values."""
         key = self.symbol.key
         assert isinstance(key, str), f"Patch key must be a string, got {type(key)}"
-        match self.symbol.outer:
+        match self.symbol.lexical_outer:
             case OuterSentinel.ROOT:
                 raise ValueError("Root symbols do not have compiled functions")
             case MixinSymbol() as outer_symbol:
@@ -1932,12 +1926,8 @@ class MultiplePatcherSymbol(PatcherSymbol[TPatch_co], Generic[TPatch_co]):
                     key,
                 )
 
-    def bind(
-        self, mixin: "runtime.Mixin"
-    ) -> "runtime.MultiplePatcher[TPatch_co]":
-        return runtime.MultiplePatcher(
-            evaluator_getter=self, mixin=mixin
-        )
+    def bind(self, mixin: "runtime.Mixin") -> "runtime.MultiplePatcher[TPatch_co]":
+        return runtime.MultiplePatcher(evaluator_getter=self, mixin=mixin)
 
     def get_same_scope_dependencies(self) -> "Sequence[MixinSymbol]":
         return _get_same_scope_dependencies_from_function(
@@ -2202,7 +2192,9 @@ class PackageScopeDefinition(ObjectScopeDefinition):
                         )
                     else:
                         definitions.append(
-                            ObjectScopeDefinition(bases=(), is_public=self.is_public, underlying=submod)
+                            ObjectScopeDefinition(
+                                bases=(), is_public=self.is_public, underlying=submod
+                            )
                         )
             except ImportError:
                 pass
@@ -2528,7 +2520,9 @@ def extern(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
 
     empty_patches_provider.__signature__ = sig  # type: ignore[attr-defined]
 
-    return MultiplePatcherDefinition(bases=(), is_public=False, function=empty_patches_provider)
+    return MultiplePatcherDefinition(
+        bases=(), is_public=False, function=empty_patches_provider
+    )
 
 
 def resource(
@@ -2647,7 +2641,7 @@ def _get_param_resolved_reference(
                 path=(param_name,),
                 target_symbol=target_symbol,
             )
-        match current.outer:
+        match current.lexical_outer:
             case OuterSentinel.ROOT:
                 return RelativeReferenceSentinel.NOT_FOUND
             case MixinSymbol() as outer_scope:
@@ -2675,7 +2669,7 @@ def _get_same_scope_dependencies_from_function(
     :param symbol: The MixinSymbol that owns this function (for same-name skip).
     :return: Tuple of MixinSymbols that are dependencies from the same scope.
     """
-    outer = symbol.outer
+    outer = symbol.lexical_outer
 
     # Only process if we have a parent scope (MixinSymbol) to look up dependencies
     if not isinstance(outer, MixinSymbol):
@@ -2693,10 +2687,10 @@ def _get_same_scope_dependencies_from_function(
         # Mirrors _compile_function_with_mixin
         if param.name == symbol.key:
             # Same-name: search from outer.outer, add 1 to levels_up
-            if isinstance(outer.outer, OuterSentinel):
+            if isinstance(outer.lexical_outer, OuterSentinel):
                 # Same-name at root level - not a sibling dependency
                 continue
-            search_symbol = outer.outer
+            search_symbol = outer.lexical_outer
             extra_levels = 1
         else:
             # Normal: search from outer
@@ -2748,7 +2742,7 @@ def _compile_function_with_mixin(
     ) -> tuple[str, ResolvedReference, int]:
         if parameter.name == name:
             # Same-name dependency: start search from outer_symbol.outer (lexical)
-            match outer_symbol.outer:
+            match outer_symbol.lexical_outer:
                 case OuterSentinel.ROOT:
                     raise ValueError(
                         f"Same-name dependency '{name}' at root level is not allowed"
@@ -2888,14 +2882,10 @@ class ResolvedReference:
         :param lexical_outer: The lexical outer Mixin of the caller.
         :return: The resolved Mixin (call .evaluated for actual value).
         """
-        # Start from outer.outer (the parent scope where we search)
-        if isinstance(outer.outer, runtime.Mixin):
-            current: runtime.Mixin = outer.outer
-        else:
-            current = outer  # Root case: stay at outer
+        current = outer.outer
 
         # Traverse up the lexical scope chain
-        current_lexical: runtime.Mixin = lexical_outer
+        current_lexical = lexical_outer
         for _ in range(self.levels_up):
             assert isinstance(current_lexical.outer, runtime.Mixin)
             current = current_lexical.outer
@@ -2905,20 +2895,18 @@ class ResolvedReference:
         # At this point, current is a Mixin that evaluates to a Scope
         for key in self.path:
             scope = current.evaluated
-            assert isinstance(scope, runtime.Scope), (
-                f"Expected Scope during navigation, got {type(scope).__name__}"
-            )
+            assert isinstance(
+                scope, runtime.Scope
+            ), f"Expected Scope during navigation, got {type(scope).__name__}"
 
             # Look up child by key in frozen _children
             child_symbol = scope.symbol.get(key)
             if child_symbol is None:
-                raise ValueError(
-                    f"Key {key!r} not found in scope {scope.symbol.key!r}"
-                )
+                raise ValueError(f"Key {key!r} not found in scope {scope.symbol.key!r}")
             # _children contains ALL mixins (including private) for internal navigation
-            assert child_symbol in scope._children, (
-                f"Symbol {child_symbol.key!r} not in _children (internal error)"
-            )
+            assert (
+                child_symbol in scope._children
+            ), f"Symbol {child_symbol.key!r} not in _children (internal error)"
             current = scope._children[child_symbol]
 
         return current

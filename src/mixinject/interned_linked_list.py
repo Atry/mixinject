@@ -28,8 +28,8 @@ class ScopeSymbol(ABC, Generic[T]):
     Example::
 
         >>> root = RootScopeSymbol()
-        >>> graph1 = ChildScopeSymbol(head=1, outer=root)
-        >>> graph2 = ChildScopeSymbol(head=1, outer=root)
+        >>> graph1 = ChildScopeSymbol(head=1, lexical_outer=root)
+        >>> graph2 = ChildScopeSymbol(head=1, lexical_outer=root)
         >>> graph1 is graph2  # Same object due to interning within same root
         True
 
@@ -73,7 +73,7 @@ class ChildScopeSymbol(ScopeSymbol[T]):
     """
     .. todo:: Remove this field. It's legacy and useless now.
     """
-    outer: Final[ScopeSymbol[T]]
+    lexical_outer: Final[ScopeSymbol[T]]
     """
     .. todo:: Remove this todo since this field has been renamed to ``outer``.
     """
@@ -105,7 +105,7 @@ def _replace_init():
             return existing  # Return already-initialized frozen instance
 
         # Python then automatically calls:
-        # existing.__init__(head=..., outer=...)
+        # existing.__init__(head=..., lexical_outer=...)
         # This raises FrozenInstanceError because frozen instances
         # cannot have their attributes set again!
 
@@ -129,15 +129,15 @@ def _replace_init():
         cls: Type[ChildScopeSymbol[T]],
         *,
         head: T,
-        outer: ScopeSymbol[T],
+        lexical_outer: ScopeSymbol[T],
     ) -> ChildScopeSymbol[T]:
-        intern_pool = outer.intern_pool
+        intern_pool = lexical_outer.intern_pool
         existing = intern_pool.get(head)
         if existing is not None:
             return existing
         else:
             instance = super(ChildScopeSymbol, cls).__new__(cls)
-            original_init(instance, head=head, outer=outer)
+            original_init(instance, head=head, lexical_lexical_outer=lexical_outer)
             intern_pool[head] = instance
             return instance
 
