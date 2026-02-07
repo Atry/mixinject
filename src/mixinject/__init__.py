@@ -1222,8 +1222,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     def de_bruijn_index(self) -> int:
         """Return the de_bruijn_index of this symbol in the scope hierarchy.
 
-        Root symbols (lexical_outer=OuterSentinel.ROOT) have de_bruijn_index 0.
-        Nested symbols have de_bruijn_index = outer.de_bruijn_index + 1.
+        The de_bruijn_index represents the static nesting depth of the symbol:
+        - Root symbols (lexical_outer=OuterSentinel.ROOT) have de_bruijn_index 0.
+        - Nested symbols have de_bruijn_index = lexical_outer.de_bruijn_index + 1.
         """
         match self.lexical_outer:
             case OuterSentinel.ROOT:
@@ -2871,20 +2872,32 @@ class ResolvedReference:
         lexical_outer: "runtime.Mixin",
     ) -> "runtime.Mixin":
         """
-        Get the target Mixin by navigating from outer using V2 semantics.
+        Get the target Mixin by navigating from outer using V2 semantics with late-binding.
+
+        Algorithm
+        =========
+
+        The resolution algorithm achieves late-binding by following two chains in parallel:
+        1. The **Runtime Chain** (via ``outer``): Follows the actual parent scope instances.
+        2. The **Static Chain** (via ``lexical_outer``): Follows the compile-time scope prototypes.
+
+        To resolve a reference with ``de_bruijn_index = n``:
+        1. Start with ``current = outer.outer`` (the runtime parent scope).
+        2. Iterate ``n`` times:
+           - Use the static prototype (``current_lexical.outer``) to determine the next
+             runtime parent to move to.
+           - This ensures that if a resource in a base scope refers to an outer resource,
+             it resolves to the definition in the *actual* derived scope at runtime.
 
         Uses key-based lookup at runtime to support merged scopes correctly.
 
-        NOTE: This only handles non-local resources via navigation. Local resources
-        at the same scope level are accessed via _sibling_dependencies, not navigation.
-
-        :param outer: The Mixin from which navigation starts.
-        :param lexical_outer: The lexical outer Mixin of the caller.
-        :return: The resolved Mixin (call .evaluated for actual value).
+        :param outer: The Mixin instance from which navigation starts.
+        :param lexical_outer: The lexical outer Mixin (static prototype context).
+        :return: The resolved Mixin instance.
         """
         current = outer.outer
 
-        # Traverse up the lexical scope chain
+        # Traverse up the lexical scope chain with late-binding
         current_lexical = lexical_outer
         for _ in range(self.de_bruijn_index):
             assert isinstance(current_lexical.outer, runtime.Mixin)
@@ -2918,52 +2931,35 @@ class LexicalReference:
     """
     A lexical reference following MIXIN spec resolution algorithm.
 
-    Resolution starts from self.lexical_outer (not self), so self[path[0]] is never resolved.
-    This prevents infinite recursion when a symbol references its own name.
+    This reference type implements **lexical scoping with late-binding**.
 
-    At each level (self.lexical_outer, self.lexical_outer.lexical_outer, ...), check:
+    Symbol Level (Static Analysis)
+    ==============================
 
+    Resolution starts from ``self.lexical_outer`` (not self). This prevents infinite
+    recursion when a symbol references its own name. The algorithm traverses up the
+    static hierarchy (``lexical_outer``, ``lexical_outer.lexical_outer``, ...) to
+    calculate the ``de_bruijn_index`` (number of levels to go up).
+
+    Runtime Level (Late Binding)
+    ============================
+
+    The calculated index is resolved at runtime through the ``outer`` chain. This
+    provides late-binding semantics: a reference defined in a base scope will resolve
+    to the definition in the actual derived scope if it has been overridden.
+
+    Algorithm Steps (at Symbol Layer)
+    ---------------------------------
+
+    At each static level (``lexical_outer``, ...):
     1. Is path[0] BOTH a property AND the scope's key? → raise ValueError (ambiguous)
     2. Is path[0] a property of that level? → early binding, return full path
     3. Is path[0] == that level's key? → self-reference, return path[1:]
-    4. Recurse to outer
-
-    Note: If a scope has a property with the same name as its key, this is ambiguous
-    and raises ValueError. This strict behavior preserves future compatibility.
+    4. Recurse to static outer
 
     The returned RelativeReference has:
-
-    - de_bruijn_index: 0 means resolve from self.lexical_outer, 1 means self.lexical_outer.lexical_outer, etc.
+    - de_bruijn_index: Static levels to go up.
     - path: For property match, returns full path. For self-reference, returns path[1:].
-
-    Examples:
-        From symbol "inner" in scope A where A contains "target"::
-
-            LexicalReference(path=("target",)):
-            - Level 0 (A = self.lexical_outer): "target" in A? YES
-            - → RelativeReference(de_bruijn_index=0, path=("target",))
-
-        From symbol "inner" in scope A where A.key == "A"::
-
-            LexicalReference(path=("A", "foo")):
-            - Level 0 (A = self.lexical_outer): "A" in A? NO, "A" == A.key? YES
-            - → RelativeReference(de_bruijn_index=0, path=("foo",))  # path[1:], first segment dropped
-
-        From symbol "foo" in scope Container where Container["foo"] exists::
-
-            LexicalReference(path=("foo",)):
-            - Level 0 (Container = self.lexical_outer): "foo" in Container? YES
-            - → RelativeReference(de_bruijn_index=0, path=("foo",))
-            - Note: self["foo"] would be the symbol itself, but we start from self.lexical_outer,
-              so Container["foo"] is found (not self).
-
-        Ambiguous case (scope A has A.key == "A" AND A["A"] exists)::
-
-            LexicalReference(path=("A", "bar")):
-            - Level 0 (A = self.lexical_outer): "A" in A? YES, "A" == A.key? YES
-            - → raises ValueError: ambiguous reference
-            - Note: Both property and self-reference match. This is disallowed to preserve
-              future compatibility for choosing either semantic.
     """
 
     path: Final[tuple[Hashable, ...]]

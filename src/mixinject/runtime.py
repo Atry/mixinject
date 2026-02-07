@@ -178,7 +178,7 @@ class Mixin(HasDict):
             match nested_index.primary_index:
                 case OuterBaseIndex(index=index):
                     # Get the i-th super mixin from our lexical outer
-                    # (index is relative to symbol.outer's supers, which is
+                    # (index is relative to symbol.lexical_outer's supers, which is
                     # isomorphic to lexical_outer's supers)
                     assert isinstance(self.outer, Mixin)
                     base_mixin = self.lexical_outer.get_super(index)
