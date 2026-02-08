@@ -1191,3 +1191,18 @@ logger.debug("read returned %d bytes: %r", len(data), data[:100])
 # Bad - redundant manual prefix
 logger.debug("[read] read returned %d bytes: %r", len(data), data[:100])
 ```
+
+## Snapshot Testing with Syrupy
+
+1. Do not assert variables against hard-coded literal constants directly; instead assert them against a Syrupy snapshot and always supply an explicit snapshot name via name="<descriptive_name>" to keep snapshots readable.
+2. When a Syrupy snapshot assertion fails, first re-run the test suite with --snapshot-update to regenerate the snapshot, then you MUST review the updated snapshot contents to confirm they match the intended change, then re-run the tests without --snapshot-update to ensure the updated snapshot passes reproducibly.
+3. Do not use a snapshot when comparing a value to another variable produced within the same test (variable-to-variable logic) or when asserting a trivially obvious outcome such as a boolean success flag that should simply be True.
+
+```python
+from syrupy.assertion import SnapshotAssertion
+
+def test_compute(snapshot: SnapshotAssertion):
+	result = expensive_or_complex_compute()
+	# Instead of: assert result == {"status": "ok", "value": 3}
+	assert result == snapshot(name="compute_result")
+```
