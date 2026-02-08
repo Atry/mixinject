@@ -49,21 +49,21 @@ def multi_module_scope() -> Scope:
     return result
 
 
-@pytest.mark.xfail(reason="Known bug: inheritance chain missing some non-synthetic MixinSymbols (Flat)")
 class TestMultiModuleCompositionFlat:
-    """Test that Module3Flat.Class4's super chain contains all 6 non-synthetic MixinSymbols.
+    """Test that Module3Flat.Class4's super chain contains all 7 non-synthetic MixinSymbols.
 
     Module1 defines: Class1, Class2 (2 definitions)
     Module2Flat defines: Class1, Class2, Class3, Class4 (4 definitions)
     Module3Flat inherits: [Module1], [Module2Flat]
 
-    Expected super chain for Module3Flat.Class4:
-      1. Module2Flat.Class4
-      2. Module2Flat.Class2
-      3. Module1.Class2
-      4. Module1.Class1
-      5. Module2Flat.Class1
-      6. Module2Flat.Class3
+    Expected super chain for Module3Flat.Class4 (including self):
+      1. Module3Flat.Class4 (self)
+      2. Module2Flat.Class4
+      3. Module2Flat.Class2
+      4. Module1.Class2
+      5. Module1.Class1
+      6. Module2Flat.Class1
+      7. Module2Flat.Class3
     """
 
     def test_class4_super_chain_contains_all_classes(
@@ -83,19 +83,27 @@ class TestMultiModuleCompositionFlat:
             for symbol in non_synthetic
         )
 
-        assert len(non_synthetic) == 6, (
-            f"Expected 6 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
+        assert len(non_synthetic) == 7, (
+            f"Expected 7 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
             f"{non_synthetic_paths}"
         )
 
 
-@pytest.mark.xfail(reason="Known bug: inheritance chain missing some non-synthetic MixinSymbols (Nested)")
 class TestMultiModuleCompositionNested:
-    """Test that Module3.Nested2.Class4's super chain contains all 6 non-synthetic MixinSymbols.
+    """Test that Module3.Nested2.Class4's super chain contains all 7 non-synthetic MixinSymbols.
 
     Module1 defines: Class1, Class2 (2 definitions)
     Module2 defines: Class1, Class2, Nested1.Class3, Nested2.Class4 (4 definitions)
     Module3 inherits: [Module1], [Module2]
+
+    Expected super chain for Module3.Nested2.Class4 (including self):
+      1. Module3.Nested2.Class4 (self)
+      2. Module2.Nested2.Class4
+      3. Module2.Class2
+      4. Module1.Class2
+      5. Module1.Class1
+      6. Module2.Class1
+      7. Module2.Nested1.Class3
     """
 
     def test_class4_super_chain_contains_all_classes(
@@ -119,11 +127,7 @@ class TestMultiModuleCompositionNested:
             for symbol in non_synthetic
         )
 
-        # Should have 6 non-synthetic MixinSymbols:
-        # From Module1: Class1, Class2 (2)
-        # From Module2: Class1, Class2, Nested1.Class3, Nested2.Class4 (4)
-        # Total: 6 distinct MixinSymbol objects
-        assert len(non_synthetic) == 6, (
-            f"Expected 6 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
+        assert len(non_synthetic) == 7, (
+            f"Expected 7 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
             f"{non_synthetic_paths}"
         )

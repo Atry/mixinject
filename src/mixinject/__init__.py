@@ -1457,10 +1457,19 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         return iter(self.strict_super_indices.keys())
 
     @final
-    @cached_property
-    def union_indices(self) -> Mapping["MixinSymbol", int]:
-        """Collect base_indices from outer's strict super symbols."""
-        match (self.outer, self.key):
+    def union_indices(
+        self,
+        context: "MixinSymbol",
+    ) -> Mapping["MixinSymbol", int]:
+        """Collect base_indices from context's outer's strict super symbols.
+
+        The ``context`` parameter determines which scope's outer is used
+        for collecting union bases. For ``Module3.Nested2``, using
+        ``context.outer = Module3`` instead of ``self.outer = Module2``
+        ensures we traverse ``Module3``'s strict super chain (which includes
+        both Module1 and Module2).
+        """
+        match (context.outer, self.key):
             case (MixinSymbol() as outer_scope, key) if not isinstance(
                 key, KeySentinel
             ):
@@ -1558,14 +1567,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         Module3Flat = [Module1] + [Module2Flat], a reference [Class2] from
         Module2Flat.Class4 resolves to Module3Flat.Class2 (the union) rather
         than Module2Flat.Class2 (the original scope).
-
-        Union base indices (``linearized_union_indices``) are NOT parameterized
-        because union bases may be in different subtrees where the structural
-        chain diverges from the composing scope.
         """
         return ChainMap(
             self.linearized_base_indices(context),
-            self.linearized_union_indices,
+            self.linearized_union_indices(context),
         )
 
     @final
@@ -1612,8 +1617,11 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         """
         return {symbol: index for index, symbol in enumerate(self.strict_super_indices)}
 
-    @cached_property
-    def union_own_indices(self):
+    @final
+    def union_own_indices(
+        self,
+        context: "MixinSymbol",
+    ):
         """
         Index mapping for outer base classes themselves.
 
@@ -1625,36 +1633,44 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 primary_index=OuterBaseIndex(index=primary_index),
                 secondary_index=SymbolIndexSentinel.OWN,
             )
-            for symbol, primary_index in self.union_indices.items()
+            for symbol, primary_index in self.union_indices(context).items()
             if symbol.definitions  # Only include symbols with definitions
         }
 
     @final
-    @cached_property
-    def linearized_union_base_indices(self):
+    def linearized_union_base_indices(
+        self,
+        context: "MixinSymbol",
+    ):
         """
         Index mapping for strict super symbols of outer base classes.
 
         Maps each strict super symbol from outer base classes to its ``NestedSymbolIndex``
         with ``OuterBaseIndex`` as primary and the linearized index as secondary.
 
-        Each union base computes its strict super using itself as context
-        (via ``strict_super_indices``), because union bases may be in different
-        subtrees where the structural chain diverges from the composing scope.
+        Each union base re-computes its strict super indices using the given
+        ``context``, so that base references (extend) resolve in the composing
+        scope rather than the original definition site. This enables C++-template-like
+        specialization: ``[Class2]`` inside ``Module2Flat.Class4`` resolves to
+        ``Module3Flat.Class2`` (the union) when composed as ``Module3Flat = [Module1] + [Module2Flat]``.
         """
         return {
             symbol: NestedSymbolIndex(
                 primary_index=OuterBaseIndex(index=primary_index),
                 secondary_index=secondary_index,
             )
-            for base, primary_index in self.union_indices.items()
-            for secondary_index, symbol in enumerate(base.strict_super_indices)
+            for base, primary_index in self.union_indices(context).items()
+            for secondary_index, symbol in enumerate(
+                base.strict_super_indices
+            )
             if symbol.definitions  # Only include symbols with definitions
         }
 
     @final
-    @cached_property
-    def linearized_union_indices(self):
+    def linearized_union_indices(
+        self,
+        context: "MixinSymbol",
+    ):
         """
         Index mapping for outer base classes (common to both subclasses).
 
@@ -1665,7 +1681,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         Uses ``ChainMap`` to avoid dictionary unpacking. Outer base classes take
         precedence over their strict super symbols (first map in ChainMap wins on key collision).
         """
-        return ChainMap(self.union_own_indices, self.linearized_union_base_indices)
+        return ChainMap(self.union_own_indices(context), self.linearized_union_base_indices(context))
 
 
 class OuterSentinel(Enum):
