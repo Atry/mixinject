@@ -1463,15 +1463,17 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             return {}
         match self.outer:
             case MixinSymbol():
+                context_outer = context.outer
+                assert isinstance(context_outer, MixinSymbol)
                 return {
-                    resolved_reference.get_symbol(context): NestedSymbolIndex(
+                    resolved_reference.get_symbol(context_outer): NestedSymbolIndex(
                         primary_index=OwnBaseIndex(index=own_base_index),
                         secondary_index=SymbolIndexSentinel.OWN,
                     )
                     for own_base_index, resolved_reference in enumerate(
                         self.resolved_bases
                     )
-                    if resolved_reference.get_symbol(context).definitions
+                    if resolved_reference.get_symbol(context_outer).definitions
                 }
             case _:
                 return {}
@@ -1486,6 +1488,8 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             return {}
         match self.outer:
             case MixinSymbol():
+                context_outer = context.outer
+                assert isinstance(context_outer, MixinSymbol)
                 return {
                     symbol: (
                         NestedSymbolIndex(
@@ -1498,7 +1502,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                     )
                     # Linearized strict super symbols of the extend reference
                     for secondary_index, symbol in enumerate(
-                        resolved_reference.get_symbol(context).generate_strict_super()
+                        resolved_reference.get_symbol(
+                            context_outer
+                        ).generate_strict_super()
                     )
                     if symbol.definitions  # Only include symbols with definitions
                 }
@@ -2720,7 +2726,8 @@ def public(definition: TPublicDefinition) -> TPublicDefinition:
 
 
 def _get_param_resolved_reference(
-    param_name: str, outer_symbol: MixinSymbol, origin_symbol: MixinSymbol
+    param_name: str,
+    outer_symbol: MixinSymbol,
 ) -> "ResolvedReference | RelativeReferenceSentinel":
     """
     Get a ResolvedReference to a parameter using lexical scoping (MixinSymbol chain).
@@ -2745,7 +2752,7 @@ def _get_param_resolved_reference(
                 de_bruijn_index=de_bruijn_index,
                 path=(param_name,),
                 target_symbol_bound=target_symbol,
-                origin_symbol=origin_symbol.outer,
+                origin_symbol=outer_symbol,
             )
         match current.outer:
             case OuterSentinel.ROOT:
@@ -2804,7 +2811,8 @@ def _get_same_scope_dependencies_from_function(
             extra_levels = 0
 
         resolved_reference = _get_param_resolved_reference(
-            param.name, search_symbol, origin_symbol=symbol
+            param.name,
+            search_symbol,
         )
         if resolved_reference is RelativeReferenceSentinel.NOT_FOUND:
             continue
@@ -2813,7 +2821,9 @@ def _get_same_scope_dependencies_from_function(
         effective_levels_up = resolved_reference.de_bruijn_index + extra_levels
         # Only include dependencies with de_bruijn_index=0 (same scope)
         if effective_levels_up == 0:
-            result.append(resolved_reference.get_symbol(symbol))
+            symbol_outer = symbol.outer
+            assert isinstance(symbol_outer, MixinSymbol)
+            result.append(resolved_reference.get_symbol(symbol_outer))
 
     return tuple(result)
 
@@ -2861,7 +2871,8 @@ def _compile_function_with_mixin(
                 case MixinSymbol() as search_symbol:
                     pass
             resolved_reference_or_sentinel = _get_param_resolved_reference(
-                parameter.name, search_symbol, origin_symbol=resource_symbol
+                parameter.name,
+                search_symbol,
             )
             match resolved_reference_or_sentinel:
                 case RelativeReferenceSentinel.NOT_FOUND:
@@ -2875,7 +2886,8 @@ def _compile_function_with_mixin(
         else:
             # Normal dependency
             resolved_reference_or_sentinel = _get_param_resolved_reference(
-                parameter.name, outer_symbol, origin_symbol=resource_symbol
+                parameter.name,
+                outer_symbol,
             )
             match resolved_reference_or_sentinel:
                 case RelativeReferenceSentinel.NOT_FOUND:
@@ -2994,23 +3006,26 @@ class ResolvedReference:
            starting from the stored ``origin_symbol``. This tracks the original definition site.
 
         Starting point:
-        - outer = ``symbol`` (the passed-in parameter, call-site symbol)
+        - outer = ``symbol`` (the passed-in parameter, should be the parent symbol)
         - lexical_outer = ``self.origin_symbol`` (stored definition-site symbol)
 
         Each step advances both chains independently:
         - ``current = current.outer`` (structural)
         - ``current_lexical = current_lexical.lexical_outer`` (lexical)
 
-        After ``de_bruijn_index + 1`` steps, navigate through ``path`` from ``current``.
+        After ``de_bruijn_index`` steps, navigate through ``path`` from ``current``.
 
         This gives NixOS module-style union mount semantics: same-named symbols
         in the composing scope are automatically brought in.
 
-        :param symbol: The MixinSymbol from which structural navigation starts.
+        :param symbol: The MixinSymbol from which structural navigation starts (should be the parent).
         :return: The resolved MixinSymbol.
         """
-        current: MixinSymbol | OuterSentinel = symbol.outer
-        current_lexical: MixinSymbol | OuterSentinel = self.origin_symbol
+        current = symbol
+        current_lexical = self.origin_symbol
+        assert current == current_lexical or (
+            current_lexical in current.strict_super_indices
+        )
 
         # Traverse de_bruijn_index times
         for _ in range(self.de_bruijn_index):
