@@ -1133,6 +1133,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             de_bruijn_index=de_bruijn_index,
             path=hashable_path,
             target_symbol_bound=current_symbol,
+            origin_symbol=self.outer,
         )
 
     def resolve_relative_reference(
@@ -1262,7 +1263,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 ),
                 None,
             )
-            lexical_outer = first_base_with_key if first_base_with_key is not None else self
+            lexical_outer = (
+                first_base_with_key if first_base_with_key is not None else self
+            )
 
         # Use Nested to create child symbol with lazy definition resolution
         compiled_symbol = MixinSymbol(
@@ -1337,8 +1340,6 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         return all(
             isinstance(definition, ScopeDefinition) for definition in all_definitions
         )
-
-    # V1 methods (mixin_type, get_mixin, __get__) removed - use V2 instead
 
     @cached_property
     def elected_merger_index(
@@ -1453,9 +1454,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 return {}
 
     @final
-    @cached_property
     def direct_base_indices(
         self,
+        context: "MixinSymbol",
     ) -> dict["MixinSymbol", NestedSymbolIndex]:
         # Only symbols with definitions have bases to resolve
         if not self.definitions:
@@ -1463,22 +1464,22 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         match self.outer:
             case MixinSymbol():
                 return {
-                    resolved_reference.get_symbol(self): NestedSymbolIndex(
+                    resolved_reference.get_symbol(context): NestedSymbolIndex(
                         primary_index=OwnBaseIndex(index=own_base_index),
                         secondary_index=SymbolIndexSentinel.OWN,
                     )
                     for own_base_index, resolved_reference in enumerate(
                         self.resolved_bases
                     )
-                    if resolved_reference.get_symbol(self).definitions
+                    if resolved_reference.get_symbol(context).definitions
                 }
             case _:
                 return {}
 
     @final
-    @cached_property
     def transitive_base_indices(
         self,
+        context: "MixinSymbol",
     ) -> dict["MixinSymbol", NestedSymbolIndex]:
         # Only symbols with definitions have bases to resolve
         if not self.definitions:
@@ -1497,7 +1498,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                     )
                     # Linearized strict super symbols of the extend reference
                     for secondary_index, symbol in enumerate(
-                        resolved_reference.get_symbol(self).generate_strict_super()
+                        resolved_reference.get_symbol(context).generate_strict_super()
                     )
                     if symbol.definitions  # Only include symbols with definitions
                 }
@@ -1505,9 +1506,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 return {}
 
     @final
-    @cached_property
     def linearized_base_indices(
         self,
+        context: "MixinSymbol",
     ):
         """
         Linearized indices for own bases (extend references) and their strict super symbols.
@@ -1519,12 +1520,35 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         Uses ``OwnBaseIndex`` to distinguish from outer base indices.
         """
         return ChainMap(
-            self.direct_base_indices,
-            self.transitive_base_indices,
+            self.direct_base_indices(context),
+            self.transitive_base_indices(context),
         )
 
     @final
-    @property
+    def _compute_strict_super_indices(
+        self,
+        context: "MixinSymbol",
+    ):
+        """
+        Compute strict super indices with the given context for base resolution.
+
+        The ``context`` parameter determines how base references are resolved:
+        references use ``get_symbol(context)`` so that in a composition like
+        Module3Flat = [Module1] + [Module2Flat], a reference [Class2] from
+        Module2Flat.Class4 resolves to Module3Flat.Class2 (the union) rather
+        than Module2Flat.Class2 (the original scope).
+
+        Union base indices (``linearized_union_indices``) are NOT parameterized
+        because union bases may be in different subtrees where the structural
+        chain diverges from the composing scope.
+        """
+        return ChainMap(
+            self.linearized_base_indices(context),
+            self.linearized_union_indices,
+        )
+
+    @final
+    @cached_property
     def strict_super_indices(
         self,
     ):
@@ -1556,11 +1580,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             Symbols without definitions (inherited-only) are excluded via
             ``if symbol.definitions`` checks in the underlying index mappings.
         """
-
-        return ChainMap(
-            self.linearized_base_indices,
-            self.linearized_union_indices,
-        )
+        return self._compute_strict_super_indices(self)
 
     @cached_property
     def strict_super_reverse_index(self) -> Mapping["MixinSymbol", int]:
@@ -1569,10 +1589,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         Used by Mixin.lexical_outer to find the corresponding super Mixin
         for a given symbol via ``self.outer.strict_super_mixins[index]``.
         """
-        return {
-            symbol: index
-            for index, symbol in enumerate(self.strict_super_indices)
-        }
+        return {symbol: index for index, symbol in enumerate(self.strict_super_indices)}
 
     @cached_property
     def union_own_indices(self):
@@ -1591,6 +1608,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             if symbol.definitions  # Only include symbols with definitions
         }
 
+    @final
     @cached_property
     def linearized_union_base_indices(self):
         """
@@ -1598,6 +1616,10 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
 
         Maps each strict super symbol from outer base classes to its ``NestedSymbolIndex``
         with ``OuterBaseIndex`` as primary and the linearized index as secondary.
+
+        Each union base computes its strict super using itself as context
+        (via ``strict_super_indices``), because union bases may be in different
+        subtrees where the structural chain diverges from the composing scope.
         """
         return {
             symbol: NestedSymbolIndex(
@@ -1609,10 +1631,9 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             if symbol.definitions  # Only include symbols with definitions
         }
 
+    @final
     @cached_property
-    def linearized_union_indices(
-        self,
-    ):
+    def linearized_union_indices(self):
         """
         Index mapping for outer base classes (common to both subclasses).
 
@@ -2699,7 +2720,7 @@ def public(definition: TPublicDefinition) -> TPublicDefinition:
 
 
 def _get_param_resolved_reference(
-    param_name: str, outer_symbol: MixinSymbol
+    param_name: str, outer_symbol: MixinSymbol, origin_symbol: MixinSymbol
 ) -> "ResolvedReference | RelativeReferenceSentinel":
     """
     Get a ResolvedReference to a parameter using lexical scoping (MixinSymbol chain).
@@ -2711,6 +2732,7 @@ def _get_param_resolved_reference(
 
     :param param_name: The name of the parameter to find.
     :param outer_symbol: The MixinSymbol to start searching from (lexical scope).
+    :param origin_symbol: The MixinSymbol where this reference originates (for lexical chain).
     :return: ResolvedReference with pre-resolved symbol describing how to reach the parameter,
              or RelativeReferenceSentinel.NOT_FOUND if not found.
     """
@@ -2723,6 +2745,7 @@ def _get_param_resolved_reference(
                 de_bruijn_index=de_bruijn_index,
                 path=(param_name,),
                 target_symbol_bound=target_symbol,
+                origin_symbol=origin_symbol.outer,
             )
         match current.outer:
             case OuterSentinel.ROOT:
@@ -2780,7 +2803,9 @@ def _get_same_scope_dependencies_from_function(
             search_symbol = outer
             extra_levels = 0
 
-        resolved_reference = _get_param_resolved_reference(param.name, search_symbol)
+        resolved_reference = _get_param_resolved_reference(
+            param.name, search_symbol, origin_symbol=symbol
+        )
         if resolved_reference is RelativeReferenceSentinel.NOT_FOUND:
             continue
 
@@ -2819,6 +2844,9 @@ def _compile_function_with_mixin(
         case keyword_params:
             has_positional = False
 
+    # The symbol that owns this resource (for origin tracking in ResolvedReference)
+    resource_symbol = outer_symbol[name]
+
     # Pre-compute ResolvedReferences for each dependency (lexical scoping)
     def compute_dependency_reference(
         parameter: Parameter,
@@ -2833,7 +2861,7 @@ def _compile_function_with_mixin(
                 case MixinSymbol() as search_symbol:
                     pass
             resolved_reference_or_sentinel = _get_param_resolved_reference(
-                parameter.name, search_symbol
+                parameter.name, search_symbol, origin_symbol=resource_symbol
             )
             match resolved_reference_or_sentinel:
                 case RelativeReferenceSentinel.NOT_FOUND:
@@ -2847,7 +2875,7 @@ def _compile_function_with_mixin(
         else:
             # Normal dependency
             resolved_reference_or_sentinel = _get_param_resolved_reference(
-                parameter.name, outer_symbol
+                parameter.name, outer_symbol, origin_symbol=resource_symbol
             )
             match resolved_reference_or_sentinel:
                 case RelativeReferenceSentinel.NOT_FOUND:
@@ -2935,16 +2963,20 @@ class ResolvedReference:
 
     The path uses Hashable keys for runtime navigation to support merged scopes.
     The target_symbol_bound provides compile-time type bound checking.
+    The origin_symbol records the definition-site symbol for lexical chain navigation.
     """
 
     de_bruijn_index: Final[int]
-    """Number of levels to go up in the lexical scope."""
+    """Number of levels to go up in the scope chain."""
 
     path: Final[tuple[Hashable, ...]]
     """Hashable path for runtime navigation (supports merged scopes)."""
 
     target_symbol_bound: Final["MixinSymbol"]
     """The final resolved MixinSymbol (for compile-time type bound checking)."""
+
+    origin_symbol: Final["MixinSymbol"]
+    """The symbol where this reference was defined (starting lexical_outer for navigation)."""
 
     def get_symbol(
         self,
@@ -2956,25 +2988,31 @@ class ResolvedReference:
         This is the compile-time counterpart of :meth:`get_mixin`. The algorithm
         follows two chains in parallel:
 
-        1. The **Structural Chain** (via ``outer``): The actual parent in the symbol tree.
-        2. The **Lexical Chain** (via ``lexical_outer``): The definition origin parent.
+        1. The **Structural Chain** (via ``outer``): Follows the actual parent in the symbol tree,
+           starting from the passed-in symbol. This stays in the composing scope.
+        2. The **Lexical Chain** (via ``lexical_outer``): Follows the definition origin chain,
+           starting from the stored ``origin_symbol``. This tracks the original definition site.
 
-        To resolve a reference with ``de_bruijn_index = n``:
+        Starting point:
+        - outer = ``symbol`` (the passed-in parameter, call-site symbol)
+        - lexical_outer = ``self.origin_symbol`` (stored definition-site symbol)
 
-        1. Start with ``current = symbol.outer`` (the structural parent symbol).
-        2. Iterate ``n`` times using ``lexical_outer.outer`` to guide traversal.
-        3. Navigate through ``path`` using ``__getitem__``.
+        Each step advances both chains independently:
+        - ``current = current.outer`` (structural)
+        - ``current_lexical = current_lexical.lexical_outer`` (lexical)
 
-        Isomorphic with :meth:`get_mixin`:
-        ``ref.get_symbol(mixin.symbol) is ref.get_mixin(mixin).symbol``
+        After ``de_bruijn_index + 1`` steps, navigate through ``path`` from ``current``.
 
-        :param symbol: The MixinSymbol from which navigation starts.
+        This gives NixOS module-style union mount semantics: same-named symbols
+        in the composing scope are automatically brought in.
+
+        :param symbol: The MixinSymbol from which structural navigation starts.
         :return: The resolved MixinSymbol.
         """
-        current = symbol.outer
+        current: MixinSymbol | OuterSentinel = symbol.outer
+        current_lexical: MixinSymbol | OuterSentinel = self.origin_symbol
 
-        # Traverse up the lexical scope chain
-        current_lexical = symbol.lexical_outer
+        # Traverse de_bruijn_index times
         for _ in range(self.de_bruijn_index):
             assert isinstance(current_lexical, MixinSymbol)
             current = current_lexical.outer
@@ -3014,12 +3052,18 @@ class ResolvedReference:
         :param outer: The Mixin instance from which navigation starts.
         :return: The resolved Mixin instance.
         """
+        # Start from outer directly (no initial step)
         current = outer.outer
 
-        # Traverse up the lexical scope chain with late-binding
-        current_lexical = outer.lexical_outer
+        current_lexical = current.get_super(
+            current.symbol.strict_super_reverse_index.get(
+                self.origin_symbol, SymbolIndexSentinel.OWN
+            )
+        )
+
+        # Traverse de_bruijn_index times
         for _ in range(self.de_bruijn_index):
-            assert isinstance(current_lexical.outer, runtime.Mixin)
+            assert isinstance(current_lexical, runtime.Mixin)
             current = current_lexical.outer
             current_lexical = current_lexical.lexical_outer
 
@@ -3204,4 +3248,6 @@ def resource_reference_from_pure_path(path: PurePath) -> ResourceReference:
             finished_pardir = True
             remaining_parts.append(part)
 
-    return RelativeReference(de_bruijn_index=de_bruijn_index, path=tuple(remaining_parts))
+    return RelativeReference(
+        de_bruijn_index=de_bruijn_index, path=tuple(remaining_parts)
+    )

@@ -12,6 +12,10 @@ NOTE: This module does NOT include dynamic class generation.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -143,15 +147,40 @@ class Mixin(HasDict):
         Guarantees isomorphism: mixin.lexical_outer.symbol is mixin.symbol.lexical_outer.
         """
         target_symbol = self.symbol.lexical_outer
+        logger.debug(
+            "lexical_outer: self.symbol.path=%(path)s target_symbol=%(target)s self.outer=%(outer)s",
+            {"path": self.symbol.path, "target": target_symbol, "outer": self.outer},
+        )
         match target_symbol:
             case OuterSentinel.ROOT:
                 return OuterSentinel.ROOT
             case _:
                 assert isinstance(self.outer, Mixin)
+                logger.debug(
+                    "lexical_outer: self.outer.symbol.path=%(outer_path)s "
+                    "self.outer.symbol.strict_super_reverse_index keys=%(keys)s "
+                    "target_symbol.path=%(target_path)s "
+                    "target_symbol is self.outer.symbol=%(is_same)s",
+                    {
+                        "outer_path": self.outer.symbol.path,
+                        "keys": [
+                            s.path for s in self.outer.symbol.strict_super_reverse_index
+                        ],
+                        "target_path": target_symbol.path,
+                        "is_same": target_symbol is self.outer.symbol,
+                    },
+                )
                 if target_symbol is self.outer.symbol:
                     return self.outer
-                index = self.outer.symbol.strict_super_reverse_index[target_symbol]
-                return self.outer.strict_super_mixins[index]
+                from mixinject import SymbolIndexSentinel
+
+                index = self.outer.symbol.strict_super_reverse_index.get(
+                    target_symbol, SymbolIndexSentinel.OWN
+                )
+                if index is SymbolIndexSentinel.OWN:
+                    return self.outer
+                else:
+                    return self.outer.strict_super_mixins[index]
 
     kwargs: Final["Mapping[str, object] | KwargsSentinel"]
     """
@@ -289,6 +318,15 @@ class Mixin(HasDict):
         - Mapping[str, object]: Returns InstanceScope
         """
         symbol = self.symbol
+        logger.debug(
+            "_construct_scope: symbol.path=%(path)s self.outer=%(outer)s kwargs=%(kwargs)s prototype=%(proto)s",
+            {
+                "path": symbol.path,
+                "outer": self.outer,
+                "kwargs": self.kwargs,
+                "proto": symbol.prototype,
+            },
+        )
 
         # Phase 1: Create all Mixin instances
         all_mixins: dict["MixinSymbol", Mixin] = {
@@ -299,6 +337,20 @@ class Mixin(HasDict):
             )
             for key in symbol
         }
+        for child_symbol, child_mixin in all_mixins.items():
+            logger.debug(
+                "_construct_scope child: key=%(key)s child.outer.symbol.path=%(outer_path)s "
+                "child.symbol.lexical_outer=%(lex_outer)s",
+                {
+                    "key": child_symbol.key,
+                    "outer_path": (
+                        child_mixin.outer.symbol.path
+                        if isinstance(child_mixin.outer, Mixin)
+                        else child_mixin.outer
+                    ),
+                    "lex_outer": child_symbol.lexical_outer,
+                },
+            )
 
         # Phase 2: Wire dependency references as attributes on each Mixin
         for child_symbol, child_mixin in all_mixins.items():
@@ -525,6 +577,24 @@ class StaticScope(Scope):
 
     def __call__(self, **kwargs: object) -> "InstanceScope":
         """Create an instance scope with the given kwargs."""
+        logger.debug(
+            "StaticScope.__call__: self.symbol.path=%(path)s self._outer_mixin=%(outer)s "
+            "instance_symbol.path=%(inst_path)s instance_symbol.outer=%(inst_outer)s",
+            {
+                "path": self.symbol.path,
+                "outer": self._outer_mixin,
+                "inst_path": (
+                    self.symbol.instance.path
+                    if hasattr(self.symbol.instance, "path")
+                    else "N/A"
+                ),
+                "inst_outer": (
+                    self.symbol.instance.outer
+                    if hasattr(self.symbol.instance, "outer")
+                    else "N/A"
+                ),
+            },
+        )
         instance_mixin = Mixin(
             symbol=self.symbol.instance,
             outer=self._outer_mixin,

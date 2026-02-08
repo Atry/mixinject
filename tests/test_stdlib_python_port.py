@@ -7,13 +7,22 @@ Convention tested:
 
 import pytest
 
-from mixinject import public, resource, scope, RelativeReference as R, extend, extern, MixinSymbol
+from mixinject import (
+    public,
+    resource,
+    scope,
+    RelativeReference as R,
+    extend,
+    extern,
+    MixinSymbol,
+)
 from mixinject.runtime import Scope, evaluate
 
 
 # =============================================================================
 # Simple test: underscore prefix determines privacy
 # =============================================================================
+
 
 @scope
 class TestPrivacy:
@@ -23,11 +32,13 @@ class TestPrivacy:
     @scope
     class PublicScope:
         """Public scope (no underscore)."""
+
         pass
 
     @scope
     class _PrivateScope:
         """Private scope (underscore prefix)."""
+
         pass
 
     @public
@@ -71,6 +82,7 @@ def test_private_resource_not_accessible():
 
 def test_private_resource_accessible_as_dependency():
     """Private resources should be accessible as dependencies to other resources."""
+
     @scope
     class TestDependency:
         @resource
@@ -89,6 +101,7 @@ def test_private_resource_accessible_as_dependency():
 # =============================================================================
 # Port a simplified version of Nat
 # =============================================================================
+
 
 @public
 @scope
@@ -109,6 +122,7 @@ class Nat:
             @scope
             class ZeroVisitor:
                 """Handler for zero case."""
+
                 pass
 
             @public
@@ -116,6 +130,7 @@ class Nat:
             @scope
             class Visitor:
                 """Result of visitor application (inherits from ZeroVisitor)."""
+
                 pass
 
         @public
@@ -156,6 +171,7 @@ class Nat:
             @scope
             class SuccVisitor:
                 """Handler for successor case."""
+
                 pass
 
             @public
@@ -163,6 +179,7 @@ class Nat:
             @scope
             class Visitor:
                 """Result of visitor application (inherits from SuccVisitor)."""
+
                 pass
 
         @public
@@ -182,7 +199,9 @@ class Nat:
                 return Succ(predecessor=addend)
 
             @resource
-            def _recursive_addition(predecessor: Scope, _increased_addend: Scope) -> Scope:
+            def _recursive_addition(
+                predecessor: Scope, _increased_addend: Scope
+            ) -> Scope:
                 """Compute predecessor + Succ(addend)."""
                 return predecessor.Addition(addend=_increased_addend)
 
@@ -233,6 +252,7 @@ def test_succ_visitors_structure():
 # Test concrete Church numerals and addition
 # =============================================================================
 
+
 def count_church_numeral(num: Scope) -> int:
     """Count the depth of a Church numeral by following predecessor chain."""
     depth = 0
@@ -243,7 +263,6 @@ def count_church_numeral(num: Scope) -> int:
     return depth
 
 
-@pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
 def test_zero_addition():
     """Test Zero + n = n."""
     nat = evaluate(Nat)
@@ -262,7 +281,6 @@ def test_zero_addition():
     assert count_church_numeral(result) == 1
 
 
-@pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
 def test_one_plus_zero():
     """Test One + Zero = One."""
     nat = evaluate(Nat)
@@ -279,7 +297,6 @@ def test_one_plus_zero():
     assert count_church_numeral(result) == 1
 
 
-@pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
 def test_one_plus_one():
     """Test One + One = Two.
 
@@ -302,7 +319,6 @@ def test_one_plus_one():
     assert count_church_numeral(result) == 2
 
 
-@pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
 def test_two_plus_three():
     """Test Two + Three = Five.
 
@@ -326,7 +342,6 @@ def test_two_plus_three():
     assert count_church_numeral(result) == 5
 
 
-@pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
 def test_three_plus_four():
     """Test Three + Four = Seven.
 
@@ -354,6 +369,7 @@ def test_three_plus_four():
 # =============================================================================
 # Test symbol tree termination (compilation halts)
 # =============================================================================
+
 
 def traverse_symbol_tree_impl(
     symbol: "MixinSymbol",  # type: ignore
@@ -445,7 +461,9 @@ def test_nat_symbol_tree_terminates():
     # Verify tree is reasonably sized (not infinite)
     # Nat has: Zero, Succ, their Visitors, Additions, etc.
     # Should be < 100 unique symbols
-    assert node_count < 100, f"Nat tree too large ({node_count} symbols), may be infinite"
+    assert (
+        node_count < 100
+    ), f"Nat tree too large ({node_count} symbols), may be infinite"
 
     print(f"Nat symbol tree: {node_count} unique symbols (finite ✓)")
 

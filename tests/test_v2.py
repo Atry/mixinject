@@ -1180,7 +1180,6 @@ class TestInstanceScope:
 class TestScopeCallable:
     """Test Scope as Callable - dynamic mixin injection (ported from V1 TestScopeCallable)."""
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_scope_call_provides_endo_only_base_value(self) -> None:
         """Test Scope callable providing base value for parameter pattern.
 
@@ -1273,7 +1272,6 @@ class TestSyntheticScopeCallable:
 class TestInstanceScopeNestedAccess:
     """Test nested scope access through instance scopes (ported from V1)."""
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_instance_scope_nested_access(self) -> None:
         """Ported from V1: test_instance_scope_nested_access_has_instance_symbol_in_path"""
 
@@ -1306,7 +1304,6 @@ class TestInstanceScopeNestedAccess:
 class TestDefinitionSharing:
     """Test that Definition instances are shared among mixins (ported from V1)."""
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_definition_shared_across_different_instance_args(self) -> None:
         """Ported from V1: test_definition_shared_across_different_instance_args"""
 
@@ -1410,7 +1407,6 @@ class TestExtendInstanceScopeProhibition:
             root = evaluate(Root)
             _ = root.Invalid.foo
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_extend_within_instance_scope_sibling_allowed(self) -> None:
         """Ported from V1: test_extend_within_instance_scope_sibling_allowed
 
@@ -1670,7 +1666,6 @@ class TestScopeDir:
 class TestParameter:
     """Test @extern decorator as syntactic sugar for empty patches (ported from V1)."""
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_parameter_with_keyword_argument_symbol(self) -> None:
         """Test that @extern registers a resource name and accepts injected values."""
 
@@ -1687,7 +1682,6 @@ class TestParameter:
         root = evaluate(Config)(database_url="postgresql://localhost/mydb")
         assert root.connection_string == "Connected to: postgresql://localhost/mydb"
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_parameter_with_dependencies(self) -> None:
         """Test that @extern can have its own dependencies."""
 
@@ -1750,7 +1744,6 @@ class TestParameter:
         assert root_param.value == 42
         assert root_patches.value == 42
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_parameter_multiple_injections(self) -> None:
         """Test that multiple @extern resources can be injected together."""
 
@@ -1770,7 +1763,6 @@ class TestParameter:
         root = evaluate(Config)(host="example.com", port=8080)
         assert root.url == "http://example.com:8080"
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_patch_with_identity_endo_equivalent_to_parameter(self) -> None:
         """Test that @patch with identity endo is equivalent to @extern."""
 
@@ -1870,7 +1862,6 @@ class TestInstanceScopeV2Specific:
         with pytest.raises(ValueError, match="requires kwargs"):
             _ = instance.bar
 
-    @pytest.mark.xfail(reason="Known bug: outer/lexical_outer navigation in _generate_strict_super_mixins")
     def test_deeply_nested_instance_scope(self) -> None:
         """kwargs propagate through deeply nested scopes."""
 
