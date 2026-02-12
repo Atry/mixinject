@@ -167,31 +167,28 @@ class TestGetSymbolInherited:
     def test_de_bruijn_1_from_qux_bar_baz_navigates_via_strict_super(
         self, fixture_symbol: MixinSymbol
     ) -> None:
-        """From Qux.Bar.Baz, de_bruijn_index=1 path=("Bar",) → {Qux.Bar, Foo.Bar}.
+        """From Qux.Bar.Baz, de_bruijn_index=1 path=("Bar",) → {Qux.Bar}.
 
-        Navigation with get_symbols:
+        Navigation with get_symbols via lexical_outer:
         1. current = Qux.Bar, origin_symbol = Foo.Bar, definition_site = Foo.Bar
         2. Loop (1 iteration):
-           - strict_supers of Qux.Bar: (Qux.Bar, Foo.Bar)
-           - Qux.Bar inherits Foo.Bar → candidate_outer = Qux
-           - Foo.Bar == definition_site → candidate_outer = Foo
-           - currents = (Qux, Foo)
+           - lexical_outer[Foo.Bar] → {Qux} (Qux.Bar's outer for Foo.Bar union)
+           - currents = {Qux}
            - definition_site = Foo.Bar.outer = Foo
-        3. Navigate "Bar": (Qux.Bar, Foo.Bar)
+        3. Navigate "Bar": Qux["Bar"] = Qux.Bar
         """
-        foo_bar = fixture_symbol["Foo"]["Bar"]
         qux_bar = fixture_symbol["Qux"]["Bar"]
 
         reference = ResolvedReference(
             de_bruijn_index=1,
             path=("Bar",),
             target_symbol_bound=qux_bar,
-            origin_symbol=foo_bar,
+            origin_symbol=fixture_symbol["Foo"]["Bar"],
         )
 
         results = reference.get_symbols(current=qux_bar)
 
-        assert results == (qux_bar, foo_bar)
+        assert results == (qux_bar,)
 
     def test_de_bruijn_1_from_qux_bar(self, fixture_symbol: MixinSymbol) -> None:
         """From Qux.Bar, de_bruijn_index=1 path=("Foo",) → Foo.

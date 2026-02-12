@@ -47,7 +47,7 @@ def _has_cyclic_inheritance(
     symbol: MixinSymbol, ancestors: frozenset[MixinSymbol]
 ) -> bool:
     """Check if symbol inherits from any ancestor (structural cycle)."""
-    for strict_super in symbol.strict_supers:
+    for strict_super in symbol.strict_super_references:
         if strict_super in ancestors:
             return True
     return False
@@ -72,7 +72,7 @@ def _symbol_tree_snapshot(
         _ancestors = _collect_tree_ancestors(symbol)
 
     strict_super = tuple(
-        sorted(_format_path(super_symbol) for super_symbol in symbol.strict_supers)
+        sorted(_format_path(super_symbol) for super_symbol in symbol.strict_super_references)
     )
 
     children: dict[str, Any] = {}
@@ -96,18 +96,8 @@ def _symbol_tree_snapshot(
 
 
 def _collect_all_super_symbols(symbol: MixinSymbol) -> set[MixinSymbol]:
-    """Recursively collect all MixinSymbols in the inheritance chain (including self)."""
-    collected: set[MixinSymbol] = set()
-
-    def walk(current: MixinSymbol) -> None:
-        if current in collected:
-            return
-        collected.add(current)
-        for super_symbol in current.strict_supers:
-            walk(super_symbol)
-
-    walk(symbol)
-    return collected
+    """Collect all MixinSymbols in the inheritance chain (including self) via super_unions."""
+    return set(symbol.super_unions)
 
 
 @pytest.fixture
@@ -123,25 +113,14 @@ def multi_module_scope() -> Scope:
 
 
 class TestMultiModuleCompositionFlat:
-    """Test that Module3Flat.Class4's super chain contains all 10 non-synthetic MixinSymbols.
+    """Test that Module3Flat.Class4's super_unions contains all Class4 union symbols.
 
-    Module1 defines: Class1, Class2 (2 definitions)
-    Module2Flat defines: Class1, Class2, Class3, Class4 (4 definitions)
+    Module2Flat defines: Class4
     Module3Flat inherits: [Module1], [Module2Flat]
 
-    Expected super chain for Module3Flat.Class4 (including self):
-      Definition-site symbols (7):
-        1. Module3Flat.Class4 (self)
-        2. Module2Flat.Class4
-        3. Module2Flat.Class2
-        4. Module1.Class2
-        5. Module1.Class1
-        6. Module2Flat.Class1
-        7. Module2Flat.Class3
-      Composition-site shell symbols (3):
-        8. Module3Flat.Class1
-        9. Module3Flat.Class2
-       10. Module3Flat.Class3
+    Expected super_unions for Module3Flat.Class4:
+      1. Module3Flat.Class4 (self)
+      2. Module2Flat.Class4 (definition-site)
     """
 
     def test_class4_super_chain_contains_all_classes(
@@ -159,8 +138,8 @@ class TestMultiModuleCompositionFlat:
             for symbol in non_synthetic
         )
 
-        assert len(non_synthetic) == 10, (
-            f"Expected 10 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
+        assert len(non_synthetic) == 2, (
+            f"Expected 2 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
             f"{non_synthetic_paths}"
         )
 
@@ -184,25 +163,14 @@ class TestMultiModuleCompositionSnapshot:
 
 
 class TestMultiModuleCompositionNested:
-    """Test that Module3.Nested2.Class4's super chain contains all 10 non-synthetic MixinSymbols.
+    """Test that Module3.Nested2.Class4's super_unions contains all Class4 union symbols.
 
-    Module1 defines: Class1, Class2 (2 definitions)
-    Module2 defines: Class1, Class2, Nested1.Class3, Nested2.Class4 (4 definitions)
+    Module2 defines: Nested2.Class4
     Module3 inherits: [Module1], [Module2]
 
-    Expected super chain for Module3.Nested2.Class4 (including self):
-      Definition-site symbols (7):
-        1. Module3.Nested2.Class4 (self)
-        2. Module2.Nested2.Class4
-        3. Module2.Class2
-        4. Module1.Class2
-        5. Module1.Class1
-        6. Module2.Class1
-        7. Module2.Nested1.Class3
-      Composition-site shell symbols (3):
-        8. Module3.Class1
-        9. Module3.Class2
-       10. Module3.Nested1.Class3
+    Expected super_unions for Module3.Nested2.Class4:
+      1. Module3.Nested2.Class4 (self)
+      2. Module2.Nested2.Class4 (definition-site)
     """
 
     def test_class4_super_chain_contains_all_classes(
@@ -223,8 +191,8 @@ class TestMultiModuleCompositionNested:
             for symbol in non_synthetic
         )
 
-        assert len(non_synthetic) == 10, (
-            f"Expected 10 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
+        assert len(non_synthetic) == 2, (
+            f"Expected 2 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
             f"{non_synthetic_paths}"
         )
 
@@ -298,7 +266,7 @@ class TestMyRootFlatten:
     def test_flatten_reference_to_target_outer_and_supers(
         self, multi_module_scope: Scope
     ) -> None:
-        """Verify that outer and strict_supers are correctly set for the flatten case."""
+        """Verify that outer and strict_super_references are correctly set for the flatten case."""
         my_root = multi_module_scope.MyRoot
         assert isinstance(my_root, Scope)
         my_root_symbol = my_root.symbol
@@ -320,9 +288,9 @@ class TestMyRootFlatten:
         # Flatten inherits from [Nested1, Nested3]
         # Nested1 inherits from [Nested2] and [Nested4]
         # So Nested1.Nested3 merges Nested2.Nested3 and Nested4.Nested3
-        # Both should be strict supers of Flatten (the composition-site parent)
-        assert nested2_nested3_symbol in flatten_symbol.strict_supers
-        assert nested4_nested3_symbol in flatten_symbol.strict_supers
+        # Both should be in super_unions of Flatten (the composition-site parent)
+        assert nested2_nested3_symbol in flatten_symbol.super_unions
+        assert nested4_nested3_symbol in flatten_symbol.super_unions
 
 
 class TestMergedValueOverride:
@@ -360,7 +328,7 @@ class TestMergedValueOverride:
 
 
 class TestCompositionOuterChain:
-    """Test that outer and strict_supers correctly map at each composition level.
+    """Test that outer and strict_super_references correctly map at each composition level.
 
     LexicalOuterConflict:
       GrandParent:
@@ -388,9 +356,9 @@ class TestCompositionOuterChain:
       - Merged.Parent.outer is Merged
 
     And the definition-site symbols should appear as strict supers:
-      - GrandParent.Parent.Child in Merged.Parent.Child.strict_supers
-      - GrandParent.Parent in Merged.Parent.strict_supers
-      - GrandParent in Merged.strict_supers
+      - GrandParent.Parent.Child in Merged.Parent.Child.strict_super_references
+      - GrandParent.Parent in Merged.Parent.strict_super_references
+      - GrandParent in Merged.strict_super_references
     """
 
     def test_outer_chain_maps_correctly(self, multi_module_scope: Scope) -> None:
@@ -411,48 +379,17 @@ class TestCompositionOuterChain:
         # Level 1: Ref.outer is Merged.Parent.Child (structural parent)
         assert ref_symbol.outer is merged_parent_child_symbol
         assert (
-            grandparent_parent_child_symbol in merged_parent_child_symbol.strict_supers
+            grandparent_parent_child_symbol in merged_parent_child_symbol.super_unions
         )
 
         # Level 2: Merged.Parent.Child.outer is Merged.Parent
         assert merged_parent_child_symbol.outer is merged_parent_symbol
-        assert grandparent_parent_symbol in merged_parent_symbol.strict_supers
+        assert grandparent_parent_symbol in merged_parent_symbol.super_unions
 
         # Level 3: Merged.Parent.outer is Merged
         assert merged_parent_symbol.outer is merged_symbol
-        assert grandparent_symbol in merged_symbol.strict_supers
+        assert grandparent_symbol in merged_symbol.super_unions
 
-
-class TestUnionMixinNavigation:
-    """Test that _generate_strict_super_mixins handles union mixins correctly.
-
-    Module3Flat.Class4 has 10 non-synthetic strict super symbols (verified by
-    TestMultiModuleCompositionFlat). The union branch in
-    _generate_strict_super_mixins navigates outer's strict_super_mixins
-    to find parent scopes that have a child with the same key.
-    """
-
-    def test_strict_super_mixins_index_error(self, multi_module_scope: Scope) -> None:
-        """Accessing strict_super_mixins on a composed scope's child Mixin triggers IndexError."""
-        module3_flat = multi_module_scope.Module3Flat
-        assert isinstance(module3_flat, Scope)
-
-        # Get the Class4 symbol in the composition-site context
-        class4_symbol = module3_flat.symbol["Class4"]
-
-        # Verify precondition: Class4 has more than 1 strict super at composition-site
-        strict_super_count = sum(1 for _ in class4_symbol.strict_supers)
-        assert strict_super_count > 1, (
-            f"Expected Class4 to have multiple strict supers at composition-site, "
-            f"got {strict_super_count}"
-        )
-
-        # Access the Mixin for Class4 from the Scope's _children
-        class4_mixin = module3_flat._children[class4_symbol]
-
-        # This triggers _generate_strict_super_mixins which exercises
-        # the union mixin navigation path
-        _ = class4_mixin.strict_super_mixins
 
 
 class TestFlattenedContainer:
@@ -504,61 +441,96 @@ class TestDeBruijnCompositionNavigation:
     Each reference uses a qualified-this reference [ScopeName, ~]
     which resolves to the scope itself at de_bruijn=N.
 
-    Expected composition-site current at each de Bruijn level:
-      de_bruijn=0 → Composed                      (= Container)
-      de_bruijn=1 → ?                              (= Types)
-      de_bruijn=2 → ?                              (= Library)
-      de_bruijn=3 → multi_module_composition
+    De Bruijn navigation uses lexical_outer to trace from composition-site back
+    to definition-site. Expected resolution at each level:
+      de_bruijn=0 → {Composed}
+      de_bruijn=1 → {Wrapper.AltTypes, Wrapper2.AltTypes2}  (2 indirect paths)
+      de_bruijn=2 → {Library}
+      de_bruijn=3 → {multi_module_composition}
     """
 
     def test_de_bruijn_references_resolve_after_flattening(
         self, multi_module_scope: Scope
     ) -> None:
         composed_symbol = multi_module_scope.symbol["Composed"]
+        library_symbol = multi_module_scope.symbol["Library"]
+        container_symbol = library_symbol["Types"]["Container"]
 
-        reference_symbol_0 = composed_symbol["DeBruijnIndex0"]
-        strict_super_paths_0 = tuple(
-            super_symbol.path for super_symbol in reference_symbol_0.strict_supers
+        # Each DeBruijnIndex symbol has 2 super_unions:
+        # - One at Composed level (composition-site)
+        # - One at Library.Types.Container level (definition-site)
+        expected_outer_paths = {
+            ("multi_module_composition", "Composed"),
+            ("multi_module_composition", "Library", "Types", "Container"),
+        }
+
+        for index in range(4):
+            reference_symbol = composed_symbol[f"DeBruijnIndex{index}"]
+            super_union_paths = {
+                super_symbol.path for super_symbol in reference_symbol.super_unions
+            }
+            super_union_outer_paths = {
+                super_symbol.outer.path for super_symbol in reference_symbol.super_unions
+            }
+            assert len(super_union_paths) == 2, (
+                f"DeBruijnIndex{index}: expected 2 super_unions, "
+                f"got {len(super_union_paths)}: {super_union_paths}"
+            )
+            assert super_union_outer_paths == expected_outer_paths, (
+                f"DeBruijnIndex{index}: expected outers {expected_outer_paths}, "
+                f"got {super_union_outer_paths}"
+            )
+
+        # Verify de Bruijn resolution at each level via lexical_outer navigation.
+        # This traces the same path the runtime uses when resolving references.
+        #
+        # De Bruijn navigation uses lexical_outer[definition_site] at each level:
+        #   Level 0: definition_site = Container
+        #            composed.lexical_outer[Container] → {AltTypes, AltTypes2}
+        #   Level 1: definition_site = Types
+        #            AltTypes.lexical_outer[Types] → {Library}
+        #   Level 2: definition_site = Library
+        #            Library.lexical_outer[Library] → {multi_module_composition}
+
+        types_symbol = library_symbol["Types"]
+
+        # DeBruijnIndex0 (de_bruijn=0): resolves to Composed (self level)
+        assert composed_symbol.path == ("multi_module_composition", "Composed")
+
+        # DeBruijnIndex1 (de_bruijn=1): navigate 1 level up
+        # composed.lexical_outer[Container] gives AltTypes and AltTypes2
+        resolved_1 = composed_symbol.lexical_outer[container_symbol]
+        resolved_1_paths = {symbol.path for symbol in resolved_1}
+        assert ("multi_module_composition", "Library", "Wrapper", "AltTypes") in resolved_1_paths, (
+            f"DeBruijnIndex1: expected Wrapper.AltTypes in resolved paths, got {resolved_1_paths}"
         )
-        assert ("multi_module_composition", "Composed") in strict_super_paths_0, (
-            f"DeBruijnIndex0: expected multi_module_composition.Composed "
-            f"in strict_super, got {['.'.join(str(s) for s in p) for p in strict_super_paths_0]}"
+        assert ("multi_module_composition", "Library", "Wrapper2", "AltTypes2") in resolved_1_paths, (
+            f"DeBruijnIndex1: expected Wrapper2.AltTypes2 in resolved paths, got {resolved_1_paths}"
         )
 
-        reference_symbol_1 = composed_symbol["DeBruijnIndex1"]
-        strict_super_paths_1 = tuple(
-            super_symbol.path for super_symbol in reference_symbol_1.strict_supers
-        )
-        assert (
-            "multi_module_composition",
-            "Library",
-            "Wrapper",
-            "AltTypes",
-        ) in strict_super_paths_1
-        assert (
-            "multi_module_composition",
-            "Library",
-            "Wrapper2",
-            "AltTypes2",
-        ) in strict_super_paths_1, (
-            f"DeBruijnIndex1: expected multi_module_composition.Library.Wrapper2.AltTypes2 "
-            f"in strict_super, got {['.'.join(str(s) for s in p) for p in strict_super_paths_1]}"
+        # DeBruijnIndex2 (de_bruijn=2): navigate 2 levels up
+        # Level 0: Container → {AltTypes, AltTypes2}
+        # Level 1: Types → {Library}
+        resolved_2: frozenset[MixinSymbol] = frozenset()
+        for level_1_symbol in resolved_1:
+            resolved_2 = resolved_2 | frozenset(
+                level_1_symbol.lexical_outer.get(types_symbol, set())
+            )
+        resolved_2_paths = {symbol.path for symbol in resolved_2}
+        assert ("multi_module_composition", "Library") in resolved_2_paths, (
+            f"DeBruijnIndex2: expected Library in resolved paths, got {resolved_2_paths}"
         )
 
-        reference_symbol_2 = composed_symbol["DeBruijnIndex2"]
-        strict_super_paths_2 = tuple(
-            super_symbol.path for super_symbol in reference_symbol_2.strict_supers
-        )
-        assert ("multi_module_composition", "Library") in strict_super_paths_2, (
-            f"DeBruijnIndex2: expected multi_module_composition.Library "
-            f"in strict_super, got {['.'.join(str(s) for s in p) for p in strict_super_paths_2]}"
-        )
-
-        reference_symbol_3 = composed_symbol["DeBruijnIndex3"]
-        strict_super_paths_3 = tuple(
-            super_symbol.path for super_symbol in reference_symbol_3.strict_supers
-        )
-        assert ("multi_module_composition",) in strict_super_paths_3, (
-            f"DeBruijnIndex3: expected multi_module_composition "
-            f"in strict_super, got {['.'.join(str(s) for s in p) for p in strict_super_paths_3]}"
+        # DeBruijnIndex3 (de_bruijn=3): navigate 3 levels up
+        # Level 0: Container → {AltTypes, AltTypes2}
+        # Level 1: Types → {Library}
+        # Level 2: Library → {multi_module_composition}
+        resolved_3: frozenset[MixinSymbol] = frozenset()
+        for level_2_symbol in resolved_2:
+            resolved_3 = resolved_3 | frozenset(
+                level_2_symbol.lexical_outer.get(library_symbol, set())
+            )
+        resolved_3_paths = {symbol.path for symbol in resolved_3}
+        assert ("multi_module_composition",) in resolved_3_paths, (
+            f"DeBruijnIndex3: expected multi_module_composition in resolved paths, got {resolved_3_paths}"
         )

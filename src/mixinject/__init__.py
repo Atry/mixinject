@@ -529,6 +529,7 @@ Callables can be used not only to define resources but also to define and transf
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from functools import cached_property
@@ -604,23 +605,6 @@ class RelativeReferenceSentinel(Enum):
 
     NOT_FOUND = auto()
 
-
-class PrototypeSymbolSentinel(Enum):
-    """Sentinel value for symbols that are not instance symbols."""
-
-    NOT_INSTANCE = auto()
-
-
-class InstanceSymbolSentinel(Enum):
-    """Sentinel value for instance_symbol when called on an already-instance symbol."""
-
-    ALREADY_INSTANCE = auto()
-
-
-class PathSentinel(Enum):
-    """Sentinel value used in MixinSymbol.path to mark instance boundaries."""
-
-    INSTANCE_PATH = auto()
 
 
 class Symbol(ABC):
@@ -817,9 +801,6 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     - For nested symbols: Nested(outer, key) (lazy resolution)
     """
 
-    prototype: "MixinSymbol | PrototypeSymbolSentinel" = (
-        PrototypeSymbolSentinel.NOT_INSTANCE
-    )
     _nested: weakref.WeakValueDictionary[Hashable, "MixinSymbol"] = field(
         default_factory=weakref.WeakValueDictionary
     )
@@ -849,20 +830,16 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 return KeySentinel.ROOT
 
     @property
-    def path(self) -> tuple[Hashable | PathSentinel, ...]:
+    def path(self) -> tuple[Hashable, ...]:
         """Get the full path from root to this symbol, excluding root itself.
 
-        Instance symbols include an InstanceSentinel.INSTANCE marker after the key.
-        For example, ``Foo.Bar(a=1).Baz.Qux(b=2)`` produces::
+        For example, ``Foo.Bar.Baz`` produces::
 
-            ("Foo", "Bar", InstanceSentinel.INSTANCE, "Baz", "Qux", InstanceSentinel.INSTANCE)
+            ("Foo", "Bar", "Baz")
         """
-        segments: list[Hashable | PathSentinel] = []
+        segments: list[Hashable] = []
         current: MixinSymbol | OuterSentinel = self
         while isinstance(current, MixinSymbol):
-            match current.prototype:
-                case MixinSymbol():
-                    segments.append(PathSentinel.INSTANCE_PATH)
             match current.origin:
                 case Nested(outer=outer, key=key):
                     segments.append(key)
@@ -1030,12 +1007,14 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         seen.add(key)
                         yield key
 
-        # Keys from strict supers
-        for strict_super in self.strict_supers:
-            for key in strict_super:
-                if key not in seen:
-                    seen.add(key)
-                    yield key
+        # Keys from super unions (own definitions only, no recursion)
+        for super_union in self.super_unions:
+            for definition in super_union.definitions:
+                if isinstance(definition, ScopeDefinition):
+                    for key in definition:
+                        if key not in seen:
+                            seen.add(key)
+                            yield key
 
     def __len__(self) -> int:
         """Return the number of keys in this symbol."""
@@ -1058,24 +1037,12 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Use Nested to create child symbol with lazy definition resolution
         compiled_symbol = MixinSymbol(origin=Nested(outer=self, key=key))
 
-        # If definitions is empty and no strict supers, key doesn't exist
-        if not compiled_symbol.definitions and not compiled_symbol.strict_supers:
+        # Check if any super union of self has this key as an own key
+        if not any(super_union.has_own_key(key) for super_union in self.super_unions):
             raise KeyError(key)
 
         self._nested[key] = compiled_symbol
         return compiled_symbol
-
-    @cached_property
-    def instance(self) -> "MixinSymbol | InstanceSymbolSentinel":
-        """Get or create the instance symbol for this symbol.
-
-        Returns InstanceSymbolSentinel.ALREADY_INSTANCE if this is already an instance symbol.
-        """
-        match self.prototype:
-            case PrototypeSymbolSentinel.NOT_INSTANCE:
-                return replace(self, prototype=self)
-            case MixinSymbol():
-                return InstanceSymbolSentinel.ALREADY_INSTANCE
 
     @property
     def depth(self) -> int:
@@ -1096,7 +1063,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Check if any definition is public
         return any(
             definition.is_public
-            for super_symbol in (self, *self.strict_supers)
+            for super_symbol in self.super_unions
             for definition in super_symbol.definitions
         )
 
@@ -1104,7 +1071,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     def is_eager(self):
         return any(
             definition.is_eager
-            for super_symbol in (self, *self.strict_supers)
+            for super_symbol in self.super_unions
             for definition in super_symbol.definitions
             if isinstance(definition, MergerDefinition)
         )
@@ -1118,7 +1085,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         """
         all_definitions = tuple(
             definition
-            for symbol in (self, *self.strict_supers)
+            for symbol in self.super_unions
             for definition in symbol.definitions
         )
         if not all_definitions:
@@ -1144,7 +1111,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             MergerElectionSentinel.PATCHER_ONLY: Has patchers but no merger
         """
 
-        self_and_strict_supers = tuple((self, *self.strict_supers))
+        self_and_strict_supers = tuple(self.super_unions)
 
         # Collect all (symbol, evaluator_getter_index, getter) tuples
         all_merger_symbols: list[tuple["MixinSymbol", int, "MergerSymbol"]] = []
@@ -1207,65 +1174,46 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 raise ValueError("Multiple pure merger definitions found")
 
     @cached_property
-    def unions(self):
-        match self.origin:
-            case Nested(outer=outer, key=key):
-                return tuple(
-                    child
-                    for outer_strict_super in outer.strict_supers
-                    if (child := outer_strict_super.get(key)) is not None
-                )
-            case definitions:
-                return ()
-
-    def _generate_supers(self):
-        yield self
-        yield from self.strict_supers
+    def lexical_outer(self) -> Mapping["MixinSymbol", Collection[MixinSymbol]]:
+        result = defaultdict(set)
+        for super_symbol in self._generate_super_references():
+            for union in super_symbol.unions:
+                result[union].add(super_symbol.outer)
+        return result
 
     @cached_property
-    def strict_supers(self) -> Collection[MixinSymbol]:
+    def unions(self):
+        return frozenset(self._generate_unions())
 
-        return ChainMap(
-            (
-                {}
-                if self.outer is OuterSentinel.ROOT
-                else {
-                    super_mixin: None
-                    for resolved_reference in self.resolved_bases
-                    for symbol in resolved_reference.get_symbols(self.outer)
-                    for super_mixin in symbol._generate_supers()
-                }
-            ),
-            dict.fromkeys(self.unions),
-            (
-                {}
-                if self.outer is OuterSentinel.ROOT
-                else {
-                    super_mixin: None
-                    for direct_union in self.unions
-                    for resolved_reference in direct_union.resolved_bases
-                    for symbol in resolved_reference.get_symbols(self.outer)
-                    for super_mixin in symbol._generate_supers()
-                }
-            ),
-        )
+    def _generate_unions(self):
+        yield self
+        match self.origin:
+            case Nested(outer=outer, key=key):
+                for outer_union in outer.super_unions:
+                    if outer_union.has_own_key(key):
+                        yield outer_union[key]
 
-    @final
-    def is_super(self, other: "MixinSymbol") -> bool:
-        """Check if ``other`` is ``self`` or a strict super of ``self``.
+    def _generate_super_unions(self):
+        for super_symbol in self._generate_super_references():
+            yield from super_symbol.unions
 
-        Handles prototype (instance/static) relationships: an instance symbol
-        and its prototype (static version) are considered equivalent for
-        ``is_super`` purposes. Both ``self`` and ``other`` are normalized to
-        their static versions before comparison.
-        """
-        static_self: MixinSymbol = (
-            self.prototype if isinstance(self.prototype, MixinSymbol) else self
-        )
-        static_other: MixinSymbol = (
-            other.prototype if isinstance(other.prototype, MixinSymbol) else other
-        )
-        return static_other is static_self or static_other in static_self.strict_supers
+    def _generate_super_references(self):
+        yield self
+        yield from self.strict_super_references
+
+    @cached_property
+    def super_unions(self):
+        return frozenset(self._generate_super_unions())
+
+    def _generate_strict_supers(self):
+        if self.outer is not OuterSentinel.ROOT:
+            for resolved_reference in self.resolved_bases:
+                for symbol in resolved_reference.get_symbols(self.outer):
+                    yield from symbol._generate_super_references()
+
+    @cached_property
+    def strict_super_references(self) -> Collection[MixinSymbol]:
+        return frozenset(self._generate_strict_supers())
 
 
 class OuterSentinel(Enum):
@@ -2584,25 +2532,16 @@ class ResolvedReference:
         :param current: Composition-site parent symbol.
         :return: All resolved target symbols (one per inheritance path).
         """
-        currents: tuple[MixinSymbol, ...] = (current,)
+        currents = frozenset((current,))
         definition_site: MixinSymbol = self.origin_symbol
 
         for _ in range(self.de_bruijn_index):
-            next_definition_site = definition_site.outer
-            assert isinstance(next_definition_site, MixinSymbol)
-            next_currents: dict[MixinSymbol, None] = {}
-            for current in currents:
-                for strict_super in (current, *current.strict_supers):
-                    candidate_outer = strict_super.outer
-                    if not isinstance(candidate_outer, MixinSymbol):
-                        continue
-                    if not strict_super.is_super(definition_site):
-                        continue
-                    if not candidate_outer.is_super(next_definition_site):
-                        continue
-                    next_currents[candidate_outer] = None
-            currents = tuple(next_currents)
-            definition_site = next_definition_site
+            currents = frozenset(
+                lexical_outer
+                for current in currents
+                for lexical_outer in current.lexical_outer[definition_site]
+            )
+            definition_site = definition_site.outer
 
         results: list[MixinSymbol] = []
         for current in currents:

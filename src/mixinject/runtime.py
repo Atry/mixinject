@@ -12,10 +12,6 @@ NOTE: This module does NOT include dynamic class generation.
 
 from __future__ import annotations
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -59,32 +55,6 @@ TPatch_contra = TypeVar("TPatch_contra", contravariant=True)
 TResult_co = TypeVar("TResult_co", covariant=True)
 TResult = TypeVar("TResult")
 
-
-def _symbols_identity_match(
-    symbol_a: "MixinSymbol", symbol_b: "MixinSymbol"
-) -> bool:
-    """Check if two symbols refer to the same static symbol.
-
-    Normalizes both to their prototypes before identity comparison.
-    Unlike ``is_super()``, this does NOT check the strict_supers chain —
-    it only checks direct identity after prototype normalization.
-
-    This is needed because instance symbols and their static prototypes
-    are different objects but represent the same logical symbol.
-    """
-    from mixinject import MixinSymbol
-
-    static_a: MixinSymbol = (
-        symbol_a.prototype
-        if isinstance(symbol_a.prototype, MixinSymbol)
-        else symbol_a
-    )
-    static_b: MixinSymbol = (
-        symbol_b.prototype
-        if isinstance(symbol_b.prototype, MixinSymbol)
-        else symbol_b
-    )
-    return static_a is static_b
 
 
 @final
@@ -173,70 +143,77 @@ class Mixin(HasDict):
     Propagated to nested scopes when Mixin.evaluated creates a Scope.
     """
 
-    @cached_property
-    def strict_super_mixins(self) -> tuple["Mixin", ...]:
-        """
-        Get super Mixin instances for multiple inheritance support.
-
-        Navigates the mixin tree for each target symbol in
-        ``self.symbol.strict_supers`` using ``find_mixin``.
-        This ensures mixin-symbol isomorphism: ``strict_super_mixins[i].symbol``
-        corresponds to the i-th symbol from ``strict_supers``.
-        """
-        return tuple(
-            self.find_mixin(target_symbol)
-            for target_symbol in self.symbol.strict_supers
-        )
-
     def find_mixin(self, target_symbol: "MixinSymbol") -> "Mixin":
         """
         Navigate the mixin tree to find the mixin for target_symbol.
 
-        Walks up the outer chain from self. At each level, checks if the
-        outer mixin's symbol (or one of its strict_super_mixins' symbols)
-        matches target_symbol.outer via prototype-normalized identity. When
-        found, looks up target_symbol by key in that scope's _children.
+        Uses the classic linked-list LCA (Lowest Common Ancestor) algorithm:
+        1. Align self_symbol and target to the same depth
+        2. Walk both up in sync until they meet at the common ancestor
+        3. Navigate up from self to the LCA mixin
+        4. Navigate down from LCA along target's path via evaluated._children
 
-        If target_symbol.outer is not found in the ancestor chain (e.g., it
-        is a sibling's child in a path-dependent type scenario), recursively
-        calls ``find_mixin(target_symbol.outer)`` to locate the parent first.
-
-        Uses prototype-normalized identity (not ``is_super``) for comparison
-        to avoid matching union scopes that merely contain the target as a
-        strict super.
+        Instance scope handling:
+        When called from inside an instance scope, the mixin outer chain passes
+        through instance mixins that share the same symbol as their static
+        counterparts. If the LCA lands directly on an instance mixin (no further
+        downward navigation needed), we escape upward to the static mixin and
+        re-navigate down. If downward navigation is needed, we stay in the
+        instance tree since children correctly inherit instance kwargs.
         """
         from mixinject import MixinSymbol
 
-        target_outer = target_symbol.outer
-        assert isinstance(target_outer, MixinSymbol)
-        target_key = target_symbol.key
+        self_symbol = self.symbol
+        target = target_symbol
 
-        def _lookup_child(scope_mixin: Mixin) -> "Mixin":
-            scope = scope_mixin.evaluated
+        # Collect target keys for downward navigation
+        target_keys: list[Hashable] = []
+
+        # Align to same depth
+        steps_up = 0
+        while self_symbol.depth > target.depth:
+            assert isinstance(self_symbol.outer, MixinSymbol)
+            self_symbol = self_symbol.outer
+            steps_up += 1
+        while target.depth > self_symbol.depth:
+            target_keys.append(target.key)
+            assert isinstance(target.outer, MixinSymbol)
+            target = target.outer
+
+        # Walk both up in sync until they meet (LCA)
+        while self_symbol is not target:
+            assert isinstance(self_symbol.outer, MixinSymbol)
+            assert isinstance(target.outer, MixinSymbol)
+            self_symbol = self_symbol.outer
+            target_keys.append(target.key)
+            target = target.outer
+            steps_up += 1
+
+        # Navigate up from self to LCA mixin
+        current_mixin = self
+        for _ in range(steps_up):
+            outer_mixin = current_mixin.outer
+            assert isinstance(outer_mixin, Mixin)
+            current_mixin = outer_mixin
+
+        # Escape instance boundary when the target is the LCA itself
+        # (no downward navigation). References cannot point into instances,
+        # so we must resolve to the static mixin.
+        if not target_keys:
+            while not isinstance(current_mixin.kwargs, KwargsSentinel):
+                target_keys.append(current_mixin.symbol.key)
+                outer_mixin = current_mixin.outer
+                assert isinstance(outer_mixin, Mixin)
+                current_mixin = outer_mixin
+
+        # Navigate down from LCA along target's path
+        for key in reversed(target_keys):
+            scope = current_mixin.evaluated
             assert isinstance(scope, Scope)
-            child_symbol = scope_mixin.symbol[target_key]
-            return scope._children[child_symbol]
+            child_symbol = current_mixin.symbol[key]
+            current_mixin = scope._children[child_symbol]
 
-        # Walk up the outer chain looking for target_outer
-        current = self
-        while True:
-            outer_mixin = current.outer
-            if not isinstance(outer_mixin, Mixin):
-                break  # Exhausted outer chain without finding target_outer
-
-            if _symbols_identity_match(outer_mixin.symbol, target_outer):
-                return _lookup_child(outer_mixin)
-
-            for super_mixin in outer_mixin.strict_super_mixins:
-                if _symbols_identity_match(super_mixin.symbol, target_outer):
-                    return _lookup_child(super_mixin)
-
-            current = outer_mixin
-
-        # target_outer not found in ancestor chain — recursively navigate
-        # to target_outer first (e.g., sibling's child in path-dependent types)
-        target_outer_mixin = self.find_mixin(target_outer)
-        return _lookup_child(target_outer_mixin)
+        return current_mixin
 
     @cached_property
     def evaluated(self) -> "object | Scope":
@@ -263,15 +240,6 @@ class Mixin(HasDict):
         - Mapping[str, object]: Returns InstanceScope
         """
         symbol = self.symbol
-        logger.debug(
-            "_construct_scope: symbol.path=%(path)s self.outer=%(outer)s kwargs=%(kwargs)s prototype=%(proto)s",
-            {
-                "path": symbol.path,
-                "outer": self.outer,
-                "kwargs": self.kwargs,
-                "proto": symbol.prototype,
-            },
-        )
 
         # Phase 1: Create all Mixin instances
         all_mixins: dict["MixinSymbol", Mixin] = {
@@ -282,18 +250,6 @@ class Mixin(HasDict):
             )
             for key in symbol
         }
-        for child_symbol, child_mixin in all_mixins.items():
-            logger.debug(
-                "_construct_scope child: key=%(key)s child.outer.symbol.path=%(outer_path)s",
-                {
-                    "key": child_symbol.key,
-                    "outer_path": (
-                        child_mixin.outer.symbol.path
-                        if isinstance(child_mixin.outer, Mixin)
-                        else child_mixin.outer
-                    ),
-                },
-            )
 
         # Phase 2: Wire dependency references as attributes on each Mixin
         for child_symbol, child_mixin in all_mixins.items():
@@ -350,20 +306,10 @@ class Mixin(HasDict):
             )
 
         def find_mixin_by_symbol(target_symbol: "MixinSymbol") -> "Mixin":
-            """Find the mixin (self or a strict super) matching the target symbol.
-
-            Uses prototype-normalized identity comparison — elected symbols come
-            from the definition site (static) while mixin symbols may be instance
-            versions.
-            """
-            if _symbols_identity_match(self.symbol, target_symbol):
+            """Find the mixin (self or a super union) matching the target symbol."""
+            if self.symbol is target_symbol:
                 return self
-            for super_mixin in self.strict_super_mixins:
-                if _symbols_identity_match(super_mixin.symbol, target_symbol):
-                    return super_mixin
-            raise ValueError(
-                f"Elected symbol {target_symbol.path!r} not found in strict super mixins"
-            )
+            return self.find_mixin(target_symbol)
 
         # Get elected merger info
         elected = self.symbol.elected_merger_index
@@ -377,7 +323,7 @@ class Mixin(HasDict):
                 ):
                     # Collect patches from own evaluators
                     own_evaluators = build_evaluators_for_mixin(self)
-                    if _symbols_identity_match(self.symbol, elected_symbol):
+                    if self.symbol is elected_symbol:
                         # Exclude the elected evaluator from own
                         for evaluator_index, evaluator in enumerate(own_evaluators):
                             if evaluator_index != elected_getter_index and isinstance(
@@ -390,10 +336,13 @@ class Mixin(HasDict):
                             if isinstance(evaluator, Patcher):
                                 yield from evaluator
 
-                    # Collect patches from super mixins
-                    for super_mixin in self.strict_super_mixins:
+                    # Collect patches from super union mixins
+                    for super_union_symbol in self.symbol.super_unions:
+                        if super_union_symbol is self.symbol:
+                            continue
+                        super_mixin = self.find_mixin(super_union_symbol)
                         super_evaluators = build_evaluators_for_mixin(super_mixin)
-                        if not _symbols_identity_match(super_mixin.symbol, elected_symbol):
+                        if super_mixin.symbol is not elected_symbol:
                             for evaluator in super_evaluators:
                                 if isinstance(evaluator, Patcher):
                                     yield from evaluator
@@ -414,7 +363,10 @@ class Mixin(HasDict):
                     for evaluator in own_evaluators:
                         if isinstance(evaluator, Patcher):
                             yield from evaluator
-                    for super_mixin in self.strict_super_mixins:
+                    for super_union_symbol in self.symbol.super_unions:
+                        if super_union_symbol is self.symbol:
+                            continue
+                        super_mixin = self.find_mixin(super_union_symbol)
                         super_evaluators = build_evaluators_for_mixin(super_mixin)
                         for evaluator in super_evaluators:
                             if isinstance(evaluator, Patcher):
@@ -536,26 +488,8 @@ class StaticScope(Scope):
 
     def __call__(self, **kwargs: object) -> "InstanceScope":
         """Create an instance scope with the given kwargs."""
-        logger.debug(
-            "StaticScope.__call__: self.symbol.path=%(path)s self._outer_mixin=%(outer)s "
-            "instance_symbol.path=%(inst_path)s instance_symbol.outer=%(inst_outer)s",
-            {
-                "path": self.symbol.path,
-                "outer": self._outer_mixin,
-                "inst_path": (
-                    self.symbol.instance.path
-                    if hasattr(self.symbol.instance, "path")
-                    else "N/A"
-                ),
-                "inst_outer": (
-                    self.symbol.instance.outer
-                    if hasattr(self.symbol.instance, "outer")
-                    else "N/A"
-                ),
-            },
-        )
         instance_mixin = Mixin(
-            symbol=self.symbol.instance,
+            symbol=self.symbol,
             outer=self._outer_mixin,
             kwargs=kwargs,
         )
