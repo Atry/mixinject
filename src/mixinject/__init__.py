@@ -606,7 +606,6 @@ class RelativeReferenceSentinel(Enum):
     NOT_FOUND = auto()
 
 
-
 class Symbol(ABC):
     pass
 
@@ -1185,7 +1184,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     def unions(self):
         return frozenset(self._generate_unions())
 
-    def _generate_unions(self):
+    def _generate_unions(self) -> Iterator["MixinSymbol"]:
         yield self
         match self.origin:
             case Nested(outer=outer, key=key):
@@ -1205,14 +1204,16 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     def super_unions(self):
         return frozenset(self._generate_super_unions())
 
-    def _generate_strict_supers(self):
+    def _generate_strict_supers(self) -> Iterator["MixinSymbol"]:
         if self.outer is not OuterSentinel.ROOT:
-            for resolved_reference in self.resolved_bases:
-                for symbol in resolved_reference.get_symbols(self.outer):
-                    yield from symbol._generate_super_references()
+            for union in self.unions:
+                for resolved_reference in union.resolved_bases:
+                    for symbol in resolved_reference.get_symbols(self.outer):
+                        yield symbol
+                        yield from symbol.strict_super_references
 
     @cached_property
-    def strict_super_references(self) -> Collection[MixinSymbol]:
+    def strict_super_references(self) -> Collection["MixinSymbol"]:
         return frozenset(self._generate_strict_supers())
 
 

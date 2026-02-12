@@ -75,7 +75,7 @@ NatEquality:
           - predecessor: [Nat]
         _recursiveEquality:
           - [Successor, ~, predecessor, Equal]
-          - other: [other, predecessor]
+          - other: [Equal, ~, other, predecessor]
         _OtherVisitor:
           - [other, Visitor]
           - VisitZero:

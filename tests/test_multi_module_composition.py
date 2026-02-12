@@ -113,18 +113,17 @@ def multi_module_scope() -> Scope:
 
 
 class TestMultiModuleCompositionFlat:
-    """Test that Module3Flat.Class4's super_unions contains all Class4 union symbols.
+    """Test that Module3Flat.Class4's super_unions contains all Class union symbols.
 
     Module2Flat defines: Class4
     Module3Flat inherits: [Module1], [Module2Flat]
 
-    Expected super_unions for Module3Flat.Class4:
-      1. Module3Flat.Class4 (self)
-      2. Module2Flat.Class4 (definition-site)
+    super_unions transitively includes all Class symbols from all modules
+    in the composition chain (Module1, Module2Flat, Module3Flat).
     """
 
     def test_class4_super_chain_contains_all_classes(
-        self, multi_module_scope: Scope
+        self, multi_module_scope: Scope, snapshot: SnapshotAssertion
     ) -> None:
         module3 = multi_module_scope.Module3Flat
         assert isinstance(module3, Scope)
@@ -138,10 +137,7 @@ class TestMultiModuleCompositionFlat:
             for symbol in non_synthetic
         )
 
-        assert len(non_synthetic) == 2, (
-            f"Expected 2 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
-            f"{non_synthetic_paths}"
-        )
+        assert non_synthetic_paths == snapshot(name="flat_class4_super_chain")
 
 
 class TestMultiModuleCompositionSnapshot:
@@ -163,18 +159,17 @@ class TestMultiModuleCompositionSnapshot:
 
 
 class TestMultiModuleCompositionNested:
-    """Test that Module3.Nested2.Class4's super_unions contains all Class4 union symbols.
+    """Test that Module3.Nested2.Class4's super_unions contains all Class union symbols.
 
     Module2 defines: Nested2.Class4
     Module3 inherits: [Module1], [Module2]
 
-    Expected super_unions for Module3.Nested2.Class4:
-      1. Module3.Nested2.Class4 (self)
-      2. Module2.Nested2.Class4 (definition-site)
+    super_unions transitively includes all Class symbols from all modules
+    in the composition chain (Module1, Module2, Module3).
     """
 
     def test_class4_super_chain_contains_all_classes(
-        self, multi_module_scope: Scope
+        self, multi_module_scope: Scope, snapshot: SnapshotAssertion
     ) -> None:
         module3 = multi_module_scope.Module3
         assert isinstance(module3, Scope)
@@ -191,10 +186,7 @@ class TestMultiModuleCompositionNested:
             for symbol in non_synthetic
         )
 
-        assert len(non_synthetic) == 2, (
-            f"Expected 2 non-synthetic MixinSymbols, got {len(non_synthetic)}: "
-            f"{non_synthetic_paths}"
-        )
+        assert non_synthetic_paths == snapshot(name="nested_class4_super_chain")
 
 
 class TestMultiModuleCompositionDiamond:
@@ -450,35 +442,22 @@ class TestDeBruijnCompositionNavigation:
     """
 
     def test_de_bruijn_references_resolve_after_flattening(
-        self, multi_module_scope: Scope
+        self, multi_module_scope: Scope, snapshot: SnapshotAssertion
     ) -> None:
         composed_symbol = multi_module_scope.symbol["Composed"]
         library_symbol = multi_module_scope.symbol["Library"]
         container_symbol = library_symbol["Types"]["Container"]
 
-        # Each DeBruijnIndex symbol has 2 super_unions:
-        # - One at Composed level (composition-site)
-        # - One at Library.Types.Container level (definition-site)
-        expected_outer_paths = {
-            ("multi_module_composition", "Composed"),
-            ("multi_module_composition", "Library", "Types", "Container"),
-        }
-
+        # Each DeBruijnIndex symbol's super_unions transitively includes
+        # all union symbols from the composition chain.
         for index in range(4):
             reference_symbol = composed_symbol[f"DeBruijnIndex{index}"]
-            super_union_paths = {
-                super_symbol.path for super_symbol in reference_symbol.super_unions
-            }
-            super_union_outer_paths = {
-                super_symbol.outer.path for super_symbol in reference_symbol.super_unions
-            }
-            assert len(super_union_paths) == 2, (
-                f"DeBruijnIndex{index}: expected 2 super_unions, "
-                f"got {len(super_union_paths)}: {super_union_paths}"
+            super_union_paths = sorted(
+                ".".join(str(segment) for segment in super_symbol.path)
+                for super_symbol in reference_symbol.super_unions
             )
-            assert super_union_outer_paths == expected_outer_paths, (
-                f"DeBruijnIndex{index}: expected outers {expected_outer_paths}, "
-                f"got {super_union_outer_paths}"
+            assert super_union_paths == snapshot(
+                name=f"de_bruijn_index_{index}_super_unions"
             )
 
         # Verify de Bruijn resolution at each level via lexical_outer navigation.

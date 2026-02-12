@@ -37,55 +37,30 @@ def arithmetic_scope() -> Scope:
 # Church numeral construction tests
 # =============================================================================
 
-@pytest.mark.skip(reason="Known bug: instance scope creation from inherited scopes")
 class TestChurchNumerals:
     """Test that Church numerals are constructed correctly."""
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_zero(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Zero.ToPython.pythonValue == 0
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_one(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.One.ToPython.pythonValue == 1
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_two(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Two.ToPython.pythonValue == 2
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_three(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Three.ToPython.pythonValue == 3
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_four(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Four.ToPython.pythonValue == 4
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_five(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Five.ToPython.pythonValue == 5
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_six(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Six.ToPython.pythonValue == 6
 
-    @pytest.mark.xfail(
-        reason="Known bug: instance scope creation from inherited scopes"
-    )
     def test_seven(self, arithmetic_scope: Scope) -> None:
         assert arithmetic_scope.Seven.ToPython.pythonValue == 7
 
@@ -95,7 +70,6 @@ class TestChurchNumerals:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="ToPython not yet available on addition results")
 class TestAddition:
     """Test Church numeral addition via the Plus operation."""
 
@@ -117,7 +91,6 @@ class TestAddition:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="ToPython not yet available on equality results")
 class TestDirectEquality:
     """Test Church numeral equality via the Equal operation."""
 
@@ -139,7 +112,6 @@ class TestDirectEquality:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="ToPython not yet available on equality results")
 class TestEqualityWithAddition:
     """Test equality of addition results."""
 
