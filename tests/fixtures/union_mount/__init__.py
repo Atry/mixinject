@@ -1,7 +1,7 @@
 """Union mount fixtures demonstrating merge and patches use cases."""
 
-from mixinject import RelativeReference as R
-from mixinject import extend, public, scope
+from ol import RelativeReference as R
+from ol import extend, public, scope
 
 
 @extend(

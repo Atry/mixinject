@@ -180,7 +180,7 @@
                   ]
                 );
             members = [
-              "mixinject"
+              "ol"
             ]
             ++ lib.optionals (builtins.pathExists ./lib) (
               lib.pipe ./lib [
@@ -257,8 +257,8 @@
                 )
               ]
             );
-            mixinject-dev-env =
-              (editablePythonSet.mkVirtualEnv "mixinject-dev-env" workspace.deps.all).overrideAttrs
+            ol-dev-env =
+              (editablePythonSet.mkVirtualEnv "ol-dev-env" workspace.deps.all).overrideAttrs
                 (old: {
                   venvIgnoreCollisions = [ "*" ];
                 });
@@ -280,7 +280,7 @@
             start-jupyter-lab = pkgs.writeShellApplication {
               name = "start-jupyter-lab";
               runtimeInputs = [
-                mixinject-dev-env
+                ol-dev-env
                 pkgs.screen
                 pkgs.coreutils
                 pkgs.xxd
@@ -297,16 +297,16 @@
             nixpkgs.hostPlatform = system;
             nixpkgs.config.allowUnfree = true;
             packages.default =
-              (pythonSet.mkVirtualEnv "mixinject-env" workspace.deps.default).overrideAttrs
+              (pythonSet.mkVirtualEnv "ol-env" workspace.deps.default).overrideAttrs
                 (old: {
                   venvIgnoreCollisions = [ "*" ];
                 });
-            packages.mixinject-dev-env = mixinject-dev-env;
+            packages.ol-dev-env = ol-dev-env;
 
             devShells.default = pkgs.mkShell {
               env = {
                 # Force uv to use Python interpreter from venv
-                UV_PYTHON = "${mixinject-dev-env}/bin/python";
+                UV_PYTHON = "${ol-dev-env}/bin/python";
 
                 # Prevent uv from downloading managed Python's
                 UV_PYTHON_DOWNLOADS = "never";
@@ -339,7 +339,7 @@
                 );
               };
               packages = [
-                mixinject-dev-env
+                ol-dev-env
                 pkgs.nixfmt
                 pkgs.shellcheck
                 pkgs.uv
@@ -353,9 +353,9 @@
                 # Get repository root using git. This is expanded at runtime by the editable `.pth` machinery.
                 export REPO_ROOT=$(git rev-parse --show-toplevel)
 
-                # Create symlink .venv -> mixinject-dev-env
+                # Create symlink .venv -> ol-dev-env
                 rm -rf .venv
-                ln -sf ${mixinject-dev-env} .venv
+                ln -sf ${ol-dev-env} .venv
 
                 # Compute hash from current path for Jupyter URL
                 PWD_HASH=$(echo -n "$PWD" | sha256sum | cut -c1-8)

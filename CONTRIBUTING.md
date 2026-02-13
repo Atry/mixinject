@@ -14,7 +14,7 @@
 
 ```bash
 # ✗ FORBIDDEN - Never use git checkout to discard changes
-git checkout src/mixinject/runtime.py
+git checkout src/ol
 git checkout .
 
 # ✓ REQUIRED - Use named git stash with descriptive message

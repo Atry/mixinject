@@ -1,6 +1,6 @@
 """Branch 1: Provides tag1 patch and another_dependency resource."""
 
-from mixinject import patch, public, resource, scope
+from ol import patch, public, resource, scope
 
 
 @patch

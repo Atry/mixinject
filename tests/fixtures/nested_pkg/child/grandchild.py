@@ -1,5 +1,5 @@
 """Grandchild module (two levels deep)."""
-from mixinject import public, resource
+from ol import public, resource
 
 
 @public

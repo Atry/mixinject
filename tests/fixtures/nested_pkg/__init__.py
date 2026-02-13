@@ -1,5 +1,5 @@
 """Nested package for testing lazy import depth."""
-from mixinject import public, resource
+from ol import public, resource
 
 
 @public

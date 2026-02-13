@@ -2,7 +2,7 @@ from pathlib import PurePath
 
 import pytest
 
-from mixinject import AbsoluteReference, RelativeReference, resource_reference_from_pure_path
+from ol import AbsoluteReference, RelativeReference, resource_reference_from_pure_path
 
 
 class TestResourceReferenceFromPurePath:

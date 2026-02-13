@@ -1,5 +1,5 @@
 """Child package (one level deep)."""
-from mixinject import public, resource
+from ol import public, resource
 
 
 @public

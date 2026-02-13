@@ -1,7 +1,7 @@
 """Tests for Church-encoded natural number arithmetic and equality.
 
-Tests the MIXIN definitions in arithmetic_test.mixin.yaml which compose
-NatPlus and NatEquality from Mixin.mixin.yaml to verify:
+Tests the OL definitions in ArithmeticTest.ol.yaml which compose
+NatPlus and NatEquality from Builtin.ol.yaml to verify:
 - Church numeral construction
 - Addition (Plus operation)
 - Equality checking (Equal operation)
@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-import mixinject as mixinject_module
-from mixinject.mixin_directory import DirectoryMixinDefinition
-from mixinject.runtime import Scope, evaluate
+import ol.library
+from ol.mixin_directory import DirectoryMixinDefinition
+from ol.runtime import Scope, evaluate
 
 
 TESTS_PATH = Path(__file__).parent
@@ -27,8 +27,8 @@ def arithmetic_scope() -> Scope:
     tests_definition = DirectoryMixinDefinition(
         bases=(), is_public=True, underlying=TESTS_PATH
     )
-    root = evaluate(mixinject_module, tests_definition, modules_public=True)
-    result = root.arithmetic_test
+    root = evaluate(ol.library, tests_definition, modules_public=True)
+    result = root.ArithmeticTest
     assert isinstance(result, Scope)
     return result
 

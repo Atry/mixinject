@@ -1,6 +1,6 @@
 """A regular module (not a package) for testing."""
 
-from mixinject import resource
+from ol import resource
 
 
 @resource

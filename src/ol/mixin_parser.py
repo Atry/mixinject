@@ -2,7 +2,7 @@
 Parser for MIXIN specification files (YAML/JSON/TOML).
 
 This module provides parsing of MIXIN files into Definition objects that can be
-evaluated by the mixinject runtime.
+evaluated by the overlay runtime.
 
 .. todo::
    Implement naming convention detection for automatic decorator inference.
@@ -46,7 +46,7 @@ from typing import TypeAlias, final
 
 import yaml
 
-from mixinject import (
+from ol import (
     Definition,
     LexicalReference,
     QualifiedThisReference,
@@ -325,16 +325,16 @@ def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefiniti
 
     # Determine format from the full filename pattern
     name = file_path.name.lower()
-    if name.endswith(".mixin.yaml") or name.endswith(".mixin.yml"):
+    if name.endswith(".ol.yaml") or name.endswith(".ol.yml"):
         data = yaml.safe_load(content)
-    elif name.endswith(".mixin.json"):
+    elif name.endswith(".ol.json"):
         data = json.loads(content)
-    elif name.endswith(".mixin.toml"):
+    elif name.endswith(".ol.toml"):
         data = tomllib.loads(content)
     else:
         raise ValueError(
-            f"Unrecognized MIXIN file format: {file_path.name}. "
-            f"Expected .mixin.yaml, .mixin.json, or .mixin.toml"
+            f"Unrecognized OL file format: {file_path.name}. "
+            f"Expected .ol.yaml, .ol.json, or .ol.toml"
         )
 
     if not isinstance(data, dict):

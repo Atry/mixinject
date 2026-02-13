@@ -1,6 +1,6 @@
 """A regular package for testing."""
 
-from mixinject import public, resource
+from ol import public, resource
 
 
 @public

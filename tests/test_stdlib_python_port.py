@@ -1,4 +1,4 @@
-"""Port of stdlib.mixin.yaml to Python API to test resource/scope semantics.
+"""Port of stdlib.ol.yaml to Python API to test resource/scope semantics.
 
 Convention tested:
 - Names starting with `_` → private (no @public decorator)
@@ -7,7 +7,7 @@ Convention tested:
 
 import pytest
 
-from mixinject import (
+from ol import (
     public,
     resource,
     scope,
@@ -16,7 +16,7 @@ from mixinject import (
     extern,
     MixinSymbol,
 )
-from mixinject.runtime import Scope, evaluate
+from ol.runtime import Scope, evaluate
 
 
 # =============================================================================

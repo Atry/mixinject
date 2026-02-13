@@ -1,6 +1,6 @@
 """Module B in namespace package with internal dependencies."""
 
-from mixinject import public, resource
+from ol import public, resource
 
 
 @public

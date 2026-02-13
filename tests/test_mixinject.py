@@ -2,7 +2,7 @@
 
 import pytest
 
-from mixinject import (
+from ol import (
     MixinSymbol,
     ObjectScopeDefinition,
     LexicalReference,

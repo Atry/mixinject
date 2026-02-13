@@ -2,7 +2,7 @@
 
 import gc
 
-from mixinject import (
+from ol import (
     MixinSymbol,
     Nested,
     ObjectScopeDefinition,

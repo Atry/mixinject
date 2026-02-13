@@ -2,7 +2,7 @@
 
 from typing import Callable, Iterator
 
-from mixinject import merge, public, scope
+from ol import merge, public, scope
 
 
 @public

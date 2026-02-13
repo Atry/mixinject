@@ -1,10 +1,10 @@
 # Composed namespace: NatPlus + NatEquality
 # Provides Zero/Successor with Plus and Equal operations, plus True/False
 NatArithmetic:
-  - [Mixin, NatPlus]
-  - [Mixin, NatEquality]
-  - [ffi, NatToPython]
-  - [ffi, BooleanToPython]
+  - [Builtin, NatPlus]
+  - [Builtin, NatEquality]
+  - [Builtin, NatToPython]
+  - [Builtin, BooleanToPython]
 
 # =============================================================================
 # Concrete Church numerals

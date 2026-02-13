@@ -1,4 +1,4 @@
-from mixinject import (
+from ol import (
     LexicalReference,
     MappingScopeDefinition,
     extend,
@@ -7,11 +7,11 @@ from mixinject import (
     resource,
     scope,
 )
-from mixinject.runtime import Scope
+from ol.runtime import Scope
 
 
 @public
-@extend(LexicalReference(path=("Mixin", "Nat")))
+@extend(LexicalReference(path=("Nat",)))
 @scope
 class NatToPython:
     @public

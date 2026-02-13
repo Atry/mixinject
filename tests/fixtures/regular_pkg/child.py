@@ -1,6 +1,6 @@
 """A child module within regular_pkg."""
 
-from mixinject import public, resource
+from ol import public, resource
 
 
 @public

@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from mixinject import LexicalReference, QualifiedThisReference
-from mixinject.mixin_directory import (
+from ol import LexicalReference, QualifiedThisReference
+from ol.mixin_directory import (
     DirectoryMixinDefinition,
     evaluate_mixin_directory,
 )
-from mixinject.mixin_parser import (
+from ol.mixin_parser import (
     FileMixinDefinition,
     parse_mixin_file,
     parse_mixin_value,
@@ -63,7 +63,7 @@ class TestParseMixinValue:
     def test_object_value(self) -> None:
         """Object value should be parsed as properties only."""
         value = {"name": "test", "value": 42}
-        result = parse_mixin_value(value, source_file=Path("test.mixin.yaml"))
+        result = parse_mixin_value(value, source_file=Path("test.ol.yaml"))
 
         assert result.inheritances == ()
         assert result.property_definitions == ({"name": "test", "value": 42},)
@@ -71,7 +71,7 @@ class TestParseMixinValue:
 
     def test_scalar_value(self) -> None:
         """Scalar value should be parsed as scalar_values."""
-        result = parse_mixin_value(42, source_file=Path("test.mixin.yaml"))
+        result = parse_mixin_value(42, source_file=Path("test.ol.yaml"))
 
         assert result.inheritances == ()
         assert result.property_definitions == ()
@@ -80,7 +80,7 @@ class TestParseMixinValue:
     def test_array_with_inheritance(self) -> None:
         """Array with inheritance reference should be parsed."""
         value = [["ParentMixin"], {"property": "value"}]
-        result = parse_mixin_value(value, source_file=Path("test.mixin.yaml"))
+        result = parse_mixin_value(value, source_file=Path("test.ol.yaml"))
 
         assert len(result.inheritances) == 1
         assert isinstance(result.inheritances[0], LexicalReference)
@@ -90,7 +90,7 @@ class TestParseMixinValue:
     def test_array_with_scalar(self) -> None:
         """Array with scalar value should be parsed."""
         value = [42, ["ParentMixin"]]
-        result = parse_mixin_value(value, source_file=Path("test.mixin.yaml"))
+        result = parse_mixin_value(value, source_file=Path("test.ol.yaml"))
 
         assert len(result.inheritances) == 1
         assert result.scalar_values == (42,)
@@ -117,7 +117,7 @@ test_late_binding:
     late_binding:
       - [my_mixin1, ~, inner]
 """
-        yaml_file = tmp_path / "foo.mixin.yaml"
+        yaml_file = tmp_path / "foo.ol.yaml"
         yaml_file.write_text(yaml_content)
 
         result = parse_mixin_file(yaml_file)
@@ -134,7 +134,7 @@ test_late_binding:
     def test_parse_json_file(self, tmp_path: Path) -> None:
         """Parse a JSON mixin file."""
         json_content = '{"TestMixin": {"value": 42}}'
-        json_file = tmp_path / "test.mixin.json"
+        json_file = tmp_path / "test.ol.json"
         json_file.write_text(json_content)
 
         result = parse_mixin_file(json_file)
@@ -150,7 +150,7 @@ test_late_binding:
 value = 42
 name = "test"
 """
-        toml_file = tmp_path / "test.mixin.toml"
+        toml_file = tmp_path / "test.ol.toml"
         toml_file.write_text(toml_content)
 
         result = parse_mixin_file(toml_file)
@@ -163,7 +163,7 @@ name = "test"
         """Unrecognized file format should raise ValueError."""
         invalid_file = tmp_path / "test.txt"
         invalid_file.write_text("{}")
-        with pytest.raises(ValueError, match="Unrecognized MIXIN file format"):
+        with pytest.raises(ValueError, match="Unrecognized OL file format"):
             parse_mixin_file(invalid_file)
 
     def test_multiple_origins(self, tmp_path: Path) -> None:
@@ -174,7 +174,7 @@ MultiOriginMixin:
   - field1: "value1"
   - field2: "value2"
 """
-        yaml_file = tmp_path / "multi.mixin.yaml"
+        yaml_file = tmp_path / "multi.ol.yaml"
         yaml_file.write_text(yaml_content)
 
         result = parse_mixin_file(yaml_file)
@@ -202,7 +202,7 @@ class TestFileMixinDefinition:
             is_public=True,
             underlying={"prop1": "value1", "prop2": "value2"},
             scalar_values=(),
-            source_file=Path("test.mixin.yaml"),
+            source_file=Path("test.ol.yaml"),
         )
 
         keys = list(definition)
@@ -216,7 +216,7 @@ class TestFileMixinDefinition:
             is_public=True,
             underlying={"child": {"nested": "value"}},
             scalar_values=(),
-            source_file=Path("test.mixin.yaml"),
+            source_file=Path("test.ol.yaml"),
         )
 
         children = definition["child"]
@@ -230,8 +230,8 @@ class TestDirectoryMixinDefinition:
     """Tests for DirectoryMixinDefinition class."""
 
     def test_discovers_mixin_files(self, tmp_path: Path) -> None:
-        """Should discover *.mixin.yaml files in directory."""
-        mixin_file = tmp_path / "test.mixin.yaml"
+        """Should discover *.ol.yaml files in directory."""
+        mixin_file = tmp_path / "test.ol.yaml"
         mixin_file.write_text("TestMixin:\n  value: 42\n")
 
         definition = DirectoryMixinDefinition(
@@ -259,9 +259,9 @@ class TestDirectoryMixinDefinition:
 
     def test_discovers_multiple_formats(self, tmp_path: Path) -> None:
         """Should discover yaml, json, and toml files."""
-        (tmp_path / "yaml_test.mixin.yaml").write_text("A: {}")
-        (tmp_path / "json_test.mixin.json").write_text('{"B": {}}')
-        (tmp_path / "toml_test.mixin.toml").write_text("[C]\n")
+        (tmp_path / "yaml_test.ol.yaml").write_text("A: {}")
+        (tmp_path / "json_test.ol.json").write_text('{"B": {}}')
+        (tmp_path / "toml_test.ol.toml").write_text("[C]\n")
 
         definition = DirectoryMixinDefinition(
             bases=(),
@@ -285,7 +285,7 @@ TestMixin:
   value: 42
   name: "test"
 """
-        (tmp_path / "test.mixin.yaml").write_text(yaml_content)
+        (tmp_path / "test.ol.yaml").write_text(yaml_content)
 
         scope = evaluate_mixin_directory(tmp_path)
 
@@ -297,7 +297,7 @@ TestMixin:
         """Evaluate a directory with subdirectories."""
         subdir = tmp_path / "subdir"
         subdir.mkdir()
-        (subdir / "nested.mixin.yaml").write_text("NestedMixin:\n  value: 1\n")
+        (subdir / "nested.ol.yaml").write_text("NestedMixin:\n  value: 1\n")
 
         scope = evaluate_mixin_directory(tmp_path)
 
@@ -323,7 +323,7 @@ Derived:
   - [Base]
   - derived_value: "from_derived"
 """
-        (tmp_path / "test.mixin.yaml").write_text(yaml_content)
+        (tmp_path / "test.ol.yaml").write_text(yaml_content)
 
         scope = evaluate_mixin_directory(tmp_path)
 

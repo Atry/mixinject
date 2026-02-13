@@ -1,6 +1,6 @@
 """Debug script to trace kwargs flow."""
-from mixinject import public, resource, scope, extern
-from mixinject.runtime import Scope, evaluate
+from ol import public, resource, scope, extern
+from ol.runtime import Scope, evaluate
 
 @public
 @scope

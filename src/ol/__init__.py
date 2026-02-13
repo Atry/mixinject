@@ -1,10 +1,10 @@
 """
-mixinject: A dependency injection framework with pytest-fixture-like semantics.
+The Overlay language: A dependency injection framework with pytest-fixture-like semantics.
 
 Design Philosophy
 =================
 
-mixinject implements a dependency injection framework that combines pytest fixture-like semantics
+Overlay language implements a dependency injection framework that combines pytest fixture-like semantics
 with hierarchical resource structures and mixin composition patterns, inspired by
 https://github.com/atry/mixin and https://github.com/mxmlnkn/ratarmount/pull/163.
 
@@ -63,7 +63,7 @@ This explicit-only design makes dependency injection predictable and self-docume
 
 Example::
 
-    from mixinject import scope, resource, patch, evaluate
+    from ol import scope, resource, patch, evaluate
 
     @scope
     class Base:
@@ -378,7 +378,7 @@ Merging and Composition
 Module and Package Merging
 ---------------------------
 
-When merging modules and packages, mixinject uses an algorithm similar to
+When merging modules and packages, Overlay language uses an algorithm similar to
 https://github.com/atry/mixin and https://github.com/mxmlnkn/ratarmount/pull/163.
 
 Same-Named Callable Merging Rules
@@ -444,7 +444,7 @@ Example
 ::
 
     # config.py
-    from mixinject import parameter, resource
+    from ol import parameter, resource
 
     @extern
     def settings(): ...
@@ -454,7 +454,7 @@ Example
         return f"{settings['host']}:{settings['port']}"
 
     # main.py
-    from mixinject import evaluate
+    from ol import evaluate
 
     root = evaluate(config)(settings={"host": "db.example.com", "port": "3306"})
     assert root.connection_string == "db.example.com:3306"
@@ -573,8 +573,8 @@ from typing import (
 
 
 if TYPE_CHECKING:
-    from mixinject import runtime
-    from mixinject.mixin_parser import FileMixinDefinition
+    from ol import runtime
+    from ol.mixin_parser import FileMixinDefinition
 
 
 import weakref
@@ -1640,19 +1640,19 @@ class MappingScopeDefinition(ScopeDefinition):
 @final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class PackageScopeDefinition(ObjectScopeDefinition):
-    """A definition for packages that discovers submodules and *.mixin.* files via pkgutil."""
+    """A definition for packages that discovers submodules and *.ol.* files via pkgutil."""
 
     underlying: ModuleType
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.mixin.yaml/json/toml files in the package directory."""
+        """Discover *.ol.yaml/json/toml files in the package directory."""
         result: dict[str, Path] = {}
         package_paths = getattr(self.underlying, "__path__", None)
         if package_paths is None:
             return result
 
-        mixin_extensions = (".mixin.yaml", ".mixin.yml", ".mixin.json", ".mixin.toml")
+        ol_extensions = (".ol.yaml", ".ol.yml", ".ol.json", ".ol.toml")
         for package_path in package_paths:
             package_dir = Path(package_path)
             if not package_dir.is_dir():
@@ -1661,9 +1661,9 @@ class PackageScopeDefinition(ObjectScopeDefinition):
                 if not file_path.is_file():
                     continue
                 name_lower = file_path.name.lower()
-                for extension in mixin_extensions:
+                for extension in ol_extensions:
                     if name_lower.endswith(extension):
-                        # Extract stem: foo.mixin.yaml -> foo
+                        # Extract stem: foo.ol.yaml -> foo
                         stem = file_path.name[: -len(extension)]
                         if stem not in result:
                             result[stem] = file_path
@@ -1754,7 +1754,7 @@ class _MixinFileScopeDefinition(ScopeDefinition):
 
     @cached_property
     def _parsed(self) -> Mapping[str, Sequence["FileMixinDefinition"]]:
-        from mixinject.mixin_parser import parse_mixin_file
+        from ol.mixin_parser import parse_mixin_file
 
         return parse_mixin_file(self.underlying)
 
@@ -1778,7 +1778,7 @@ def scope(c: object) -> ObjectScopeDefinition:
         Use ``@extend`` with ``RelativeReference`` to combine multiple scopes.
         This is the recommended way to create union mount points::
 
-            from mixinject import RelativeReference as R
+            from ol import RelativeReference as R
 
             @scope
             class Root:
@@ -1830,7 +1830,7 @@ def extend(
 
     Example - Extending a sibling scope::
 
-        from mixinject import RelativeReference as R
+        from ol import RelativeReference as R
 
         @scope
         class Root:
@@ -1869,7 +1869,7 @@ def extend(
                 return f"{foo}_bar"
 
             # my_package/__init__.py
-            from mixinject import RelativeReference as R, extend, scope
+            from ol import RelativeReference as R, extend, scope
 
             @extend(
                 R(de_bruijn_index=0, path=("branch1",)),
@@ -1927,8 +1927,8 @@ def merge(
 
     The following example defines a merge that deduplicates strings from multiple patches into a frozenset::
 
-        from mixinject import merge, patch, resource, extend, scope, evaluate, extern
-        from mixinject import RelativeReference as R
+        from ol import merge, patch, resource, extend, scope, evaluate, extern
+        from ol import RelativeReference as R
 
         @scope
         class Root:
@@ -2050,7 +2050,7 @@ def resource(
 
     Example:
     The following example defines a resource that can be modified by patches.
-        from mixinject import resource, patch
+        from ol import resource, patch
         @resource
         def greeting() -> str:
             return "Hello"
@@ -2061,7 +2061,7 @@ def resource(
             return lambda original: original + "!!!"
 
     Alternatively, ``greeting`` can be defined with an explicit merge:
-        from mixinject import merge
+        from ol import merge
         @merge
         def greeting() -> Callable[[Iterator[Endofunction[str]]], str]:
             return lambda endos: reduce(

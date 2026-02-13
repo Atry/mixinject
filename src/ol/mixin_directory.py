@@ -13,16 +13,16 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, final
 
-from mixinject import (
+from ol import (
     Definition,
     MixinSymbol,
     OuterSentinel,
     ScopeDefinition,
 )
-from mixinject.mixin_parser import parse_mixin_file
+from ol.mixin_parser import parse_mixin_file
 
 if TYPE_CHECKING:
-    from mixinject import runtime
+    from ol import runtime
 
 
 @final
@@ -31,7 +31,7 @@ class DirectoryMixinDefinition(ScopeDefinition):
     """
     Scope definition for a directory of MIXIN files.
 
-    Recursively discovers *.mixin.yaml/json/toml files and subdirectories.
+    Recursively discovers *.ol.yaml/json/toml files and subdirectories.
     """
 
     underlying: Path
@@ -39,19 +39,19 @@ class DirectoryMixinDefinition(ScopeDefinition):
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.mixin.yaml/json/toml files in the directory."""
+        """Discover *.ol.yaml/json/toml files in the directory."""
         result: dict[str, Path] = {}
         if not self.underlying.is_dir():
             return result
 
-        mixin_extensions = (".mixin.yaml", ".mixin.yml", ".mixin.json", ".mixin.toml")
+        ol_extensions = (".ol.yaml", ".ol.yml", ".ol.json", ".ol.toml")
         for file_path in self.underlying.iterdir():
             if not file_path.is_file():
                 continue
             name_lower = file_path.name.lower()
-            for extension in mixin_extensions:
+            for extension in ol_extensions:
                 if name_lower.endswith(extension):
-                    # Extract stem: foo.mixin.yaml -> foo
+                    # Extract stem: foo.ol.yaml -> foo
                     stem = file_path.name[: -len(extension)]
                     if stem not in result:
                         result[stem] = file_path
@@ -143,7 +143,7 @@ def evaluate_mixin_directory(directory: Path) -> "runtime.Scope":
     if not directory.is_dir():
         raise ValueError(f"Path is not a directory: {directory}")
 
-    from mixinject import runtime
+    from ol import runtime
 
     root_definition = DirectoryMixinDefinition(
         bases=(),
