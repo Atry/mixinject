@@ -138,27 +138,27 @@
             ]
           );
 
-          ol-dev-env =
-            (editablePythonSet.mkVirtualEnv "ol-dev-env" workspace.deps.all).overrideAttrs
+          overlay-dev-env =
+            (editablePythonSet.mkVirtualEnv "overlay-dev-env" workspace.deps.all).overrideAttrs
               (old: {
                 venvIgnoreCollisions = [ "*" ];
               });
         in
         {
           packages.default =
-            (pythonSet.mkVirtualEnv "ol-env" (builtins.removeAttrs workspace.deps.default [ "overlay" ])).overrideAttrs
+            (pythonSet.mkVirtualEnv "overlay-env" (builtins.removeAttrs workspace.deps.default [ "overlay" ])).overrideAttrs
               (old: {
                 venvIgnoreCollisions = [ "*" ];
               });
-          packages.ol-dev-env = ol-dev-env;
+          packages.overlay-dev-env = overlay-dev-env;
 
           ml-ops.devcontainer.devenvShellModule = {
             packages = [
-              ol-dev-env
+              overlay-dev-env
               pkgs.uv
             ];
             env = {
-              UV_PYTHON = "${ol-dev-env}/bin/python";
+              UV_PYTHON = "${overlay-dev-env}/bin/python";
               UV_PYTHON_DOWNLOADS = "never";
               UV_NO_SYNC = "1";
             };
@@ -166,7 +166,7 @@
               unset PYTHONPATH
               export REPO_ROOT=$(git rev-parse --show-toplevel)
               rm -rf .venv
-              ln -sf ${ol-dev-env} .venv
+              ln -sf ${overlay-dev-env} .venv
             '';
           };
         };

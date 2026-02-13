@@ -10,11 +10,11 @@
     , ...
     }:
     let
-      ol-dev-env = config.packages.ol-dev-env;
+      overlay-dev-env = config.packages.overlay-dev-env;
       start-jupyter-lab = pkgs.writeShellApplication {
         name = "start-jupyter-lab";
         runtimeInputs = [
-          ol-dev-env
+          overlay-dev-env
           pkgs.screen
           pkgs.coreutils
           pkgs.xxd
