@@ -1646,13 +1646,13 @@ class PackageScopeDefinition(ObjectScopeDefinition):
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.ol.yaml/json/toml files in the package directory."""
+        """Discover *.overlay.yaml/json/toml files in the package directory."""
         result: dict[str, Path] = {}
         package_paths = getattr(self.underlying, "__path__", None)
         if package_paths is None:
             return result
 
-        ol_extensions = (".ol.yaml", ".ol.yml", ".ol.json", ".ol.toml")
+        overlay_extensions = (".overlay.yaml", ".overlay.yml", ".overlay.json", ".overlay.toml")
         for package_path in package_paths:
             package_dir = Path(package_path)
             if not package_dir.is_dir():
@@ -1661,9 +1661,9 @@ class PackageScopeDefinition(ObjectScopeDefinition):
                 if not file_path.is_file():
                     continue
                 name_lower = file_path.name.lower()
-                for extension in ol_extensions:
+                for extension in overlay_extensions:
                     if name_lower.endswith(extension):
-                        # Extract stem: foo.ol.yaml -> foo
+                        # Extract stem: foo.overlay.yaml -> foo
                         stem = file_path.name[: -len(extension)]
                         if stem not in result:
                             result[stem] = file_path

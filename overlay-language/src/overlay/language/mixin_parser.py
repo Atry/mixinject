@@ -325,16 +325,16 @@ def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefiniti
 
     # Determine format from the full filename pattern
     name = file_path.name.lower()
-    if name.endswith(".ol.yaml") or name.endswith(".ol.yml"):
+    if name.endswith(".overlay.yaml") or name.endswith(".overlay.yml"):
         data = yaml.safe_load(content)
-    elif name.endswith(".ol.json"):
+    elif name.endswith(".overlay.json"):
         data = json.loads(content)
-    elif name.endswith(".ol.toml"):
+    elif name.endswith(".overlay.toml"):
         data = tomllib.loads(content)
     else:
         raise ValueError(
-            f"Unrecognized OL file format: {file_path.name}. "
-            f"Expected .ol.yaml, .ol.json, or .ol.toml"
+            f"Unrecognized Overlay file format: {file_path.name}. "
+            f"Expected .overlay.yaml, .overlay.json, or .overlay.toml"
         )
 
     if not isinstance(data, dict):

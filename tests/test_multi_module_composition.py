@@ -107,7 +107,7 @@ def multi_module_scope() -> Scope:
         bases=(), is_public=True, underlying=FIXTURES_PATH
     )
     root = evaluate(fixtures_definition, modules_public=True)
-    result = root.multi_module_composition
+    result = root.MultiModuleComposition
     assert isinstance(result, Scope)
     return result
 
@@ -416,7 +416,7 @@ class TestDeBruijnCompositionNavigation:
           DeBruijnIndex0: [Container, ~]    # de_bruijn=0
           DeBruijnIndex1: [Types, ~]      # de_bruijn=1
           DeBruijnIndex2: [Library, ~]      # de_bruijn=2
-          DeBruijnIndex3: [multi_module_composition, ~]  # de_bruijn=3
+          DeBruijnIndex3: [MultiModuleComposition, ~]  # de_bruijn=3
       DirectFlatten:
         - [Types, Container]
         - DirectOnly: []
@@ -438,7 +438,7 @@ class TestDeBruijnCompositionNavigation:
       de_bruijn=0 → {Composed}
       de_bruijn=1 → {Wrapper.AltTypes, Wrapper2.AltTypes2}  (2 indirect paths)
       de_bruijn=2 → {Library}
-      de_bruijn=3 → {multi_module_composition}
+      de_bruijn=3 → {MultiModuleComposition}
     """
 
     def test_de_bruijn_references_resolve_after_flattening(
@@ -469,21 +469,21 @@ class TestDeBruijnCompositionNavigation:
         #   Level 1: definition_site = Types
         #            AltTypes.lexical_outer[Types] → {Library}
         #   Level 2: definition_site = Library
-        #            Library.lexical_outer[Library] → {multi_module_composition}
+        #            Library.lexical_outer[Library] → {MultiModuleComposition}
 
         types_symbol = library_symbol["Types"]
 
         # DeBruijnIndex0 (de_bruijn=0): resolves to Composed (self level)
-        assert composed_symbol.path == ("multi_module_composition", "Composed")
+        assert composed_symbol.path == ("MultiModuleComposition", "Composed")
 
         # DeBruijnIndex1 (de_bruijn=1): navigate 1 level up
         # composed.lexical_outer[Container] gives AltTypes and AltTypes2
         resolved_1 = composed_symbol.lexical_outer[container_symbol]
         resolved_1_paths = {symbol.path for symbol in resolved_1}
-        assert ("multi_module_composition", "Library", "Wrapper", "AltTypes") in resolved_1_paths, (
+        assert ("MultiModuleComposition", "Library", "Wrapper", "AltTypes") in resolved_1_paths, (
             f"DeBruijnIndex1: expected Wrapper.AltTypes in resolved paths, got {resolved_1_paths}"
         )
-        assert ("multi_module_composition", "Library", "Wrapper2", "AltTypes2") in resolved_1_paths, (
+        assert ("MultiModuleComposition", "Library", "Wrapper2", "AltTypes2") in resolved_1_paths, (
             f"DeBruijnIndex1: expected Wrapper2.AltTypes2 in resolved paths, got {resolved_1_paths}"
         )
 
@@ -496,20 +496,20 @@ class TestDeBruijnCompositionNavigation:
                 level_1_symbol.lexical_outer.get(types_symbol, set())
             )
         resolved_2_paths = {symbol.path for symbol in resolved_2}
-        assert ("multi_module_composition", "Library") in resolved_2_paths, (
+        assert ("MultiModuleComposition", "Library") in resolved_2_paths, (
             f"DeBruijnIndex2: expected Library in resolved paths, got {resolved_2_paths}"
         )
 
         # DeBruijnIndex3 (de_bruijn=3): navigate 3 levels up
         # Level 0: Container → {AltTypes, AltTypes2}
         # Level 1: Types → {Library}
-        # Level 2: Library → {multi_module_composition}
+        # Level 2: Library → {MultiModuleComposition}
         resolved_3: frozenset[MixinSymbol] = frozenset()
         for level_2_symbol in resolved_2:
             resolved_3 = resolved_3 | frozenset(
                 level_2_symbol.lexical_outer.get(library_symbol, set())
             )
         resolved_3_paths = {symbol.path for symbol in resolved_3}
-        assert ("multi_module_composition",) in resolved_3_paths, (
-            f"DeBruijnIndex3: expected multi_module_composition in resolved paths, got {resolved_3_paths}"
+        assert ("MultiModuleComposition",) in resolved_3_paths, (
+            f"DeBruijnIndex3: expected MultiModuleComposition in resolved paths, got {resolved_3_paths}"
         )

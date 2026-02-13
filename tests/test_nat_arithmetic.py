@@ -1,7 +1,7 @@
 """Tests for Church-encoded natural number arithmetic and equality.
 
-Tests the OL definitions in ArithmeticTest.ol.yaml which compose
-NatPlus and NatEquality from Builtin.ol.yaml to verify:
+Tests the OL definitions in ArithmeticTest.overlay.yaml which compose
+NatPlus and NatEquality from Builtin.overlay.yaml to verify:
 - Church numeral construction
 - Addition (Plus operation)
 - Equality checking (Equal operation)

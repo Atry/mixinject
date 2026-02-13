@@ -3,7 +3,7 @@
 get_symbols navigates using strict_super_reverse_index at each de Bruijn level
 to find all symbols whose .outer inherits the definition_site.
 
-For the outer_vs_lexical_outer fixture:
+For the OuterVsLexicalOuter fixture:
     Foo:
       Bar:
         Baz: []
@@ -34,12 +34,12 @@ FIXTURES_PATH = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def fixture_symbol() -> MixinSymbol:
-    """Load the outer_vs_lexical_outer fixture and return its MixinSymbol."""
+    """Load the OuterVsLexicalOuter fixture and return its MixinSymbol."""
     fixtures_definition = DirectoryMixinDefinition(
         bases=(), is_public=True, underlying=FIXTURES_PATH
     )
     root = MixinSymbol(origin=(fixtures_definition,))
-    return root["outer_vs_lexical_outer"]
+    return root["OuterVsLexicalOuter"]
 
 
 class TestGetSymbolNonInherited:
@@ -285,7 +285,7 @@ class TestGetSymbolIsomorphicWithFindMixin:
             bases=(), is_public=True, underlying=FIXTURES_PATH
         )
         root_scope = evaluate(fixtures_definition, modules_public=True)
-        result = root_scope.outer_vs_lexical_outer
+        result = root_scope.OuterVsLexicalOuter
         assert isinstance(result, Scope)
         return result
 

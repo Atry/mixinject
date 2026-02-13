@@ -114,7 +114,7 @@ Library:
         DeBruijnIndex0: [Container, ~]
         DeBruijnIndex1: [Types, ~]
         DeBruijnIndex2: [Library, ~]
-        DeBruijnIndex3: [multi_module_composition, ~]
+        DeBruijnIndex3: [MultiModuleComposition, ~]
   Wrapper:
     AltTypes: [Types]
     IndirectFlatten:

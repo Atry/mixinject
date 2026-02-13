@@ -1,38 +1,38 @@
 # serializer version: 1
 # name: TestDeBruijnCompositionNavigation.test_de_bruijn_references_resolve_after_flattening[de_bruijn_index_0_super_unions]
   list([
-    'multi_module_composition.Composed',
-    'multi_module_composition.Composed.DeBruijnIndex0',
-    'multi_module_composition.Library',
-    'multi_module_composition.Library.Types.Container',
-    'multi_module_composition.Library.Types.Container.DeBruijnIndex0',
-    'multi_module_composition.Library.Wrapper.AltTypes.Container',
-    'multi_module_composition.Library.Wrapper.IndirectFlatten',
-    'multi_module_composition.Library.Wrapper2.AltTypes2.Container',
-    'multi_module_composition.Library.Wrapper2.IndirectFlatten2',
+    'MultiModuleComposition.Composed',
+    'MultiModuleComposition.Composed.DeBruijnIndex0',
+    'MultiModuleComposition.Library',
+    'MultiModuleComposition.Library.Types.Container',
+    'MultiModuleComposition.Library.Types.Container.DeBruijnIndex0',
+    'MultiModuleComposition.Library.Wrapper.AltTypes.Container',
+    'MultiModuleComposition.Library.Wrapper.IndirectFlatten',
+    'MultiModuleComposition.Library.Wrapper2.AltTypes2.Container',
+    'MultiModuleComposition.Library.Wrapper2.IndirectFlatten2',
   ])
 # ---
 # name: TestDeBruijnCompositionNavigation.test_de_bruijn_references_resolve_after_flattening[de_bruijn_index_1_super_unions]
   list([
-    'multi_module_composition.Composed.DeBruijnIndex1',
-    'multi_module_composition.Library.Types',
-    'multi_module_composition.Library.Types.Container.DeBruijnIndex1',
-    'multi_module_composition.Library.Wrapper.AltTypes',
-    'multi_module_composition.Library.Wrapper2.AltTypes2',
+    'MultiModuleComposition.Composed.DeBruijnIndex1',
+    'MultiModuleComposition.Library.Types',
+    'MultiModuleComposition.Library.Types.Container.DeBruijnIndex1',
+    'MultiModuleComposition.Library.Wrapper.AltTypes',
+    'MultiModuleComposition.Library.Wrapper2.AltTypes2',
   ])
 # ---
 # name: TestDeBruijnCompositionNavigation.test_de_bruijn_references_resolve_after_flattening[de_bruijn_index_2_super_unions]
   list([
-    'multi_module_composition.Composed.DeBruijnIndex2',
-    'multi_module_composition.Library',
-    'multi_module_composition.Library.Types.Container.DeBruijnIndex2',
+    'MultiModuleComposition.Composed.DeBruijnIndex2',
+    'MultiModuleComposition.Library',
+    'MultiModuleComposition.Library.Types.Container.DeBruijnIndex2',
   ])
 # ---
 # name: TestDeBruijnCompositionNavigation.test_de_bruijn_references_resolve_after_flattening[de_bruijn_index_3_super_unions]
   list([
-    'multi_module_composition',
-    'multi_module_composition.Composed.DeBruijnIndex3',
-    'multi_module_composition.Library.Types.Container.DeBruijnIndex3',
+    'MultiModuleComposition',
+    'MultiModuleComposition.Composed.DeBruijnIndex3',
+    'MultiModuleComposition.Library.Types.Container.DeBruijnIndex3',
   ])
 # ---
 # name: TestFlattenedContainer.test_indirect_flatten_symbol_tree[indirect_flatten_symbol_tree]
@@ -40,7 +40,7 @@
     'children': dict({
       'Content': dict({
         'strict_super': tuple(
-          'multi_module_composition.Library.Wrapper.AltTypes.Value',
+          'MultiModuleComposition.Library.Wrapper.AltTypes.Value',
         ),
       }),
       'DeBruijnIndex0': dict({
@@ -52,7 +52,7 @@
             'children': dict({
               'Content': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.Library.Wrapper.IndirectFlatten.DeBruijnIndex1.Value',
+                  'MultiModuleComposition.Library.Wrapper.IndirectFlatten.DeBruijnIndex1.Value',
                 ),
               }),
               'DeBruijnIndex0': dict({
@@ -77,8 +77,8 @@
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.Library.Types',
-          'multi_module_composition.Library.Wrapper.AltTypes',
+          'MultiModuleComposition.Library.Types',
+          'MultiModuleComposition.Library.Wrapper.AltTypes',
         ),
       }),
       'DeBruijnIndex2': dict({
@@ -93,7 +93,7 @@
       }),
     }),
     'strict_super': tuple(
-      'multi_module_composition.Library.Wrapper.AltTypes.Container',
+      'MultiModuleComposition.Library.Wrapper.AltTypes.Container',
     ),
   })
 # ---
@@ -104,7 +104,7 @@
         'children': dict({
           'Content': dict({
             'strict_super': tuple(
-              'multi_module_composition.Library.Types.Value',
+              'MultiModuleComposition.Library.Types.Value',
             ),
           }),
           'DeBruijnIndex0': dict({
@@ -139,7 +139,7 @@
         'children': dict({
           'Bar': dict({
             'strict_super': tuple(
-              'multi_module_composition.MergedRoot.Foo.Value',
+              'MultiModuleComposition.MergedRoot.Foo.Value',
             ),
           }),
           'Value': dict({
@@ -154,15 +154,15 @@
         'children': dict({
           'Bar': dict({
             'strict_super': tuple(
-              'multi_module_composition.MergedRoot.Merged.Value',
-              'multi_module_composition.MergedRoot.Merged.Value2',
-              'multi_module_composition.MergedRoot.Merged.Value3',
+              'MultiModuleComposition.MergedRoot.Merged.Value',
+              'MultiModuleComposition.MergedRoot.Merged.Value2',
+              'MultiModuleComposition.MergedRoot.Merged.Value3',
             ),
           }),
           'Value': dict({
             'strict_super': tuple(
-              'multi_module_composition.MergedRoot.Merged.Value2',
-              'multi_module_composition.MergedRoot.Merged.Value3',
+              'MultiModuleComposition.MergedRoot.Merged.Value2',
+              'MultiModuleComposition.MergedRoot.Merged.Value3',
             ),
           }),
           'Value2': dict({
@@ -175,9 +175,9 @@
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.MergedRoot.Foo',
-          'multi_module_composition.MergedRoot.Nested.Baz',
-          'multi_module_composition.MergedRoot.Qux',
+          'MultiModuleComposition.MergedRoot.Foo',
+          'MultiModuleComposition.MergedRoot.Nested.Baz',
+          'MultiModuleComposition.MergedRoot.Qux',
         ),
       }),
       'Nested': dict({
@@ -186,13 +186,13 @@
             'children': dict({
               'Bar': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.MergedRoot.Nested.Baz.Value',
-                  'multi_module_composition.MergedRoot.Nested.Baz.Value2',
+                  'MultiModuleComposition.MergedRoot.Nested.Baz.Value',
+                  'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
                 ),
               }),
               'Value': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.MergedRoot.Nested.Baz.Value2',
+                  'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
                 ),
               }),
               'Value2': dict({
@@ -201,7 +201,7 @@
               }),
             }),
             'strict_super': tuple(
-              'multi_module_composition.MergedRoot.Foo',
+              'MultiModuleComposition.MergedRoot.Foo',
             ),
           }),
         }),
@@ -212,13 +212,13 @@
         'children': dict({
           'Bar': dict({
             'strict_super': tuple(
-              'multi_module_composition.MergedRoot.Qux.Value',
-              'multi_module_composition.MergedRoot.Qux.Value3',
+              'MultiModuleComposition.MergedRoot.Qux.Value',
+              'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
           'Value': dict({
             'strict_super': tuple(
-              'multi_module_composition.MergedRoot.Qux.Value3',
+              'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
           'Value3': dict({
@@ -227,7 +227,7 @@
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.MergedRoot.Foo',
+          'MultiModuleComposition.MergedRoot.Foo',
         ),
       }),
     }),
@@ -240,13 +240,13 @@
     'children': dict({
       'Class1': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3Diamond.Nested1.Class3',
+          'MultiModuleComposition.Module3Diamond.Nested1.Class3',
         ),
       }),
       'Class2': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3Diamond.Class1',
-          'multi_module_composition.Module3Diamond.Nested1.Class3',
+          'MultiModuleComposition.Module3Diamond.Class1',
+          'MultiModuleComposition.Module3Diamond.Nested1.Class3',
         ),
       }),
       'Nested1': dict({
@@ -263,10 +263,10 @@
         'children': dict({
           'Class4': dict({
             'strict_super': tuple(
-              'multi_module_composition.Module3Diamond.Class1',
-              'multi_module_composition.Module3Diamond.Class2',
-              'multi_module_composition.Module3Diamond.Nested1.Class3',
-              'multi_module_composition.Module3Diamond.Nested3.ExtraNested.Class5',
+              'MultiModuleComposition.Module3Diamond.Class1',
+              'MultiModuleComposition.Module3Diamond.Class2',
+              'MultiModuleComposition.Module3Diamond.Nested1.Class3',
+              'MultiModuleComposition.Module3Diamond.Nested3.ExtraNested.Class5',
             ),
           }),
         }),
@@ -279,9 +279,9 @@
             'children': dict({
               'Class5': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.Module3Diamond.Class1',
-                  'multi_module_composition.Module3Diamond.Class2',
-                  'multi_module_composition.Module3Diamond.Nested1.Class3',
+                  'MultiModuleComposition.Module3Diamond.Class1',
+                  'MultiModuleComposition.Module3Diamond.Class2',
+                  'MultiModuleComposition.Module3Diamond.Nested1.Class3',
                 ),
               }),
             }),
@@ -294,37 +294,37 @@
       }),
     }),
     'strict_super': tuple(
-      'multi_module_composition.Module1',
-      'multi_module_composition.Module2Diamond',
+      'MultiModuleComposition.Module1',
+      'MultiModuleComposition.Module2Diamond',
     ),
   })
 # ---
 # name: TestMultiModuleCompositionFlat.test_class4_super_chain_contains_all_classes[flat_class4_super_chain]
   list([
-    'multi_module_composition.Module1.Class1',
-    'multi_module_composition.Module1.Class2',
-    'multi_module_composition.Module2Flat.Class1',
-    'multi_module_composition.Module2Flat.Class2',
-    'multi_module_composition.Module2Flat.Class3',
-    'multi_module_composition.Module2Flat.Class4',
-    'multi_module_composition.Module3Flat.Class1',
-    'multi_module_composition.Module3Flat.Class2',
-    'multi_module_composition.Module3Flat.Class3',
-    'multi_module_composition.Module3Flat.Class4',
+    'MultiModuleComposition.Module1.Class1',
+    'MultiModuleComposition.Module1.Class2',
+    'MultiModuleComposition.Module2Flat.Class1',
+    'MultiModuleComposition.Module2Flat.Class2',
+    'MultiModuleComposition.Module2Flat.Class3',
+    'MultiModuleComposition.Module2Flat.Class4',
+    'MultiModuleComposition.Module3Flat.Class1',
+    'MultiModuleComposition.Module3Flat.Class2',
+    'MultiModuleComposition.Module3Flat.Class3',
+    'MultiModuleComposition.Module3Flat.Class4',
   ])
 # ---
 # name: TestMultiModuleCompositionNested.test_class4_super_chain_contains_all_classes[nested_class4_super_chain]
   list([
-    'multi_module_composition.Module1.Class1',
-    'multi_module_composition.Module1.Class2',
-    'multi_module_composition.Module2.Class1',
-    'multi_module_composition.Module2.Class2',
-    'multi_module_composition.Module2.Nested1.Class3',
-    'multi_module_composition.Module2.Nested2.Class4',
-    'multi_module_composition.Module3.Class1',
-    'multi_module_composition.Module3.Class2',
-    'multi_module_composition.Module3.Nested1.Class3',
-    'multi_module_composition.Module3.Nested2.Class4',
+    'MultiModuleComposition.Module1.Class1',
+    'MultiModuleComposition.Module1.Class2',
+    'MultiModuleComposition.Module2.Class1',
+    'MultiModuleComposition.Module2.Class2',
+    'MultiModuleComposition.Module2.Nested1.Class3',
+    'MultiModuleComposition.Module2.Nested2.Class4',
+    'MultiModuleComposition.Module3.Class1',
+    'MultiModuleComposition.Module3.Class2',
+    'MultiModuleComposition.Module3.Nested1.Class3',
+    'MultiModuleComposition.Module3.Nested2.Class4',
   ])
 # ---
 # name: TestMultiModuleCompositionSnapshot.test_module3_flat_symbol_tree
@@ -332,13 +332,13 @@
     'children': dict({
       'Class1': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3Flat.Class3',
+          'MultiModuleComposition.Module3Flat.Class3',
         ),
       }),
       'Class2': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3Flat.Class1',
-          'multi_module_composition.Module3Flat.Class3',
+          'MultiModuleComposition.Module3Flat.Class1',
+          'MultiModuleComposition.Module3Flat.Class3',
         ),
       }),
       'Class3': dict({
@@ -347,15 +347,15 @@
       }),
       'Class4': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3Flat.Class1',
-          'multi_module_composition.Module3Flat.Class2',
-          'multi_module_composition.Module3Flat.Class3',
+          'MultiModuleComposition.Module3Flat.Class1',
+          'MultiModuleComposition.Module3Flat.Class2',
+          'MultiModuleComposition.Module3Flat.Class3',
         ),
       }),
     }),
     'strict_super': tuple(
-      'multi_module_composition.Module1',
-      'multi_module_composition.Module2Flat',
+      'MultiModuleComposition.Module1',
+      'MultiModuleComposition.Module2Flat',
     ),
   })
 # ---
@@ -364,13 +364,13 @@
     'children': dict({
       'Class1': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3.Nested1.Class3',
+          'MultiModuleComposition.Module3.Nested1.Class3',
         ),
       }),
       'Class2': dict({
         'strict_super': tuple(
-          'multi_module_composition.Module3.Class1',
-          'multi_module_composition.Module3.Nested1.Class3',
+          'MultiModuleComposition.Module3.Class1',
+          'MultiModuleComposition.Module3.Nested1.Class3',
         ),
       }),
       'Nested1': dict({
@@ -387,9 +387,9 @@
         'children': dict({
           'Class4': dict({
             'strict_super': tuple(
-              'multi_module_composition.Module3.Class1',
-              'multi_module_composition.Module3.Class2',
-              'multi_module_composition.Module3.Nested1.Class3',
+              'MultiModuleComposition.Module3.Class1',
+              'MultiModuleComposition.Module3.Class2',
+              'MultiModuleComposition.Module3.Nested1.Class3',
             ),
           }),
         }),
@@ -398,8 +398,8 @@
       }),
     }),
     'strict_super': tuple(
-      'multi_module_composition.Module1',
-      'multi_module_composition.Module2',
+      'MultiModuleComposition.Module1',
+      'MultiModuleComposition.Module2',
     ),
   })
 # ---
@@ -410,13 +410,13 @@
         'children': dict({
           'ReferenceToTarget': dict({
             'strict_super': tuple(
-              'multi_module_composition.MyRoot.Target',
-              'multi_module_composition.MyRoot.Target2',
+              'MultiModuleComposition.MyRoot.Target',
+              'MultiModuleComposition.MyRoot.Target2',
             ),
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.MyRoot.Nested1.Nested3',
+          'MultiModuleComposition.MyRoot.Nested1.Nested3',
         ),
       }),
       'Nested1': dict({
@@ -425,8 +425,8 @@
             'children': dict({
               'ReferenceToTarget': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.MyRoot.Target',
-                  'multi_module_composition.MyRoot.Target2',
+                  'MultiModuleComposition.MyRoot.Target',
+                  'MultiModuleComposition.MyRoot.Target2',
                 ),
               }),
             }),
@@ -435,8 +435,8 @@
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.MyRoot.Nested2',
-          'multi_module_composition.MyRoot.Nested4',
+          'MultiModuleComposition.MyRoot.Nested2',
+          'MultiModuleComposition.MyRoot.Nested4',
         ),
       }),
       'Nested2': dict({
@@ -445,7 +445,7 @@
             'children': dict({
               'ReferenceToTarget': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.MyRoot.Target',
+                  'MultiModuleComposition.MyRoot.Target',
                 ),
               }),
             }),
@@ -462,7 +462,7 @@
             'children': dict({
               'ReferenceToTarget': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.MyRoot.Target2',
+                  'MultiModuleComposition.MyRoot.Target2',
                 ),
               }),
             }),
@@ -493,13 +493,13 @@
         'children': dict({
           'ReferenceToTarget': dict({
             'strict_super': tuple(
-              'multi_module_composition.Reroot.Target',
-              'multi_module_composition.Reroot.Target2',
+              'MultiModuleComposition.Reroot.Target',
+              'MultiModuleComposition.Reroot.Target2',
             ),
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.Reroot.Nested1.Nested3',
+          'MultiModuleComposition.Reroot.Nested1.Nested3',
         ),
       }),
       'Nested1': dict({
@@ -508,8 +508,8 @@
             'children': dict({
               'ReferenceToTarget': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.Reroot.Target',
-                  'multi_module_composition.Reroot.Target2',
+                  'MultiModuleComposition.Reroot.Target',
+                  'MultiModuleComposition.Reroot.Target2',
                 ),
               }),
             }),
@@ -518,8 +518,8 @@
           }),
         }),
         'strict_super': tuple(
-          'multi_module_composition.Reroot.Nested2',
-          'multi_module_composition.Reroot.Nested4',
+          'MultiModuleComposition.Reroot.Nested2',
+          'MultiModuleComposition.Reroot.Nested4',
         ),
       }),
       'Nested2': dict({
@@ -528,7 +528,7 @@
             'children': dict({
               'ReferenceToTarget': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.Reroot.Target',
+                  'MultiModuleComposition.Reroot.Target',
                 ),
               }),
             }),
@@ -545,7 +545,7 @@
             'children': dict({
               'ReferenceToTarget': dict({
                 'strict_super': tuple(
-                  'multi_module_composition.Reroot.Target2',
+                  'MultiModuleComposition.Reroot.Target2',
                 ),
               }),
             }),
@@ -566,7 +566,7 @@
       }),
     }),
     'strict_super': tuple(
-      'multi_module_composition.MyRoot',
+      'MultiModuleComposition.MyRoot',
     ),
   })
 # ---

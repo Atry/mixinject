@@ -31,7 +31,7 @@ class DirectoryMixinDefinition(ScopeDefinition):
     """
     Scope definition for a directory of MIXIN files.
 
-    Recursively discovers *.ol.yaml/json/toml files and subdirectories.
+    Recursively discovers *.overlay.yaml/json/toml files and subdirectories.
     """
 
     underlying: Path
@@ -39,19 +39,19 @@ class DirectoryMixinDefinition(ScopeDefinition):
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.ol.yaml/json/toml files in the directory."""
+        """Discover *.overlay.yaml/json/toml files in the directory."""
         result: dict[str, Path] = {}
         if not self.underlying.is_dir():
             return result
 
-        ol_extensions = (".ol.yaml", ".ol.yml", ".ol.json", ".ol.toml")
+        overlay_extensions = (".overlay.yaml", ".overlay.yml", ".overlay.json", ".overlay.toml")
         for file_path in self.underlying.iterdir():
             if not file_path.is_file():
                 continue
             name_lower = file_path.name.lower()
-            for extension in ol_extensions:
+            for extension in overlay_extensions:
                 if name_lower.endswith(extension):
-                    # Extract stem: foo.ol.yaml -> foo
+                    # Extract stem: foo.overlay.yaml -> foo
                     stem = file_path.name[: -len(extension)]
                     if stem not in result:
                         result[stem] = file_path
