@@ -6,7 +6,7 @@ from typing import Callable
 
 import pytest
 
-from ol import (
+from overlay.language import (
     resource,
     scope,
     eager,
@@ -21,7 +21,7 @@ from ol import (
     PackageScopeDefinition,
     ScopeDefinition,
 )
-from ol.runtime import (
+from overlay.language.runtime import (
     Mixin,
     Scope,
     evaluate,
@@ -982,7 +982,7 @@ class TestModuleParsing:
             ns_pkg_dir = Path(tmpdir) / "ns_pkg"
             ns_pkg_dir.mkdir()
             (ns_pkg_dir / "mod_c.py").write_text(
-                "from ol import public, resource\n"
+                "from overlay.language import public, resource\n"
                 "value_c = public(resource(lambda: 'c'))\n"
             )
 
@@ -1212,7 +1212,7 @@ class TestInstanceScopeImplementation:
 
         When providing a value via __call__, endofunction patches should be applied.
         """
-        from ol import Endofunction
+        from overlay.language import Endofunction
 
         @scope
         class Config:

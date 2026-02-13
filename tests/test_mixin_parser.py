@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from ol import LexicalReference, QualifiedThisReference
-from ol.mixin_directory import (
+from overlay.language import LexicalReference, QualifiedThisReference
+from overlay.language.mixin_directory import (
     DirectoryMixinDefinition,
     evaluate_mixin_directory,
 )
-from ol.mixin_parser import (
+from overlay.language.mixin_parser import (
     FileMixinDefinition,
     parse_mixin_file,
     parse_mixin_value,

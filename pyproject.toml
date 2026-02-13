@@ -1,9 +1,5 @@
-[build-system]
-requires = ["uv_build>=0.10.2,<0.11"]
-build-backend = "uv_build"
-
 [project]
-name = "ol"
+name = "overlay"
 version = "0.1.0"
 description = "Overlay Language — a composition-based programming language built on Overlay-Calculus"
 readme = "README.md"
@@ -19,11 +15,19 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "pyyaml>=6.0.3",
+    "overlay.language",
+    "overlay.library",
 ]
 
 [project.urls]
-Repository = "https://github.com/Atry/ol"
+Repository = "https://github.com/Atry/overlay"
+
+[tool.uv]
+sources = {overlay-language = {workspace = true}, overlay-library = {workspace = true}}
+# Note: uv source keys use normalized names (dashes) even when project names use dots
+
+[tool.uv.workspace]
+members = ["overlay-language", "overlay-library"]
 
 [dependency-groups]
 dev = [
@@ -54,4 +58,4 @@ dev = [
 ]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["overlay-language/src", "overlay-library/src", "tests"]

@@ -1,5 +1,5 @@
 """Grandchild module (two levels deep)."""
-from ol import public, resource
+from overlay.language import public, resource
 
 
 @public

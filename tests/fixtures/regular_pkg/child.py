@@ -1,6 +1,6 @@
 """A child module within regular_pkg."""
 
-from ol import public, resource
+from overlay.language import public, resource
 
 
 @public

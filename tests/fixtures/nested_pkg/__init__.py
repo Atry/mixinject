@@ -1,5 +1,5 @@
 """Nested package for testing lazy import depth."""
-from ol import public, resource
+from overlay.language import public, resource
 
 
 @public

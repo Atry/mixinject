@@ -77,7 +77,7 @@
             pyprojectOverrides =
               # See https://pyproject-nix.github.io/uv2nix/patterns/overriding-build-systems.html
               final: prev:
-              builtins.mapAttrs
+              (builtins.mapAttrs
                 (
                   name: spec:
                   prev.${name}.overrideAttrs (old: {
@@ -89,7 +89,16 @@
                     meson-python = [ ];
                     pybind11 = [ ];
                   };
-                };
+                }
+              )
+              // {
+                # Virtual workspace root has no build-system; provide an empty package
+                overlay = prev.overlay.overrideAttrs (_: {
+                  buildPhase = "mkdir -p $out";
+                  installPhase = "true";
+                  nativeBuildInputs = [ ];
+                });
+              };
             python = pkgs.python313;
             hacks = pkgs.callPackage inputs.pyproject-nix.build.hacks { };
             pythonSet =
@@ -180,15 +189,9 @@
                   ]
                 );
             members = [
-              "ol"
-            ]
-            ++ lib.optionals (builtins.pathExists ./lib) (
-              lib.pipe ./lib [
-                builtins.readDir
-                builtins.attrNames
-                (builtins.filter (name: builtins.pathExists ./lib/${name}/pyproject.toml))
-              ]
-            );
+              "overlay-language"
+              "overlay-library"
+            ];
             editableOverlay = workspace.mkEditablePyprojectOverlay {
               root = "$REPO_ROOT";
               inherit members;
@@ -227,28 +230,26 @@
                                 else
                                   [ ];
 
-                              # Helper to get __init__.py in subdirs
-                              getSubInit =
-                                dir:
-                                if builtins.pathExists dir then
+                              # Recursively find __init__.py files up to depth 3
+                              getInitPy =
+                                dir: depth:
+                                if depth <= 0 || !builtins.pathExists dir then
+                                  [ ]
+                                else
                                   let
                                     entries = builtins.readDir dir;
                                     subdirs = builtins.filter (n: entries.${n} == "directory") (builtins.attrNames entries);
+                                    initFiles = if builtins.pathExists (dir + "/__init__.py") then [ (dir + "/__init__.py") ] else [ ];
                                   in
-                                  map (n: dir + "/${n}/__init__.py") (
-                                    builtins.filter (n: builtins.pathExists (dir + "/${n}/__init__.py")) subdirs
-                                  )
-                                else
-                                  [ ];
+                                  initFiles ++ lib.concatMap (n: getInitPy (dir + "/${n}") (depth - 1)) subdirs;
 
                               rootPy = getFiles root (n: lib.hasSuffix ".py" n);
-                              rootSubInit = getSubInit root;
 
                               srcPath = root + "/src";
                               srcPy = getFiles srcPath (n: lib.hasSuffix ".py" n);
-                              srcSubInit = getSubInit srcPath;
+                              srcInitPy = getInitPy srcPath 3;
                             in
-                            rootPy ++ rootSubInit ++ srcPy ++ srcSubInit
+                            rootPy ++ srcPy ++ srcInitPy
                           )
                         );
                       };
@@ -297,7 +298,7 @@
             nixpkgs.hostPlatform = system;
             nixpkgs.config.allowUnfree = true;
             packages.default =
-              (pythonSet.mkVirtualEnv "ol-env" workspace.deps.default).overrideAttrs
+              (pythonSet.mkVirtualEnv "ol-env" (builtins.removeAttrs workspace.deps.default [ "overlay" ])).overrideAttrs
                 (old: {
                   venvIgnoreCollisions = [ "*" ];
                 });

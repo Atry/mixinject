@@ -2,7 +2,7 @@
 
 import pytest
 
-from ol import (
+from overlay.language import (
     MixinSymbol,
     ObjectScopeDefinition,
     LexicalReference,

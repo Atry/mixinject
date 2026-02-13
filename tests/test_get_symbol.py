@@ -24,9 +24,9 @@ from pathlib import Path
 
 import pytest
 
-from ol import MixinSymbol, ResolvedReference
-from ol.mixin_directory import DirectoryMixinDefinition
-from ol.runtime import Mixin, Scope, evaluate
+from overlay.language import MixinSymbol, ResolvedReference
+from overlay.language.mixin_directory import DirectoryMixinDefinition
+from overlay.language.runtime import Mixin, Scope, evaluate
 
 
 FIXTURES_PATH = Path(__file__).parent / "fixtures"

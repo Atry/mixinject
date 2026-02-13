@@ -1,6 +1,6 @@
 """Debug script to trace kwargs flow."""
-from ol import public, resource, scope, extern
-from ol.runtime import Scope, evaluate
+from overlay.language import public, resource, scope, extern
+from overlay.language.runtime import Scope, evaluate
 
 @public
 @scope

@@ -2,7 +2,7 @@
 
 from typing import Callable, Iterator
 
-from ol import merge, public, scope
+from overlay.language import merge, public, scope
 
 
 @public

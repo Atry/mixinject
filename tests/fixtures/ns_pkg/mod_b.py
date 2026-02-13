@@ -1,6 +1,6 @@
 """Module B in namespace package with internal dependencies."""
 
-from ol import public, resource
+from overlay.language import public, resource
 
 
 @public

@@ -7,7 +7,7 @@ Convention tested:
 
 import pytest
 
-from ol import (
+from overlay.language import (
     public,
     resource,
     scope,
@@ -16,7 +16,7 @@ from ol import (
     extern,
     MixinSymbol,
 )
-from ol.runtime import Scope, evaluate
+from overlay.language.runtime import Scope, evaluate
 
 
 # =============================================================================

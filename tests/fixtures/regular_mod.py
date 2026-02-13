@@ -1,6 +1,6 @@
 """A regular module (not a package) for testing."""
 
-from ol import resource
+from overlay.language import resource
 
 
 @resource

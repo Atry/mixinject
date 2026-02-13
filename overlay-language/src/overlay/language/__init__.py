@@ -63,7 +63,7 @@ This explicit-only design makes dependency injection predictable and self-docume
 
 Example::
 
-    from ol import scope, resource, patch, evaluate
+    from overlay.language import scope, resource, patch, evaluate
 
     @scope
     class Base:
@@ -444,7 +444,7 @@ Example
 ::
 
     # config.py
-    from ol import parameter, resource
+    from overlay.language import parameter, resource
 
     @extern
     def settings(): ...
@@ -454,7 +454,7 @@ Example
         return f"{settings['host']}:{settings['port']}"
 
     # main.py
-    from ol import evaluate
+    from overlay.language import evaluate
 
     root = evaluate(config)(settings={"host": "db.example.com", "port": "3306"})
     assert root.connection_string == "db.example.com:3306"
@@ -573,8 +573,8 @@ from typing import (
 
 
 if TYPE_CHECKING:
-    from ol import runtime
-    from ol.mixin_parser import FileMixinDefinition
+    from overlay.language import runtime
+    from overlay.language.mixin_parser import FileMixinDefinition
 
 
 import weakref
@@ -1754,7 +1754,7 @@ class _MixinFileScopeDefinition(ScopeDefinition):
 
     @cached_property
     def _parsed(self) -> Mapping[str, Sequence["FileMixinDefinition"]]:
-        from ol.mixin_parser import parse_mixin_file
+        from overlay.language.mixin_parser import parse_mixin_file
 
         return parse_mixin_file(self.underlying)
 
@@ -1778,7 +1778,7 @@ def scope(c: object) -> ObjectScopeDefinition:
         Use ``@extend`` with ``RelativeReference`` to combine multiple scopes.
         This is the recommended way to create union mount points::
 
-            from ol import RelativeReference as R
+            from overlay.language import RelativeReference as R
 
             @scope
             class Root:
@@ -1830,7 +1830,7 @@ def extend(
 
     Example - Extending a sibling scope::
 
-        from ol import RelativeReference as R
+        from overlay.language import RelativeReference as R
 
         @scope
         class Root:
@@ -1869,7 +1869,7 @@ def extend(
                 return f"{foo}_bar"
 
             # my_package/__init__.py
-            from ol import RelativeReference as R, extend, scope
+            from overlay.language import RelativeReference as R, extend, scope
 
             @extend(
                 R(de_bruijn_index=0, path=("branch1",)),
@@ -1927,8 +1927,8 @@ def merge(
 
     The following example defines a merge that deduplicates strings from multiple patches into a frozenset::
 
-        from ol import merge, patch, resource, extend, scope, evaluate, extern
-        from ol import RelativeReference as R
+        from overlay.language import merge, patch, resource, extend, scope, evaluate, extern
+        from overlay.language import RelativeReference as R
 
         @scope
         class Root:
@@ -2050,7 +2050,7 @@ def resource(
 
     Example:
     The following example defines a resource that can be modified by patches.
-        from ol import resource, patch
+        from overlay.language import resource, patch
         @resource
         def greeting() -> str:
             return "Hello"
@@ -2061,7 +2061,7 @@ def resource(
             return lambda original: original + "!!!"
 
     Alternatively, ``greeting`` can be defined with an explicit merge:
-        from ol import merge
+        from overlay.language import merge
         @merge
         def greeting() -> Callable[[Iterator[Endofunction[str]]], str]:
             return lambda endos: reduce(

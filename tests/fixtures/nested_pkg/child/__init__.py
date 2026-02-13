@@ -1,5 +1,5 @@
 """Child package (one level deep)."""
-from ol import public, resource
+from overlay.language import public, resource
 
 
 @public

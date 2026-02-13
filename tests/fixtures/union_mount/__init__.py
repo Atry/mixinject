@@ -1,7 +1,7 @@
 """Union mount fixtures demonstrating merge and patches use cases."""
 
-from ol import RelativeReference as R
-from ol import extend, public, scope
+from overlay.language import RelativeReference as R
+from overlay.language import extend, public, scope
 
 
 @extend(

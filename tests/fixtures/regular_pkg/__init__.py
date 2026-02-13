@@ -1,6 +1,6 @@
 """A regular package for testing."""
 
-from ol import public, resource
+from overlay.language import public, resource
 
 
 @public

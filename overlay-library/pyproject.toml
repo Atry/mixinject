@@ -1,0 +1,25 @@
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11"]
+build-backend = "uv_build"
+
+[project]
+name = "overlay.library"
+version = "0.1.0"
+description = "Overlay Language standard library — built-in definitions for the Overlay Language"
+license = "MIT"
+requires-python = ">=3.13"
+authors = [
+    {name = "Yang, Bo", email = "yang-bo@yang-bo.com"},
+]
+dependencies = [
+    "overlay.language",
+]
+
+[tool.uv]
+sources = {overlay-language = {workspace = true}}
+
+[tool.uv.build-backend]
+module-name = "overlay.library"
+
+[project.urls]
+Repository = "https://github.com/Atry/overlay"

@@ -1,6 +1,6 @@
 """Branch 1: Provides tag1 patch and another_dependency resource."""
 
-from ol import patch, public, resource, scope
+from overlay.language import patch, public, resource, scope
 
 
 @patch

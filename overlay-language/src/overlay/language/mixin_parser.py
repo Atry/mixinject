@@ -46,7 +46,7 @@ from typing import TypeAlias, final
 
 import yaml
 
-from ol import (
+from overlay.language import (
     Definition,
     LexicalReference,
     QualifiedThisReference,

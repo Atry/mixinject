@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-import ol.library
-from ol.mixin_directory import DirectoryMixinDefinition
-from ol.runtime import Scope, evaluate
+import overlay.library
+from overlay.language.mixin_directory import DirectoryMixinDefinition
+from overlay.language.runtime import Scope, evaluate
 
 
 TESTS_PATH = Path(__file__).parent
@@ -27,7 +27,7 @@ def arithmetic_scope() -> Scope:
     tests_definition = DirectoryMixinDefinition(
         bases=(), is_public=True, underlying=TESTS_PATH
     )
-    root = evaluate(ol.library, tests_definition, modules_public=True)
+    root = evaluate(overlay.library, tests_definition, modules_public=True)
     result = root.ArithmeticTest
     assert isinstance(result, Scope)
     return result

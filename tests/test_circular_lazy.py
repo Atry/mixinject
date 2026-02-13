@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from ol.mixin_parser import parse_mixin_file
-from ol.runtime import evaluate
+from overlay.language.mixin_parser import parse_mixin_file
+from overlay.language.runtime import evaluate
 
 
 def test_circular_reference_parsing():

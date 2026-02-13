@@ -13,16 +13,16 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, final
 
-from ol import (
+from overlay.language import (
     Definition,
     MixinSymbol,
     OuterSentinel,
     ScopeDefinition,
 )
-from ol.mixin_parser import parse_mixin_file
+from overlay.language.mixin_parser import parse_mixin_file
 
 if TYPE_CHECKING:
-    from ol import runtime
+    from overlay.language import runtime
 
 
 @final
@@ -143,7 +143,7 @@ def evaluate_mixin_directory(directory: Path) -> "runtime.Scope":
     if not directory.is_dir():
         raise ValueError(f"Path is not a directory: {directory}")
 
-    from ol import runtime
+    from overlay.language import runtime
 
     root_definition = DirectoryMixinDefinition(
         bases=(),

@@ -4,7 +4,7 @@ Note: @resource decorator returns a MergerDefinition object, not a function,
 so @staticmethod is not needed (Python's descriptor protocol only applies to functions).
 """
 
-from ol import extern, patch, public, resource, scope
+from overlay.language import extern, patch, public, resource, scope
 
 
 @extern

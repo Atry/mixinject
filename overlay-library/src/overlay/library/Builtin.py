@@ -1,4 +1,4 @@
-from ol import (
+from overlay.language import (
     LexicalReference,
     MappingScopeDefinition,
     extend,
@@ -7,7 +7,7 @@ from ol import (
     resource,
     scope,
 )
-from ol.runtime import Scope
+from overlay.language.runtime import Scope
 
 
 @public
