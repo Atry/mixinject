@@ -46,9 +46,9 @@ def _collect_tree_ancestors(symbol: MixinSymbol) -> frozenset[MixinSymbol]:
 def _has_cyclic_inheritance(
     symbol: MixinSymbol, ancestors: frozenset[MixinSymbol]
 ) -> bool:
-    """Check if symbol inherits from any ancestor (structural cycle)."""
-    for strict_super in symbol.strict_super_references:
-        if strict_super in ancestors:
+    """Check if any of symbol's qualified_this keys is an ancestor (structural cycle)."""
+    for super_union in symbol.qualified_this:
+        if super_union in ancestors:
             return True
     return False
 
@@ -60,7 +60,7 @@ def _symbol_tree_snapshot(
     """Build a snapshot dict of the symbol subtree.
 
     For each node, captures:
-    - strict_super: list of paths of strict super symbols
+    - other_overlays: list of paths of qualified_this keys (excluding self)
     - children: recursive dict of child symbols (only for scope symbols)
 
     Detects cycles via _ancestors to avoid infinite recursion on
@@ -71,8 +71,8 @@ def _symbol_tree_snapshot(
     if _ancestors is None:
         _ancestors = _collect_tree_ancestors(symbol)
 
-    strict_super = tuple(
-        sorted(_format_path(super_symbol) for super_symbol in symbol.strict_super_references)
+    other_overlays = tuple(
+        sorted(_format_path(super_symbol) for super_symbol in symbol.qualified_this if super_symbol is not symbol)
     )
 
     children: dict[str, Any] = {}
@@ -85,19 +85,19 @@ def _symbol_tree_snapshot(
             seen_keys.add(key)
             child = symbol[key]
             if _has_cyclic_inheritance(child, child_ancestors):
-                children[str(key)] = {"strict_super": "<cycle>"}
+                children[str(key)] = {"other_overlays": "<cycle>"}
                 continue
             children[str(key)] = _symbol_tree_snapshot(child, child_ancestors)
 
-    result: dict[str, Any] = {"strict_super": strict_super}
+    result: dict[str, Any] = {"other_overlays": other_overlays}
     if children:
         result["children"] = children
     return result
 
 
 def _collect_all_super_symbols(symbol: MixinSymbol) -> set[MixinSymbol]:
-    """Collect all MixinSymbols in the inheritance chain (including self) via super_unions."""
-    return set(symbol.super_unions)
+    """Collect all MixinSymbols in the inheritance chain (including self) via qualified_this."""
+    return set(symbol.qualified_this)
 
 
 @pytest.fixture
@@ -113,12 +113,12 @@ def multi_module_scope() -> Scope:
 
 
 class TestMultiModuleCompositionFlat:
-    """Test that Module3Flat.Class4's super_unions contains all Class union symbols.
+    """Test that Module3Flat.Class4's qualified_this contains all Class union symbols.
 
     Module2Flat defines: Class4
     Module3Flat inherits: [Module1], [Module2Flat]
 
-    super_unions transitively includes all Class symbols from all modules
+    qualified_this transitively includes all Class symbols from all modules
     in the composition chain (Module1, Module2Flat, Module3Flat).
     """
 
@@ -159,12 +159,12 @@ class TestMultiModuleCompositionSnapshot:
 
 
 class TestMultiModuleCompositionNested:
-    """Test that Module3.Nested2.Class4's super_unions contains all Class union symbols.
+    """Test that Module3.Nested2.Class4's qualified_this contains all Class union symbols.
 
     Module2 defines: Nested2.Class4
     Module3 inherits: [Module1], [Module2]
 
-    super_unions transitively includes all Class symbols from all modules
+    qualified_this transitively includes all Class symbols from all modules
     in the composition chain (Module1, Module2, Module3).
     """
 
@@ -258,7 +258,7 @@ class TestMyRootFlatten:
     def test_flatten_reference_to_target_outer_and_supers(
         self, multi_module_scope: Scope
     ) -> None:
-        """Verify that outer and strict_super_references are correctly set for the flatten case."""
+        """Verify that outer and qualified_this are correctly set for the flatten case."""
         my_root = multi_module_scope.MyRoot
         assert isinstance(my_root, Scope)
         my_root_symbol = my_root.symbol
@@ -280,9 +280,9 @@ class TestMyRootFlatten:
         # Flatten inherits from [Nested1, Nested3]
         # Nested1 inherits from [Nested2] and [Nested4]
         # So Nested1.Nested3 merges Nested2.Nested3 and Nested4.Nested3
-        # Both should be in super_unions of Flatten (the composition-site parent)
-        assert nested2_nested3_symbol in flatten_symbol.super_unions
-        assert nested4_nested3_symbol in flatten_symbol.super_unions
+        # Both should be in qualified_this of Flatten (the composition-site parent)
+        assert nested2_nested3_symbol in flatten_symbol.qualified_this
+        assert nested4_nested3_symbol in flatten_symbol.qualified_this
 
 
 class TestMergedValueOverride:
@@ -320,7 +320,7 @@ class TestMergedValueOverride:
 
 
 class TestCompositionOuterChain:
-    """Test that outer and strict_super_references correctly map at each composition level.
+    """Test that outer and qualified_this correctly map at each composition level.
 
     LexicalOuterConflict:
       GrandParent:
@@ -347,10 +347,10 @@ class TestCompositionOuterChain:
       - Merged.Parent.Child.outer is Merged.Parent
       - Merged.Parent.outer is Merged
 
-    And the definition-site symbols should appear as strict supers:
-      - GrandParent.Parent.Child in Merged.Parent.Child.strict_super_references
-      - GrandParent.Parent in Merged.Parent.strict_super_references
-      - GrandParent in Merged.strict_super_references
+    And the definition-site symbols should appear in qualified_this:
+      - GrandParent.Parent.Child in Merged.Parent.Child.qualified_this
+      - GrandParent.Parent in Merged.Parent.qualified_this
+      - GrandParent in Merged.qualified_this
     """
 
     def test_outer_chain_maps_correctly(self, multi_module_scope: Scope) -> None:
@@ -371,16 +371,16 @@ class TestCompositionOuterChain:
         # Level 1: Ref.outer is Merged.Parent.Child (structural parent)
         assert ref_symbol.outer is merged_parent_child_symbol
         assert (
-            grandparent_parent_child_symbol in merged_parent_child_symbol.super_unions
+            grandparent_parent_child_symbol in merged_parent_child_symbol.qualified_this
         )
 
         # Level 2: Merged.Parent.Child.outer is Merged.Parent
         assert merged_parent_child_symbol.outer is merged_parent_symbol
-        assert grandparent_parent_symbol in merged_parent_symbol.super_unions
+        assert grandparent_parent_symbol in merged_parent_symbol.qualified_this
 
         # Level 3: Merged.Parent.outer is Merged
         assert merged_parent_symbol.outer is merged_symbol
-        assert grandparent_symbol in merged_symbol.super_unions
+        assert grandparent_symbol in merged_symbol.qualified_this
 
 
 
@@ -448,13 +448,13 @@ class TestDeBruijnCompositionNavigation:
         library_symbol = multi_module_scope.symbol["Library"]
         container_symbol = library_symbol["Types"]["Container"]
 
-        # Each DeBruijnIndex symbol's super_unions transitively includes
+        # Each DeBruijnIndex symbol's qualified_this transitively includes
         # all union symbols from the composition chain.
         for index in range(4):
             reference_symbol = composed_symbol[f"DeBruijnIndex{index}"]
             super_union_paths = sorted(
                 ".".join(str(segment) for segment in super_symbol.path)
-                for super_symbol in reference_symbol.super_unions
+                for super_symbol in reference_symbol.qualified_this
             )
             assert super_union_paths == snapshot(
                 name=f"de_bruijn_index_{index}_super_unions"

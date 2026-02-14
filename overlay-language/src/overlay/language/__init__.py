@@ -529,7 +529,7 @@ Callables can be used not only to define resources but also to define and transf
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from functools import cached_property
@@ -878,7 +878,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
 
     @final
     @cached_property
-    def resolved_bases(self) -> tuple["ResolvedReference", ...]:
+    def normalized_references(self) -> tuple["ResolvedReference", ...]:
         """
         Flatten all bases from all definitions into a single tuple.
         Convert from ResourceReference to ResolvedReference with pre-resolved symbols.
@@ -1007,7 +1007,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         yield key
 
         # Keys from super unions (own definitions only, no recursion)
-        for super_union in self.super_unions:
+        for super_union in self.qualified_this:
             for definition in super_union.definitions:
                 if isinstance(definition, ScopeDefinition):
                     for key in definition:
@@ -1037,7 +1037,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         compiled_symbol = MixinSymbol(origin=Nested(outer=self, key=key))
 
         # Check if any super union of self has this key as an own key
-        if not any(super_union.has_own_key(key) for super_union in self.super_unions):
+        if not any(super_union.has_own_key(key) for super_union in self.qualified_this):
             raise KeyError(key)
 
         self._nested[key] = compiled_symbol
@@ -1062,7 +1062,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Check if any definition is public
         return any(
             definition.is_public
-            for super_symbol in self.super_unions
+            for super_symbol in self.qualified_this
             for definition in super_symbol.definitions
         )
 
@@ -1070,7 +1070,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     def is_eager(self):
         return any(
             definition.is_eager
-            for super_symbol in self.super_unions
+            for super_symbol in self.qualified_this
             for definition in super_symbol.definitions
             if isinstance(definition, MergerDefinition)
         )
@@ -1084,7 +1084,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         """
         all_definitions = tuple(
             definition
-            for symbol in self.super_unions
+            for symbol in self.qualified_this
             for definition in symbol.definitions
         )
         if not all_definitions:
@@ -1110,13 +1110,11 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             MergerElectionSentinel.PATCHER_ONLY: Has patchers but no merger
         """
 
-        self_and_strict_supers = tuple(self.super_unions)
-
         # Collect all (symbol, evaluator_getter_index, getter) tuples
         all_merger_symbols: list[tuple["MixinSymbol", int, "MergerSymbol"]] = []
         all_patcher_symbols: list[tuple["MixinSymbol", int, "PatcherSymbol"]] = []
 
-        for symbol in self_and_strict_supers:
+        for symbol in self.qualified_this:
             for getter_index, getter in enumerate(symbol.evaluator_symbols):
                 if isinstance(getter, MergerSymbol):
                     all_merger_symbols.append((symbol, getter_index, getter))
@@ -1126,7 +1124,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         # Check for scope symbols (definitions containing ScopeDefinition)
         has_scope_symbol = any(
             any(isinstance(d, ScopeDefinition) for d in symbol.definitions)
-            for symbol in self_and_strict_supers
+            for symbol in self.qualified_this
         )
 
         # Rule 0: Scope MixinSymbol cannot coexist with MergerSymbol/PatcherSymbol
@@ -1174,47 +1172,47 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
 
     @cached_property
     def qualified_this(self) -> Mapping["MixinSymbol", Collection[MixinSymbol]]:
-        result = defaultdict(set)
-        for super_symbol in self._generate_super_references():
-            for union in super_symbol.unions:
-                result[union].add(super_symbol.outer)
-        return result
+        """Map each overlay of ``self`` to the outer scopes that instantiate it.
 
-    @cached_property
-    def unions(self):
-        return frozenset(self._generate_unions())
+        Uses BFS over the inheritance graph: starting from ``self``, each
+        symbol is expanded through its ``unions`` and their
+        ``normalized_references``.
+
+        Corresponds to the ``this`` function in the Overlay-Calculus paper::
+
+            this(p, p_def) = { init(p_super) | p_super in supers(p),
+                                               s.t. p_super = p_def }
+
+        :return: Mapping from each overlay (definition-site symbol) to the
+            set of outer scopes (initialization contexts) through which it
+            is reached.
+        """
+        visited: defaultdict[MixinSymbol, set[MixinSymbol]] = defaultdict(set)
+        pending: deque[MixinSymbol] = deque((self,))
+        while pending:
+            current = pending.popleft()
+            for union in current.unions:
+                outers = visited[union]
+                if current.outer is OuterSentinel.ROOT:
+                    continue
+                if current.outer in outers:
+                    continue
+                outers.add(current.outer)
+                for resolved_reference in union.normalized_references:
+                    pending.extend(resolved_reference.get_symbols(current.outer))
+        return visited
 
     def _generate_unions(self) -> Iterator["MixinSymbol"]:
         yield self
         match self.origin:
             case Nested(outer=outer, key=key):
-                for outer_union in outer.super_unions:
+                for outer_union in outer.qualified_this:
                     if outer_union.has_own_key(key):
                         yield outer_union[key]
 
-    def _generate_super_unions(self):
-        for super_symbol in self._generate_super_references():
-            yield from super_symbol.unions
-
-    def _generate_super_references(self):
-        yield self
-        yield from self.strict_super_references
-
     @cached_property
-    def super_unions(self):
-        return frozenset(self._generate_super_unions())
-
-    def _generate_strict_supers(self) -> Iterator["MixinSymbol"]:
-        if self.outer is not OuterSentinel.ROOT:
-            for union in self.unions:
-                for resolved_reference in union.resolved_bases:
-                    for symbol in resolved_reference.get_symbols(self.outer):
-                        yield symbol
-                        yield from symbol.strict_super_references
-
-    @cached_property
-    def strict_super_references(self) -> Collection["MixinSymbol"]:
-        return frozenset(self._generate_strict_supers())
+    def unions(self):
+        return frozenset(self._generate_unions())
 
 
 class OuterSentinel(Enum):
@@ -1652,7 +1650,12 @@ class PackageScopeDefinition(ObjectScopeDefinition):
         if package_paths is None:
             return result
 
-        overlay_extensions = (".overlay.yaml", ".overlay.yml", ".overlay.json", ".overlay.toml")
+        overlay_extensions = (
+            ".overlay.yaml",
+            ".overlay.yml",
+            ".overlay.json",
+            ".overlay.toml",
+        )
         for package_path in package_paths:
             package_dir = Path(package_path)
             if not package_dir.is_dir():

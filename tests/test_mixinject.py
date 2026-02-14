@@ -35,7 +35,7 @@ class TestResolvedBases:
         """Root symbol with empty bases should return empty tuple."""
         scope_def = ObjectScopeDefinition(bases=(), is_public=False, underlying=object())
         root_symbol = MixinSymbol(origin=(scope_def,))
-        assert root_symbol.resolved_bases == ()
+        assert root_symbol.normalized_references == ()
 
 
 class TestLexicalReference:
@@ -59,7 +59,7 @@ class TestLexicalReference:
         inner_symbol = root_symbol["inner"]
 
         # "target" is found as property → full path returned
-        resolved_bases = inner_symbol.resolved_bases
+        resolved_bases = inner_symbol.normalized_references
         assert len(resolved_bases) == 1
         assert resolved_bases[0].de_bruijn_index == 0
         assert resolved_bases[0].path == ("target", "foo")
@@ -75,7 +75,7 @@ class TestLexicalReference:
         root_symbol = MixinSymbol(origin=(root_def,))
         inner_symbol = root_symbol["inner"]
         with pytest.raises(LookupError, match="LexicalReference.*nonexistent.*not found"):
-            _ = inner_symbol.resolved_bases
+            _ = inner_symbol.normalized_references
 
     def test_lexical_reference_empty_path_raises_value_error(self) -> None:
         """LexicalReference with empty path raises ValueError."""
@@ -88,7 +88,7 @@ class TestLexicalReference:
         root_symbol = MixinSymbol(origin=(root_def,))
         inner_symbol = root_symbol["inner"]
         with pytest.raises(ValueError, match="LexicalReference path must not be empty"):
-            _ = inner_symbol.resolved_bases
+            _ = inner_symbol.normalized_references
 
 
 class TestFixtureReference:
@@ -105,4 +105,4 @@ class TestFixtureReference:
         root_symbol = MixinSymbol(origin=(root_def,))
         inner_symbol = root_symbol["inner"]
         with pytest.raises(LookupError, match="FixtureReference.*nonexistent.*not found"):
-            _ = inner_symbol.resolved_bases
+            _ = inner_symbol.normalized_references

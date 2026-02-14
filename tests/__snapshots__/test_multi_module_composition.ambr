@@ -39,60 +39,68 @@
   dict({
     'children': dict({
       'Content': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Library.Types.Container.Content',
+          'MultiModuleComposition.Library.Types.Value',
           'MultiModuleComposition.Library.Wrapper.AltTypes.Value',
         ),
       }),
       'DeBruijnIndex0': dict({
-        'strict_super': '<cycle>',
+        'other_overlays': '<cycle>',
       }),
       'DeBruijnIndex1': dict({
         'children': dict({
           'Container': dict({
             'children': dict({
               'Content': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.Library.Types.Container.Content',
+                  'MultiModuleComposition.Library.Types.Value',
                   'MultiModuleComposition.Library.Wrapper.IndirectFlatten.DeBruijnIndex1.Value',
                 ),
               }),
               'DeBruijnIndex0': dict({
-                'strict_super': '<cycle>',
+                'other_overlays': '<cycle>',
               }),
               'DeBruijnIndex1': dict({
-                'strict_super': '<cycle>',
+                'other_overlays': '<cycle>',
               }),
               'DeBruijnIndex2': dict({
-                'strict_super': '<cycle>',
+                'other_overlays': '<cycle>',
               }),
               'DeBruijnIndex3': dict({
-                'strict_super': '<cycle>',
+                'other_overlays': '<cycle>',
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Library.Types.Container',
             ),
           }),
           'Value': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Library.Types.Value',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
           'MultiModuleComposition.Library.Types',
+          'MultiModuleComposition.Library.Types.Container.DeBruijnIndex1',
           'MultiModuleComposition.Library.Wrapper.AltTypes',
         ),
       }),
       'DeBruijnIndex2': dict({
-        'strict_super': '<cycle>',
+        'other_overlays': '<cycle>',
       }),
       'DeBruijnIndex3': dict({
-        'strict_super': '<cycle>',
+        'other_overlays': '<cycle>',
       }),
       'IndirectOnly': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
+      'MultiModuleComposition.Library.Types.Container',
       'MultiModuleComposition.Library.Wrapper.AltTypes.Container',
     ),
   })
@@ -103,32 +111,32 @@
       'Container': dict({
         'children': dict({
           'Content': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
               'MultiModuleComposition.Library.Types.Value',
             ),
           }),
           'DeBruijnIndex0': dict({
-            'strict_super': '<cycle>',
+            'other_overlays': '<cycle>',
           }),
           'DeBruijnIndex1': dict({
-            'strict_super': '<cycle>',
+            'other_overlays': '<cycle>',
           }),
           'DeBruijnIndex2': dict({
-            'strict_super': '<cycle>',
+            'other_overlays': '<cycle>',
           }),
           'DeBruijnIndex3': dict({
-            'strict_super': '<cycle>',
+            'other_overlays': '<cycle>',
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
       'Value': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
     ),
   })
 # ---
@@ -138,43 +146,56 @@
       'Foo': dict({
         'children': dict({
           'Bar': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
               'MultiModuleComposition.MergedRoot.Foo.Value',
             ),
           }),
           'Value': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
       'Merged': dict({
         'children': dict({
           'Bar': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MergedRoot.Foo.Bar',
+              'MultiModuleComposition.MergedRoot.Foo.Value',
               'MultiModuleComposition.MergedRoot.Merged.Value',
               'MultiModuleComposition.MergedRoot.Merged.Value2',
               'MultiModuleComposition.MergedRoot.Merged.Value3',
+              'MultiModuleComposition.MergedRoot.Nested.Baz.Value',
+              'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
+              'MultiModuleComposition.MergedRoot.Qux.Value',
+              'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
           'Value': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MergedRoot.Foo.Value',
               'MultiModuleComposition.MergedRoot.Merged.Value2',
               'MultiModuleComposition.MergedRoot.Merged.Value3',
+              'MultiModuleComposition.MergedRoot.Nested.Baz.Value',
+              'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
+              'MultiModuleComposition.MergedRoot.Qux.Value',
+              'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
           'Value2': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
             ),
           }),
           'Value3': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
           'MultiModuleComposition.MergedRoot.Foo',
           'MultiModuleComposition.MergedRoot.Nested.Baz',
           'MultiModuleComposition.MergedRoot.Qux',
@@ -185,53 +206,59 @@
           'Baz': dict({
             'children': dict({
               'Bar': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.MergedRoot.Foo.Bar',
+                  'MultiModuleComposition.MergedRoot.Foo.Value',
                   'MultiModuleComposition.MergedRoot.Nested.Baz.Value',
                   'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
                 ),
               }),
               'Value': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.MergedRoot.Foo.Value',
                   'MultiModuleComposition.MergedRoot.Nested.Baz.Value2',
                 ),
               }),
               'Value2': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
               'MultiModuleComposition.MergedRoot.Foo',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
       'Qux': dict({
         'children': dict({
           'Bar': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MergedRoot.Foo.Bar',
+              'MultiModuleComposition.MergedRoot.Foo.Value',
               'MultiModuleComposition.MergedRoot.Qux.Value',
               'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
           'Value': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MergedRoot.Foo.Value',
               'MultiModuleComposition.MergedRoot.Qux.Value3',
             ),
           }),
           'Value3': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
           'MultiModuleComposition.MergedRoot.Foo',
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
     ),
   })
 # ---
@@ -239,12 +266,20 @@
   dict({
     'children': dict({
       'Class1': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module2Diamond.Class1',
+          'MultiModuleComposition.Module2Diamond.Nested1.Class3',
           'MultiModuleComposition.Module3Diamond.Nested1.Class3',
         ),
       }),
       'Class2': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module1.Class2',
+          'MultiModuleComposition.Module2Diamond.Class1',
+          'MultiModuleComposition.Module2Diamond.Class2',
+          'MultiModuleComposition.Module2Diamond.Nested1.Class3',
           'MultiModuleComposition.Module3Diamond.Class1',
           'MultiModuleComposition.Module3Diamond.Nested1.Class3',
         ),
@@ -252,17 +287,26 @@
       'Nested1': dict({
         'children': dict({
           'Class3': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Module2Diamond.Nested1.Class3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module2Diamond.Nested1',
         ),
       }),
       'Nested2': dict({
         'children': dict({
           'Class4': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Module1.Class1',
+              'MultiModuleComposition.Module1.Class2',
+              'MultiModuleComposition.Module2Diamond.Class1',
+              'MultiModuleComposition.Module2Diamond.Class2',
+              'MultiModuleComposition.Module2Diamond.Nested1.Class3',
+              'MultiModuleComposition.Module2Diamond.Nested2.Class4',
+              'MultiModuleComposition.Module2Diamond.Nested3.ExtraNested.Class5',
               'MultiModuleComposition.Module3Diamond.Class1',
               'MultiModuleComposition.Module3Diamond.Class2',
               'MultiModuleComposition.Module3Diamond.Nested1.Class3',
@@ -270,7 +314,8 @@
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module2Diamond.Nested2',
         ),
       }),
       'Nested3': dict({
@@ -278,22 +323,30 @@
           'ExtraNested': dict({
             'children': dict({
               'Class5': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.Module1.Class1',
+                  'MultiModuleComposition.Module1.Class2',
+                  'MultiModuleComposition.Module2Diamond.Class1',
+                  'MultiModuleComposition.Module2Diamond.Class2',
+                  'MultiModuleComposition.Module2Diamond.Nested1.Class3',
+                  'MultiModuleComposition.Module2Diamond.Nested3.ExtraNested.Class5',
                   'MultiModuleComposition.Module3Diamond.Class1',
                   'MultiModuleComposition.Module3Diamond.Class2',
                   'MultiModuleComposition.Module3Diamond.Nested1.Class3',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Module2Diamond.Nested3.ExtraNested',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module2Diamond.Nested3',
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
       'MultiModuleComposition.Module1',
       'MultiModuleComposition.Module2Diamond',
     ),
@@ -331,29 +384,44 @@
   dict({
     'children': dict({
       'Class1': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module2Flat.Class1',
+          'MultiModuleComposition.Module2Flat.Class3',
           'MultiModuleComposition.Module3Flat.Class3',
         ),
       }),
       'Class2': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module1.Class2',
+          'MultiModuleComposition.Module2Flat.Class1',
+          'MultiModuleComposition.Module2Flat.Class2',
+          'MultiModuleComposition.Module2Flat.Class3',
           'MultiModuleComposition.Module3Flat.Class1',
           'MultiModuleComposition.Module3Flat.Class3',
         ),
       }),
       'Class3': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module2Flat.Class3',
         ),
       }),
       'Class4': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module1.Class2',
+          'MultiModuleComposition.Module2Flat.Class1',
+          'MultiModuleComposition.Module2Flat.Class2',
+          'MultiModuleComposition.Module2Flat.Class3',
+          'MultiModuleComposition.Module2Flat.Class4',
           'MultiModuleComposition.Module3Flat.Class1',
           'MultiModuleComposition.Module3Flat.Class2',
           'MultiModuleComposition.Module3Flat.Class3',
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
       'MultiModuleComposition.Module1',
       'MultiModuleComposition.Module2Flat',
     ),
@@ -363,12 +431,20 @@
   dict({
     'children': dict({
       'Class1': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module2.Class1',
+          'MultiModuleComposition.Module2.Nested1.Class3',
           'MultiModuleComposition.Module3.Nested1.Class3',
         ),
       }),
       'Class2': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module1.Class1',
+          'MultiModuleComposition.Module1.Class2',
+          'MultiModuleComposition.Module2.Class1',
+          'MultiModuleComposition.Module2.Class2',
+          'MultiModuleComposition.Module2.Nested1.Class3',
           'MultiModuleComposition.Module3.Class1',
           'MultiModuleComposition.Module3.Nested1.Class3',
         ),
@@ -376,28 +452,37 @@
       'Nested1': dict({
         'children': dict({
           'Class3': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Module2.Nested1.Class3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module2.Nested1',
         ),
       }),
       'Nested2': dict({
         'children': dict({
           'Class4': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.Module1.Class1',
+              'MultiModuleComposition.Module1.Class2',
+              'MultiModuleComposition.Module2.Class1',
+              'MultiModuleComposition.Module2.Class2',
+              'MultiModuleComposition.Module2.Nested1.Class3',
+              'MultiModuleComposition.Module2.Nested2.Class4',
               'MultiModuleComposition.Module3.Class1',
               'MultiModuleComposition.Module3.Class2',
               'MultiModuleComposition.Module3.Nested1.Class3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.Module2.Nested2',
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
       'MultiModuleComposition.Module1',
       'MultiModuleComposition.Module2',
     ),
@@ -409,14 +494,18 @@
       'Flatten': dict({
         'children': dict({
           'ReferenceToTarget': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MyRoot.Nested2.Nested3.ReferenceToTarget',
+              'MultiModuleComposition.MyRoot.Nested4.Nested3.ReferenceToTarget',
               'MultiModuleComposition.MyRoot.Target',
               'MultiModuleComposition.MyRoot.Target2',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
           'MultiModuleComposition.MyRoot.Nested1.Nested3',
+          'MultiModuleComposition.MyRoot.Nested2.Nested3',
+          'MultiModuleComposition.MyRoot.Nested4.Nested3',
         ),
       }),
       'Nested1': dict({
@@ -424,17 +513,21 @@
           'Nested3': dict({
             'children': dict({
               'ReferenceToTarget': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.MyRoot.Nested2.Nested3.ReferenceToTarget',
+                  'MultiModuleComposition.MyRoot.Nested4.Nested3.ReferenceToTarget',
                   'MultiModuleComposition.MyRoot.Target',
                   'MultiModuleComposition.MyRoot.Target2',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MyRoot.Nested2.Nested3',
+              'MultiModuleComposition.MyRoot.Nested4.Nested3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
           'MultiModuleComposition.MyRoot.Nested2',
           'MultiModuleComposition.MyRoot.Nested4',
         ),
@@ -444,16 +537,16 @@
           'Nested3': dict({
             'children': dict({
               'ReferenceToTarget': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
                   'MultiModuleComposition.MyRoot.Target',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
       'Nested4': dict({
@@ -461,28 +554,28 @@
           'Nested3': dict({
             'children': dict({
               'ReferenceToTarget': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
                   'MultiModuleComposition.MyRoot.Target2',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
       'Target': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
       'Target2': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
     ),
   })
 # ---
@@ -492,13 +585,20 @@
       'Flatten': dict({
         'children': dict({
           'ReferenceToTarget': dict({
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MyRoot.Nested2.Nested3.ReferenceToTarget',
+              'MultiModuleComposition.MyRoot.Nested4.Nested3.ReferenceToTarget',
+              'MultiModuleComposition.MyRoot.Target',
+              'MultiModuleComposition.MyRoot.Target2',
               'MultiModuleComposition.Reroot.Target',
               'MultiModuleComposition.Reroot.Target2',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.MyRoot.Flatten',
+          'MultiModuleComposition.MyRoot.Nested2.Nested3',
+          'MultiModuleComposition.MyRoot.Nested4.Nested3',
           'MultiModuleComposition.Reroot.Nested1.Nested3',
         ),
       }),
@@ -507,17 +607,26 @@
           'Nested3': dict({
             'children': dict({
               'ReferenceToTarget': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.MyRoot.Nested2.Nested3.ReferenceToTarget',
+                  'MultiModuleComposition.MyRoot.Nested4.Nested3.ReferenceToTarget',
+                  'MultiModuleComposition.MyRoot.Target',
+                  'MultiModuleComposition.MyRoot.Target2',
                   'MultiModuleComposition.Reroot.Target',
                   'MultiModuleComposition.Reroot.Target2',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MyRoot.Nested2.Nested3',
+              'MultiModuleComposition.MyRoot.Nested4.Nested3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.MyRoot.Nested1',
+          'MultiModuleComposition.MyRoot.Nested2',
+          'MultiModuleComposition.MyRoot.Nested4',
           'MultiModuleComposition.Reroot.Nested2',
           'MultiModuleComposition.Reroot.Nested4',
         ),
@@ -527,16 +636,20 @@
           'Nested3': dict({
             'children': dict({
               'ReferenceToTarget': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.MyRoot.Nested2.Nested3.ReferenceToTarget',
+                  'MultiModuleComposition.MyRoot.Target',
                   'MultiModuleComposition.Reroot.Target',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MyRoot.Nested2.Nested3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.MyRoot.Nested2',
         ),
       }),
       'Nested4': dict({
@@ -544,28 +657,34 @@
           'Nested3': dict({
             'children': dict({
               'ReferenceToTarget': dict({
-                'strict_super': tuple(
+                'other_overlays': tuple(
+                  'MultiModuleComposition.MyRoot.Nested4.Nested3.ReferenceToTarget',
+                  'MultiModuleComposition.MyRoot.Target2',
                   'MultiModuleComposition.Reroot.Target2',
                 ),
               }),
             }),
-            'strict_super': tuple(
+            'other_overlays': tuple(
+              'MultiModuleComposition.MyRoot.Nested4.Nested3',
             ),
           }),
         }),
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.MyRoot.Nested4',
         ),
       }),
       'Target': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.MyRoot.Target',
         ),
       }),
       'Target2': dict({
-        'strict_super': tuple(
+        'other_overlays': tuple(
+          'MultiModuleComposition.MyRoot.Target2',
         ),
       }),
     }),
-    'strict_super': tuple(
+    'other_overlays': tuple(
       'MultiModuleComposition.MyRoot',
     ),
   })

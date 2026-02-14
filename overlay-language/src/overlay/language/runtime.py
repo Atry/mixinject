@@ -337,7 +337,7 @@ class Mixin(HasDict):
                                 yield from evaluator
 
                     # Collect patches from super union mixins
-                    for super_union_symbol in self.symbol.super_unions:
+                    for super_union_symbol in self.symbol.qualified_this:
                         if super_union_symbol is self.symbol:
                             continue
                         super_mixin = self.find_mixin(super_union_symbol)
@@ -363,7 +363,7 @@ class Mixin(HasDict):
                     for evaluator in own_evaluators:
                         if isinstance(evaluator, Patcher):
                             yield from evaluator
-                    for super_union_symbol in self.symbol.super_unions:
+                    for super_union_symbol in self.symbol.qualified_this:
                         if super_union_symbol is self.symbol:
                             continue
                         super_mixin = self.find_mixin(super_union_symbol)
