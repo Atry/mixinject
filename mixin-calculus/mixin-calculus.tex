@@ -18,16 +18,19 @@
   \if@ACM@anonymous{#2}\else{#1}\fi
 }
 
-\DeclareMathOperator{\Overlay}{Overlay}
+\DeclareMathOperator{\Path}{Path}
 \DeclareMathOperator{\dom}{dom}
-\DeclareMathOperator{\keys}{keys}
+\DeclareMathOperator{\keys}{properties}
 \DeclareMathOperator{\unions}{unions}
-\DeclareMathOperator{\superunions}{super\_unions}
-\DeclareMathOperator{\supers}{strict\_supers}
-\DeclareMathOperator{\bases}{bases}
-\DeclareMathOperator{\qualifiedthis}{qualified\_this}
-\DeclareMathOperator{\definitions}{definitions}
+\DeclareMathOperator{\supers}{supers}
+\DeclareMathOperator{\references}{references}
+\DeclareMathOperator{\qualifiedthis}{this}
+\DeclareMathOperator{\ownmembers}{own\text{-}properties}
+\DeclareMathOperator{\edges}{edges}
 \DeclareMathOperator{\navigate}{navigate}
+\newcommand{\snoc}{\mathbin{\triangleright}}
+\DeclareMathOperator{\init}{init}
+\DeclareMathOperator{\last}{last}
 \newcommand{\self}{\mathbf{this}}
 
 \begin{document}
@@ -51,7 +54,7 @@
   as the foundation of declarative programming. Unlike the $\lambda$-calculus,
   which requires first-class functions, or Turing machines, which require
   mutable state, Overlay-Calculus is purely declarative and function-free,
-  yet Turing complete. Composition ($\oplus$) is commutative, idempotent,
+  yet Turing complete. Composition ($\sqcup$) is commutative, idempotent,
   and associative---the linearization problem familiar from traditional
   mixin and trait systems simply does not arise. We demonstrate Turing
   completeness by giving a straightforward translation from the
@@ -182,7 +185,7 @@ single package to be evaluated without materializing the entire set.
 This paper provides the missing theoretical foundation. We present
 \textbf{Overlay-Calculus}, a minimal calculus that distills the essence of
 this mechanism into three constructs---record literals, references,
-and composition ($\oplus$)---without functions or let-bindings.
+and composition ($\sqcup$)---without functions or let-bindings.
 A key observation is that
 \emph{function application admits a straightforward translation into inheritance}:
 a $\lambda$-abstraction corresponds to a record with an
@@ -232,8 +235,8 @@ mixin-based systems~\cite{bracha1990mixin,c3linearization}. In traditional
 mixin or trait calculi~\cite{scharli2003traits,ducasse2006traits}, composing
 mixins that define the same field raises conflicts that must be resolved by
 a linearization order. In Overlay-Calculus, because there are no scalar values,
-the observable behavior at every node is solely \emph{key presence}---a set
-of labels. Composition ($\oplus$) is therefore commutative, idempotent, and
+the observable behavior at every node is solely \emph{property presence}---a set
+of labels. Composition ($\sqcup$) is therefore commutative, idempotent, and
 associative. The linearization problem does not arise---not because it is
 resolved, but because it does not exist.
 
@@ -258,7 +261,7 @@ mechanically verified against expected output snapshots.
   \item We present Overlay-Calculus, a minimal computational model for
     declarative programming that contains only mixin constructs (record,
     reference, composition) and no functions or scalar types.
-  \item We observe that composition ($\oplus$) is commutative, idempotent,
+  \item We observe that composition ($\sqcup$) is commutative, idempotent,
     and associative, and provide an intuitive explanation for why this
     holds. The linearization problem inherent in prior mixin and trait
     calculi simply does not arise.
@@ -289,17 +292,17 @@ We define an expression language with an evaluation operation:
     \mathrm{right} \mapsto \{\}\}\}, \\[4pt]
     \mathrm{evaluation} &\mapsto \{
       \mathrm{Constant} \mapsto \mathrm{expression}.\self.\mathrm{Constant}
-      \oplus \{\mathrm{outcome} \mapsto
+      \sqcup \{\mathrm{outcome} \mapsto
       \mathrm{Constant}.\self.\mathrm{magnitude}\}, \\
       &\qquad \mathrm{Addition} \mapsto
-      \mathrm{expression}.\self.\mathrm{Addition} \oplus \{ \\
+      \mathrm{expression}.\self.\mathrm{Addition} \sqcup \{ \\
         &\qquad\qquad
         \mathrm{left\_outcome} \mapsto \mathrm{Addition}.\self.\mathrm{left}.\mathrm{outcome},\\
         &\qquad\qquad
         \mathrm{right\_outcome} \mapsto \mathrm{Addition}.\self.\mathrm{right}.\mathrm{outcome},\\
         &\qquad\qquad
         \mathrm{sum} \mapsto \mathrm{binnat}.\self.\mathrm{Addition}
-        \oplus \{\mathrm{augend} \mapsto
+        \sqcup \{\mathrm{augend} \mapsto
         \mathrm{sum}.\self.\mathrm{left\_outcome},\;
         \mathrm{addend} \mapsto
         \mathrm{sum}.\self.\mathrm{right\_outcome}\}, \\
@@ -317,10 +320,10 @@ module that inherits from the same $\mathrm{expression}$ schemas:
 \begin{align*}
   \mathrm{display} \mapsto \{
     \mathrm{Constant} &\mapsto \mathrm{expression}.\self.\mathrm{Constant}
-    \oplus \{\mathrm{representation} \mapsto
+    \sqcup \{\mathrm{representation} \mapsto
     \mathrm{Constant}.\self.\mathrm{magnitude}\},\\
     \mathrm{Addition} &\mapsto \mathrm{expression}.\self.\mathrm{Addition}
-    \oplus \{\mathrm{representation} \mapsto \{
+    \sqcup \{\mathrm{representation} \mapsto \{
         \mathrm{left} \mapsto
         \mathrm{Addition}.\self.\mathrm{left}.\mathrm{representation},\;
   \mathrm{right} \mapsto
@@ -334,13 +337,13 @@ and an empty API for the arithmetic primitive:
   \{\mathrm{operand} \mapsto \{\}\}\}, \\
   \mathrm{negation\_evaluation} &\mapsto \{
     \mathrm{Negation} \mapsto
-    \mathrm{negation}.\self.\mathrm{Negation} \oplus \{\\
+    \mathrm{negation}.\self.\mathrm{Negation} \sqcup \{\\
       &\qquad
       \mathrm{operand\_outcome} \mapsto
       \mathrm{Negation}.\self.\mathrm{operand}.\mathrm{outcome},\\
       &\qquad
       \mathrm{negated} \mapsto \mathrm{binnat}.\self.\mathrm{Negation}
-      \oplus \{\mathrm{operand} \mapsto
+      \sqcup \{\mathrm{operand} \mapsto
       \mathrm{negated}.\self.\mathrm{operand\_outcome}\},\\
       &\qquad
   \mathrm{outcome} \mapsto
@@ -350,7 +353,7 @@ and an empty API for the arithmetic primitive:
     \{\mathrm{operand} \mapsto \{\},\;
   \mathrm{outcome} \mapsto \{\}\}\}
 \end{align*}
-All modules compose freely via $\oplus$; none requires modification of
+All modules compose freely via $\sqcup$; none requires modification of
 existing definitions.
 A complete executable version of this example---including both the
 evaluation and display operations, a negation extension, and their free
@@ -372,9 +375,9 @@ Let $k$ denote a non-negative integer (path length).
 \begin{align*}
   e \quad ::= \quad & \{\ell_1 \mapsto e_1,\; \ldots,\; \ell_n \mapsto e_n\}
   && \text{(record, } n \ge 0\text{)} \\
-  \mid\quad & \ell_0.\self.\ell_1.\ell_2\ldots\ell_k
-  && \text{(qualified this, } k \ge 0\text{)} \\
-  \mid\quad & e_1 \oplus e_2
+  \mid\quad & \ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}
+  && \text{(reference, } k \ge 0\text{)} \\
+  \mid\quad & e_1 \sqcup e_2
   && \text{(composition)}
 \end{align*}
 
@@ -390,252 +393,255 @@ paper, as scalars can be treated as opaque sets whose composition
 remains commutative and idempotent.
 
 \paragraph{Qualified this.}
-The reference form $\ell_0.\self.\ell_1\ldots\ell_k$ is called a
-\emph{qualified this} reference, analogous to Java's
+The reference $\ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
+is analogous to Java's
 \texttt{Outer.this.field}. Each $\{\ldots\}$ record has a label in its
-enclosing scope; $\ell_0$ names the target enclosing scope.
-The keyword $\self$ retrieves the \emph{dynamic self} of that scope---the
-fully composed record after all $\oplus$ merges have been applied.
-The suffix $\ell_1\ldots\ell_k$ then projects properties from the
+enclosing scope; $\ell_{\mathrm{up}}$ names the target enclosing scope.
+The \emph{qualified this} $\ell_{\mathrm{up}}.\self$ retrieves the \emph{dynamic self} of that scope---the
+fully composed record after all $\sqcup$ merges have been applied.
+The suffix $\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ then projects properties from the
 dynamic self.
 
 A new scope level is created at each $\{\ldots\}$ (record literal).
-The scope contains all properties of that mixin, including those introduced by $\oplus$.
-In particular, $\{a \mapsto \{\}\} \oplus \{b \mapsto \{\}\}$ is a single mixin whose scope
+The scope contains all properties of that mixin, including those introduced by $\sqcup$.
+In particular, $\{a \mapsto \{\}\} \sqcup \{b \mapsto \{\}\}$ is a single mixin whose scope
 contains both $a$ and $b$.
-The operator $\oplus$ does not create additional scope levels.
+The operator $\sqcup$ does not create additional scope levels.
 
 \begin{itemize}
   \item $\mathrm{Foo}.\self$ retrieves the dynamic self of the nearest
     enclosing record named $\mathrm{Foo}$.
   \item $\mathrm{Foo}.\self.\ell$ projects property $\ell$ from the
     dynamic self of $\mathrm{Foo}$.
-  \item When $k = 0$, the reference $\ell_0.\self$ inherits the entire
+  \item When $k = 0$, the reference $\ell_{\mathrm{up}}.\self$ inherits the entire
     enclosing scope, which may produce an infinitely deep tree.
 \end{itemize}
 
 \section{Overlay Trees}
 
-The semantics of Overlay-Calculus is defined as a transformation
-from one record tree (the expression) to another record tree
-(the \emph{overlay}).
-Each node in the overlay tree is called an $\Overlay$.
-The computation proceeds by resolving qualified-this references and
-collecting definitions through the composition chain.
-All functions in this section are pure and may be cached
-(memoised) without changing semantics.
+Given a normalized AST, what are the \emph{properties} visible at
+each position in the tree? This section answers the question by
+defining a collection of mutually recursive functions over paths.
+All functions are pure and may be cached (memoised) without
+changing semantics.
 
-\paragraph{Overlay.}
-An $\Overlay$ is a node in the result tree.
-Each overlay has the following structural attributes:
+\paragraph{Path.}
+A $\Path$ is a sequence of labels
+$(\ell_1, \ell_2, \ldots, \ell_n)$ that identifies a position in
+the tree.%
+\footnote{Since paths are referentially transparent,
+  an implementation may \emph{intern} paths so that
+  structural equality reduces to pointer equality.}
+We write $p$ for a path.
+The \emph{root path} is the empty sequence $()$.
+Given a path $p$ and a label $\ell$,
+$p \snoc \ell$ is the sequence $p$ extended with $\ell$.
+For a non-root path, $\init(p)$ is $p$ with
+its last element removed,
+and $\last(p)$ is the last element of $p$.
+For convenience, we sometimes write $\ell$ for $\last(p)$
+when the path is clear from context.
+With paths in hand, we can state what the normalized AST provides
+at each path.
+
+\paragraph{Normalized AST.}
+An expression $e$ (Section~2) is \emph{normalized} into an AST
+before evaluation by flattening all $\sqcup$ nodes.
+The normalized AST provides two primitive functions at each path $p$:
 \begin{itemize}
-  \item $\Overlay_{\mathrm{node}}.\mathrm{outer}$: the parent overlay
-    (undefined for the root).
-  \item $\Overlay_{\mathrm{node}}.\mathrm{key}$: the label under which
-    this overlay appears in its parent.
-  \item $\Overlay_{\mathrm{node}}[\ell]$: the child overlay with label $\ell$.
+  \item $\ownmembers(p)$: the set of labels
+    that have subtrees at $p$.
+  \item $\references(p)$: the multiset of resolved reference pairs
+    $(\ell_{\mathrm{up},*},\; \ell_{\mathrm{down},*})$,
+    where each component is a label list.
 \end{itemize}
 
-\paragraph{Constructing the overlay tree.}
-From an expression $e$, the overlay tree is constructed as follows.
-Each record $\{\ell_1 \mapsto e_1, \ldots\}$ in $e$ becomes a
-\emph{definition}.
-An expression $e_1 \oplus e_2$ at a given tree position produces
-two definitions at that position.
-A qualified-this reference $\ell_0.\self.\ell_1\ldots\ell_k$ appearing
-in a definition becomes a \emph{base} of that definition.
-Each definition carries:
-\begin{itemize}
-  \item A set of \emph{labels} (the keys it defines).
-  \item A list of \emph{bases} (qualified-this references to inherited overlays).
-\end{itemize}
-Definitions are pure data; they are not functions.
+During normalization, a syntactic reference
+$\ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
+at path $p$ is resolved by finding the last occurrence of
+$\ell_{\mathrm{up}}$ among the labels of $p$.
+The suffix of $p$ from that position onward becomes
+$\ell_{\mathrm{up},*} = (\ell_{\mathrm{up},1}, \ldots, \ell_{\mathrm{up},m})$.
+The projections become
+$\ell_{\mathrm{down},*} = (\ell_{\mathrm{down},1}, \ldots, \ell_{\mathrm{down},k})$.
 
-\paragraph{Composition ($\oplus$).}
-Composition concatenates definition lists at each label:
+Normalization populates $\ownmembers$ and $\references$ as follows:
+\begin{itemize}
+  \item A record $\{\ell_1 \mapsto e_1, \ldots, \ell_n \mapsto e_n\}$
+    contributes $\{\ell_1, \ldots, \ell_n\}$ to $\ownmembers(p)$
+    and nothing to $\references(p)$.
+  \item A reference $\ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
+    contributes one pair
+    $(\ell_{\mathrm{up},*},\; \ell_{\mathrm{down},*})$
+    to $\references(p)$
+    and nothing to $\ownmembers(p)$.
+  \item A composition $e_1 \sqcup e_2$ takes the union of both
+    $\ownmembers$ and $\references$ from $e_1$ and $e_2$ at the same path.
+\end{itemize}
+Both $\ownmembers$ and $\references$ are pure data; they are not functions
+of runtime state.
+Given these two primitives, we can now answer the question
+posed at the beginning of this section.
+
+\paragraph{Properties.}
+The properties of a path are its own properties together with
+those inherited from all supers:
 \[
-  (e_1 \oplus e_2)(\ell) = e_1(\ell) \mathbin{+\!\!+} e_2(\ell)
+  \keys(p) =
+  \bigl\{\; \ell \;\big|\;
+  p_{\mathrm{super}} \in \supers(p),\;
+  \ell \in \ownmembers(p_{\mathrm{super}})
+  \;\bigr\}
 \]
-Properties of $\oplus$: commutative, idempotent, associative.
+The remainder of this section defines $\supers$
+and its dependencies.
+
+\paragraph{Supers.}
+The \emph{supers} of $p$ are the unions of every path in
+the reflexive transitive closure of $\edges$:
+\[
+  \supers(p) =
+  \bigl\{\; p_{\mathrm{union}} \;\big|\;
+  p' \in \edges^*(p),\;
+  p_{\mathrm{union}} \in \unions(p')
+  \;\bigr\}
+\]
+The $\supers$ formula depends on two functions:
+$\unions$ and $\edges$. We define $\unions$ first.
+
+\paragraph{Unions.}
+$\unions(p)$ is the set of paths that share
+the \emph{same identity} as $p$.
+When $p \neq ()$,
+its unions include itself and $p_{\mathrm{init\_super}} \snoc \last(p)$ for every
+super $p_{\mathrm{init\_super}}$ of $\init(p)$ that also defines $\last(p)$:
+\[
+  \unions(p) =
+  \begin{cases}
+    \{p\} & \text{if } p = ()  \\[6pt]
+    \{p\}
+    \;\cup\;
+    \left\{\; p_{\mathrm{init\_super}} \snoc \last(p) \;\left|\;
+    \begin{aligned}
+      &p_{\mathrm{init\_super}} \in \supers(\init(p)), \\
+      &\text{s.t.}\; \last(p) \in \ownmembers(p_{\mathrm{init\_super}})
+    \end{aligned}
+    \right.\right\}
+    & \text{if } p \neq ()
+  \end{cases}
+\]
+It remains to define $\edges$, the other dependency of $\supers$.
+
+\paragraph{Edges.}
+The \emph{edges} of $p$ in the inheritance DAG are the paths
+reachable by navigating its resolved references one step:
+\[
+  \edges(p) =
+  \bigl\{\; p_{\mathrm{target}} \;\big|\;
+  p_{\mathrm{union}} \in \unions(p),\;
+  \mathrm{ref} \in \references(p_{\mathrm{union}}),\;
+  p_{\mathrm{target}} \in \navigate(\init(p),\; \mathrm{ref})
+  \;\bigr\}
+\]
+The $\edges$ formula calls $\navigate$, which we define next.
+
+\paragraph{Navigation.}
+The function $\navigate(p_{\mathrm{site}},\; \mathrm{ref})$
+takes a composition-site path $p_{\mathrm{site}}$
+and a resolved base
+$\mathrm{ref} = (\ell_{\mathrm{up},*},\; \ell_{\mathrm{down},*})$,
+and returns a set of target paths, as follows.
+Since $\ell_{\mathrm{up},*}$ is a suffix of the definition-site path,
+it is also a valid absolute path $p_{\mathrm{def}}$.
+
+\begin{enumerate}
+  \item Start with the set
+    $\mathit{current\_set} = \{p_{\mathrm{site}}\}$
+    and $p_{\mathrm{def}} = \ell_{\mathrm{up},*}$.
+  \item While $p_{\mathrm{def}}$ is non-empty:
+    \[
+      \mathit{current\_set} \;\leftarrow\;
+      \bigl\{\; p' \;\big|\;
+      p_{\mathrm{current}} \in \mathit{current\_set},\;
+      p' \in
+      \qualifiedthis(p_{\mathrm{current}},\;
+      p_{\mathrm{def}})
+      \;\bigr\}
+      \qquad\qquad
+      p_{\mathrm{def}} \;\leftarrow\;
+      \init(p_{\mathrm{def}})
+    \]
+    At each step, $\qualifiedthis$ maps the definition-site path
+    to the corresponding composition-site paths,
+    then $\init$ shortens the path by one label.
+  \item For each $p_{\mathrm{current}} \in \mathit{current\_set}$,
+    append $\ell_{\mathrm{down},*}$:
+    $p_{\mathrm{current}} \snoc \ell_{\mathrm{down},1} \snoc \ell_{\mathrm{down},2} \cdots \snoc \ell_{\mathrm{down},k}$.
+\end{enumerate}
+The result is the set of target paths reached by all routes.
+When multiple routes exist (due to multi-path inheritance from $\sqcup$),
+they may yield different target paths; all are collected.
+The navigation loop calls $\qualifiedthis$, which we now define.
+
+\paragraph{Qualified this.}
+$\qualifiedthis(p,\; p_{\mathrm{def}})$ returns,
+for each definition-site path $p_{\mathrm{def}}$,
+the set of $\init(p_{\mathrm{super}})$ values
+where $p_{\mathrm{super}}$ matches $p_{\mathrm{def}}$
+among the supers of $p$:
+\begin{align*}
+  \qualifiedthis(p,\;
+  p_{\mathrm{def}}) = \left\{\;
+  \init(p_{\mathrm{super}}) \;\left|\;
+  \begin{aligned}
+    &p_{\mathrm{super}} \in \supers(p), \\
+    &\text{s.t.}\; p_{\mathrm{super}} = p_{\mathrm{def}}
+  \end{aligned}
+  \right.\right\}
+\end{align*}
+Intuitively, $\qualifiedthis(p,\;
+p_{\mathrm{def}})$ answers:
+``in the fully composed path $p$, at which
+composition-site paths does the definition-site path
+$p_{\mathrm{def}}$ appear as a super?''
+
+Note that $\qualifiedthis$ returns a \emph{set} of paths, not a single path.
+When $\sqcup$ introduces multiple inheritance routes to the same
+definition-site scope, the set may contain more than one element.
+This is a deliberate feature of Overlay-Calculus:
+all routes contribute equally to the composed result, and since
+$\sqcup$ is idempotent, duplicated contributions are harmless.
+In contrast, Scala rejects such ambiguity at compile
+time~\cite{odersky2004overview}, and the NixOS module system
+raises a merge conflict when multiple paths provide values for the
+same attribute~\cite{nixosmodules}. Overlay-Calculus avoids both
+problems because the only observable is property presence, making
+multi-path resolution well-defined without disambiguation.
+
+This completes the chain of definitions needed to compute $\keys(p)$.
+We conclude this section with the algebraic properties of $\sqcup$.
+
+\paragraph{Properties of $\sqcup$.}
+Composition is commutative, idempotent, and associative.
 The identity element is the empty record $\{\}$.
 
 \medskip\noindent\textit{Intuition.}\quad
-List concatenation is not commutative.
-However, evaluation merges all definitions for each label recursively.
-To see why commutativity holds, observe that at every leaf the only
-observable is key presence---a set of labels.
-Since there are no scalars, the only observable at any node is which keys exist.
+Evaluation merges $\references$ and $\ownmembers$ for each label recursively.
+At every leaf the only observable is property presence---a set of labels.
+Since there are no scalars, the only observable at any node is which properties exist.
 Set union is commutative and idempotent:
 $\{a,b\} \cup \{b,c\} = \{b,c\} \cup \{a,b\}$ and
 $\mathrm{Labels} \cup \mathrm{Labels} = \mathrm{Labels}$.
 The observable tree is therefore invariant under reordering or
-deduplication of definitions.
+duplication of references.
 
-Since duplicate definitions produce the same observable result,
-implementations may deduplicate definitions (e.g., by source location)
+Since duplicate references produce the same observable result,
+implementations may deduplicate references (e.g., by path)
 to avoid the exponential blowup from diamond inheritance.
 
-The only externally observable fact is key presence:
-$\ell \in \keys(\Overlay_{\mathrm{node}})$.
+The only externally observable fact is property presence:
+$\ell \in \keys(p)$.
 
-\paragraph{Definitions.}
-$\definitions(\Overlay_{\mathrm{node}})$ returns the definitions
-directly written at $\Overlay_{\mathrm{node}}$.
-For the root overlay, these are the top-level record expressions.
-For a nested overlay with parent $\Overlay_{\mathrm{parent}}$ and
-key $\ell$:
-\[
-  \definitions(\Overlay_{\mathrm{node}}) =
-  \bigl\{\mathrm{def}[\ell] \;\big|\;
-  \mathrm{def} \in \definitions(\Overlay_{\mathrm{parent}}),\;
-  \ell \in \keys(\mathrm{def}) \bigr\}
-\]
-where $\mathrm{def}[\ell]$ extracts the sub-definition under label $\ell$.
-
-\paragraph{Resolved bases.}
-Each definition may list bases (qualified-this references).
-A base $\ell_0.\self.\ell_1\ldots\ell_k$ is \emph{resolved}
-from an overlay $\Overlay_{\mathrm{node}}$ by walking up:
-$\Overlay_{\mathrm{node}}.\mathrm{outer}$,
-$\Overlay_{\mathrm{node}}.\mathrm{outer}.\mathrm{outer}$,
-\ldots\ until finding an overlay whose key matches $\ell_0$.
-Record the number of steps as $\mathit{depth}$, and the
-starting position as $\Overlay_{\mathrm{origin}}$.
-Then navigate $\ell_1, \ldots, \ell_k$ downward.
-
-\[
-  \bases(\Overlay_{\mathrm{node}}) =
-  \bigl\{\mathrm{resolve}(\mathrm{base\_ref},\; \Overlay_{\mathrm{node}})
-  \;\big|\;
-  \mathrm{def} \in \definitions(\Overlay_{\mathrm{node}}),\;
-  \mathrm{base\_ref} \in \mathrm{def}.\mathrm{bases}\bigr\}
-\]
-
-\paragraph{Unions.}
-$\unions(\Overlay_{\mathrm{node}})$ is the set of overlays that share
-the \emph{same identity} as $\Overlay_{\mathrm{node}}$.
-When an overlay is nested inside a parent with key $\ell$,
-its unions include itself and the child $\ell$ of every super-union
-of its parent that also defines $\ell$:
-\begin{align*}
-  \unions(\Overlay_{\mathrm{node}}) &= \{\Overlay_{\mathrm{node}}\}
-  \;\cup\;
-  \bigl\{\; \Overlay_{\mathrm{parent\_super}}[\ell] \;\big|\;
-  \Overlay_{\mathrm{parent\_super}} \in
-  \superunions(\Overlay_{\mathrm{node}}.\mathrm{outer}), \\
-  &\qquad\qquad\qquad\qquad\qquad\quad
-  \ell = \Overlay_{\mathrm{node}}.\mathrm{key},\;
-  \ell \in \keys(\Overlay_{\mathrm{parent\_super}}) \;\bigr\}
-\end{align*}
-For the root overlay, $\unions(\Overlay_{\mathrm{root}}) =
-\{\Overlay_{\mathrm{root}}\}$.
-
-\paragraph{Strict supers.}
-$\supers(\Overlay_{\mathrm{node}})$ is the set of overlays
-reachable by following resolved bases through $\navigate$ (defined
-below), transitively:
-\begin{align*}
-  \supers(\Overlay_{\mathrm{node}}) &=
-  \bigcup_{\Overlay_{\mathrm{union}} \in \unions(\Overlay_{\mathrm{node}})}
-  \;\bigcup_{\mathrm{ref} \in \bases(\Overlay_{\mathrm{union}})}
-  \bigl\{\; \Overlay_{\mathrm{target}}
-  \;\big|\;
-  \Overlay_{\mathrm{target}} \in
-  \navigate(\mathrm{ref},\;
-  \Overlay_{\mathrm{node}}.\mathrm{outer}) \;\bigr\}
-  \\
-  &\quad\;\cup\;
-  \bigcup_{\Overlay_{\mathrm{target}}} \supers(\Overlay_{\mathrm{target}})
-\end{align*}
-
-\paragraph{Super unions.}
-$\superunions(\Overlay_{\mathrm{node}})$ collects the unions of
-$\Overlay_{\mathrm{node}}$ together with the unions of all strict supers:
-\[
-  \superunions(\Overlay_{\mathrm{node}}) =
-  \bigcup_{\Overlay_{\mathrm{super}} \in
-  \{\Overlay_{\mathrm{node}}\} \cup \supers(\Overlay_{\mathrm{node}})}
-  \unions(\Overlay_{\mathrm{super}})
-\]
-
-\paragraph{Keys.}
-The keys of an overlay are the labels from its own definitions and
-those of its super-unions:
-\[
-  \keys(\Overlay_{\mathrm{node}}) =
-  \bigcup_{\Overlay_{\mathrm{super}} \in
-  \superunions(\Overlay_{\mathrm{node}})}
-  \;\bigcup_{\mathrm{def} \in
-  \definitions(\Overlay_{\mathrm{super}})} \keys(\mathrm{def})
-\]
-
-\paragraph{Qualified this.}
-$\qualifiedthis(\Overlay_{\mathrm{node}})$ is a mapping from
-definition-site overlays to sets of composition-site outer overlays.
-It records, for each inherited base, which outer-scope overlays the
-base originated from:
-\[
-  \qualifiedthis(\Overlay_{\mathrm{node}})
-  (\Overlay_{\mathrm{def\_site}}) =
-  \bigl\{\; \Overlay_{\mathrm{super\_union}}.\mathrm{outer} \;\big|\;
-  \Overlay_{\mathrm{super}} \in \{\Overlay_{\mathrm{node}}\} \cup
-  \supers(\Overlay_{\mathrm{node}}),\;
-  \Overlay_{\mathrm{super\_union}} \in
-  \unions(\Overlay_{\mathrm{super}}),\;
-  \Overlay_{\mathrm{super\_union}}.\mathrm{outer} =
-  \Overlay_{\mathrm{def\_site}} \;\bigr\}
-\]
-Intuitively, $\qualifiedthis(\Overlay_{\mathrm{node}})
-(\Overlay_{\mathrm{def\_site}})$ answers:
-``in the fully composed overlay $\Overlay_{\mathrm{node}}$, which
-composition-site outer scopes correspond to definition-site outer
-scope $\Overlay_{\mathrm{def\_site}}$?''
-
-\paragraph{Navigation.}
-Given a resolved reference
-$\mathrm{ref} = (\mathit{depth},\; (\ell_1, \ldots, \ell_k),\;
-\Overlay_{\mathrm{origin}})$
-and a composition-site parent overlay $\Overlay_{\mathrm{parent}}$,
-the function $\navigate(\mathrm{ref},\; \Overlay_{\mathrm{parent}})$
-proceeds as:
-
-\begin{enumerate}
-  \item Start with the set
-    $\mathit{current\_set} = \{\Overlay_{\mathrm{parent}}\}$ and
-    the definition-site chain position
-    $\Overlay_{\mathrm{def\_chain}} = \Overlay_{\mathrm{origin}}$.
-  \item Repeat $\mathit{depth}$ times:
-    \[
-      \mathit{current\_set} \;\leftarrow\;
-      \bigcup_{\Overlay_{\mathrm{current}} \in \mathit{current\_set}}
-      \qualifiedthis(\Overlay_{\mathrm{current}})
-      (\Overlay_{\mathrm{def\_chain}})
-      \qquad\qquad
-      \Overlay_{\mathrm{def\_chain}} \;\leftarrow\;
-      \Overlay_{\mathrm{def\_chain}}.\mathrm{outer}
-    \]
-    At each step, $\qualifiedthis$ maps the definition-site scope
-    to the corresponding composition-site outer scopes.
-  \item For each $\Overlay_{\mathrm{current}} \in \mathit{current\_set}$,
-    navigate the path:
-    $\Overlay_{\mathrm{current}}[\ell_1][\ell_2]\cdots[\ell_k]$.
-\end{enumerate}
-The result is the set of target overlays reached by all paths.
-When multiple paths exist (due to multi-path inheritance from $\oplus$),
-they may yield different target overlays; all are collected.
-
-\paragraph{Evaluate.}
-The children of an overlay $\Overlay_{\mathrm{node}}$ are
-computed by collecting definitions from all super-unions.
-For each label $\ell \in \keys(\Overlay_{\mathrm{node}})$:
-\[
-  \Overlay_{\mathrm{node}}[\ell] \quad\text{has definitions}\quad
-  \bigoplus_{\Overlay_{\mathrm{super}} \in
-  \superunions(\Overlay_{\mathrm{node}}[\ell])}
-  \definitions(\Overlay_{\mathrm{super}})
-\]
-Each child overlay is evaluated lazily on access.
-Overlay-Calculus does not prohibit infinite trees.
 
 \section{Relationship to Other Computational Models}
 
@@ -656,7 +662,7 @@ $\mathrm{fn}_i$ in its enclosing scope.
     $\{\mathrm{argument} \mapsto \{\},\;
     \mathrm{result} \mapsto \mathcal{T}(e)\}$ \\
     $e_1\; e_2$ (application) &
-    $\mathcal{T}(e_1) \oplus
+    $\mathcal{T}(e_1) \sqcup
     \{\mathrm{argument} \mapsto \mathcal{T}(e_2)\}$
   \end{tabular}
 \end{center}
@@ -690,7 +696,7 @@ This sophistication is not accidental---it reflects three features:
 
 \begin{enumerate}
   \item \textbf{Self-referential records with lazy evaluation.}
-    An overlay's children can reference siblings and ancestors
+    An overlay's properties can reference other properties and enclosing scopes
     through qualified this without explicit binding.
     In the $\lambda$-calculus, encoding such self-referential
     structures requires explicit allocation of mutable or lazy
@@ -698,7 +704,7 @@ This sophistication is not accidental---it reflects three features:
     cells), obscuring the declarative intent.
 
   \item \textbf{Open recursion with symmetric composition.}
-    The operator $\oplus$ merges definitions from independent sources,
+    The operator $\sqcup$ merges definitions from independent sources,
     all sharing the same composed overlay tree. Encoding this in
     the $\lambda$-calculus requires maintaining an extensible dictionary
     of methods that can be merged from multiple directions. Cook's
@@ -708,7 +714,7 @@ This sophistication is not accidental---it reflects three features:
 
   \item \textbf{Commutative, idempotent merge.}
     Composition in Overlay-Calculus is symmetric:
-    $e_1 \oplus e_2$ and $e_2 \oplus e_1$ produce the same observable
+    $e_1 \sqcup e_2$ and $e_2 \sqcup e_1$ produce the same observable
     result. In the $\lambda$-calculus, function composition
     $(f \circ g)$ is neither commutative nor idempotent, and simulating
     these properties requires additional machinery.
@@ -749,7 +755,7 @@ $\mathrm{Step}$ code remains unchanged.
 When $\mathrm{process}$ is injected from outside, the computation passes
 its intermediate result to an external handler:
 \begin{align*}
-  &\mathrm{Step} \oplus \{ \\
+  &\mathrm{Step} \sqcup \{ \\
     &\quad \mathrm{input} \mapsto \{\mathrm{data} \mapsto \{\}\},\; \\
     &\quad \mathrm{process} \mapsto \{ \\
       &\qquad \mathrm{result} \mapsto \{\mathrm{handled} \mapsto \{\}\} \\
@@ -762,7 +768,7 @@ result and determines what happens next. This is CPS-style programming.
 \paragraph{Direct-style interpretation via local composition.}
 Alternatively, $\mathrm{process}$ can be filled by local composition:
 \begin{align*}
-  &\mathrm{Step} \oplus \{ \\
+  &\mathrm{Step} \sqcup \{ \\
     &\quad \mathrm{input} \mapsto \{\mathrm{data} \mapsto \{\}\},\; \\
     &\quad \mathrm{process.result} \mapsto \{\mathrm{computed} \mapsto \{\}\} \\
   &\}
@@ -809,7 +815,7 @@ multiple exit points:
   \}
 \end{align*}
 
-All continuation slots are symmetric under $\oplus$. Traditional CPS in
+All continuation slots are symmetric under $\sqcup$. Traditional CPS in
 the $\lambda$-calculus distinguishes a single continuation parameter;
 additional continuations must be encoded (e.g., as pairs or disjoint
 sums). Overlay-Calculus treats all continuation slots uniformly, eliminating
@@ -863,18 +869,18 @@ path is taken.
 \label{sec:trie}
 
 A record $\{\ell_1 \mapsto e_1,\; \ldots,\; \ell_n \mapsto e_n\}$ is
-a trie node: each label selects a child subtree. Nested records form a
-trie whose depth corresponds to key length. Composition ($\oplus$) is
-natively trie union: merging two records combines their children
+a trie node: each label selects a subtree. Nested records form a
+trie whose depth corresponds to key length. Composition ($\sqcup$) is
+natively trie union: merging two records combines their subtrees
 recursively. This observation yields an immutable analogue of
 random-access memory.
 
 The fundamental operations on random-access memory correspond directly
 to Overlay-Calculus primitives:
 \begin{itemize}
-  \item \textbf{Write}: composing a singleton trie ($\oplus$).
+  \item \textbf{Write}: composing a singleton trie ($\sqcup$).
   \item \textbf{Read (static)}: qualified-this navigation
-    ($\ell_0.\self.\ell_1.\ell_2\ldots\ell_k$).
+    ($\ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}$).
   \item \textbf{Read (dynamic)}: folding a key into a Selector
     combinator that navigates the trie at runtime.
   \item \textbf{Delete}: folding a key into a Rebuilder combinator
@@ -915,7 +921,7 @@ difficulty. The Expression Problem, which requires sophisticated
 encodings in $\lambda$-calculus-based systems---object
 algebras~\cite{oliveira2012extensibility}, finally tagless
 interpreters~\cite{carette2009finally}, or multi-parameter type
-classes---becomes direct and natural in Overlay-Calculus via $\oplus$.
+classes---becomes direct and natural in Overlay-Calculus via $\sqcup$.
 Similarly, random-access memory via immutable tries, which requires
 explicit data structure engineering in the $\lambda$-calculus, is
 simply the native record structure of Overlay-Calculus
@@ -932,7 +938,8 @@ A skeptical reader might ask whether Overlay-Calculus is simply
 the $\lambda$-calculus with different syntax.
 
 The semantic domain of Overlay-Calculus (Section~3) is entirely
-first-order: overlays are record trees, definitions are pure data,
+first-order: paths are label sequences, overlays are the record trees
+produced by evaluation, AST nodes are pure data,
 and the resolution functions ($\unions$, $\supers$, $\navigate$, etc.)
 are ordinary set-valued functions over these structures.
 No function types appear in the object language or its semantics.
@@ -961,7 +968,7 @@ and the same problems hard. As shown in Section~5, they do not:
     & Same difficulty as $\lambda$
     & Same difficulty as $\lambda$ \\
     Overlay-Calculus
-    & Direct composition ($\oplus$)
+    & Direct composition ($\sqcup$)
     & Records \emph{are} tries \\
   \end{tabular}
 \end{center}
@@ -975,7 +982,7 @@ syntactic reshuffling.
 
 \subsection{Properties of Composition}
 
-Commutativity and idempotence of $\oplus$ make Overlay-Calculus
+Commutativity and idempotence of $\sqcup$ make Overlay-Calculus
 transparent to linearization order.
 Deduplication of inherited mixins is purely an optimization.
 
@@ -1004,7 +1011,7 @@ and similar object-oriented mechanisms use symmetric composition to extend
 classes. Traditional mixin calculi~\cite{bracha1990mixin,scharli2003traits}
 face the linearization problem when composing mixins with conflicting
 fields. In Overlay-Calculus, this problem does not arise (Section~4) because eliminating
-scalar values: only key presence is observable, making composition
+scalar values: only property presence is observable, making composition
 naturally commutative. This explains why trait systems with
 conflict-resolution strategies (e.g., Scala's linearization) require
 additional machinery that Overlay-Calculus does not.
@@ -1022,7 +1029,7 @@ monad machinery.
 \paragraph{Modular software architectures.}
 Plugin systems, component frameworks, and dependency injection frameworks
 enable software extensibility through declarative composition. The
-symmetric, associative nature of $\oplus$ (Section~4) explains why such
+symmetric, associative nature of $\sqcup$ (Section~4) explains why such
 systems work: components can be composed in any order without changing
 behavior. Overlay-Calculus formalizes the composition patterns that these
 systems implement ad hoc.
@@ -1083,7 +1090,7 @@ This appendix gives the full constructions for the RAM machine
 operations summarized in Section~\ref{sec:trie}.
 Index the trie by binary natural numbers using three labels---$\mathrm{value}$
 for the stored entry at a node, $\mathrm{at\_odd}$ and $\mathrm{at\_even}$
-for the two children corresponding to the bit structure of the key:
+for the two subtrees corresponding to the bit structure of the key:
 \begin{align*}
   \mathrm{Zero} &\;\longrightarrow\; \mathrm{value} \\
   \mathrm{Odd}(n) &\;\longrightarrow\; \mathrm{at\_odd},\;\text{then path for } n \\
@@ -1095,7 +1102,7 @@ Inserting an entry with value $v$ at key $k$ is composing a singleton
 trie whose nesting mirrors the bit structure of $k$.
 For example, inserting at key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$:
 \[
-  \mathrm{trie}' = \mathrm{trie} \oplus
+  \mathrm{trie}' = \mathrm{trie} \sqcup
   \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto \{\mathrm{value} \mapsto v\}\}\}
 \]
 Each composition creates a new immutable trie; the original is unchanged.
@@ -1110,7 +1117,7 @@ sequence that was used for insertion. For the same key~$5$:
 where $\mathrm{enclosing\_scope}$ is the qualified this scope name
 containing the trie definition.
 The reference mechanism traverses the nested record structure---which
-\emph{is} the trie---returning the $\Overlay$ at the final node.
+\emph{is} the trie---returning the value at the final node.
 
 \paragraph{Read (dynamic lookup).}
 When the key is a BinNat value constructed at runtime via
@@ -1135,7 +1142,7 @@ externally by an orchestrator (CPS interpretation) or composed locally
 The $\mathrm{on\_zero}$ callback returns a Selector that reads
 $.\mathrm{value}$ from the trie:
 \[
-  \mathrm{lookup\_on\_zero} \mapsto \mathrm{trie\_module}.\self.\mathrm{Selector} \oplus
+  \mathrm{lookup\_on\_zero} \mapsto \mathrm{trie\_module}.\self.\mathrm{Selector} \sqcup
   \{\mathrm{result} \mapsto \mathrm{lookup\_on\_zero}.\self.\mathrm{trie}.\mathrm{value}\}
 \]
 The $\mathrm{on\_odd}$ callback takes a Selector
@@ -1145,9 +1152,9 @@ $.\mathrm{at\_odd}$, then delegates to the argument Selector:
 \begin{align*}
   \mathrm{lookup\_on\_odd} &\mapsto \{
     \mathrm{argument} \mapsto \mathrm{trie\_module}.\self.\mathrm{Selector},\;
-    \mathrm{result} \mapsto \mathrm{trie\_module}.\self.\mathrm{Selector} \oplus \{\\
+    \mathrm{result} \mapsto \mathrm{trie\_module}.\self.\mathrm{Selector} \sqcup \{\\
       &\qquad
-      \mathrm{applied} \mapsto \mathrm{lookup\_on\_odd}.\self.\mathrm{argument} \oplus
+      \mathrm{applied} \mapsto \mathrm{lookup\_on\_odd}.\self.\mathrm{argument} \sqcup
       \{\mathrm{trie} \mapsto \mathrm{lookup\_on\_odd}.\self.\mathrm{trie}.\mathrm{at\_odd}\},\\
       &\qquad
   \mathrm{result} \mapsto \mathrm{result}.\self.\mathrm{applied}.\mathrm{result}\}\}
@@ -1161,12 +1168,12 @@ callbacks to obtain a Selector, then applies it to the trie:
   \mathrm{Lookup} &\mapsto \{\\
     &\quad \mathrm{key} \mapsto \mathrm{trie\_module}.\self.\mathrm{BinNat},\\
     &\quad \mathrm{trie\_input} \mapsto \{\},\\
-    &\quad \mathrm{applied\_key} \mapsto \mathrm{Lookup}.\self.\mathrm{key} \oplus \{
+    &\quad \mathrm{applied\_key} \mapsto \mathrm{Lookup}.\self.\mathrm{key} \sqcup \{
       \mathrm{on\_zero} \mapsto \mathrm{trie\_module}.\self.\mathrm{lookup\_on\_zero},\;
       \mathrm{on\_odd} \mapsto \mathrm{trie\_module}.\self.\mathrm{lookup\_on\_odd},\;
     \mathrm{on\_even} \mapsto \mathrm{trie\_module}.\self.\mathrm{lookup\_on\_even}\},\\
     &\quad \mathrm{applied\_selector} \mapsto
-    \mathrm{Lookup}.\self.\mathrm{applied\_key}.\mathrm{result} \oplus
+    \mathrm{Lookup}.\self.\mathrm{applied\_key}.\mathrm{result} \sqcup
     \{\mathrm{trie} \mapsto \mathrm{Lookup}.\self.\mathrm{trie\_input}\},\\
   &\quad \mathrm{result} \mapsto \mathrm{Lookup}.\self.\mathrm{applied\_selector}.\mathrm{result}\}
 \end{align*}
@@ -1174,7 +1181,7 @@ For example, looking up key $5 = \mathrm{Odd}(\mathrm{Even}(\mathrm{Zero}))$
 folds into a Selector that navigates
 $.\mathrm{at\_odd}.\mathrm{at\_even}.\mathrm{value}$---the same path
 as the static reference, but computed from the key value.
-The entire construction uses only composition ($\oplus$) and
+The entire construction uses only composition ($\sqcup$) and
 references; no additional primitives are needed.
 
 \paragraph{Delete.}
@@ -1195,7 +1202,7 @@ Three observer callbacks build Rebuilders bottom-up.
 The $\mathrm{on\_zero}$ callback returns a Rebuilder that copies the
 subtries but omits the value:
 \[
-  \mathrm{delete\_on\_zero} \mapsto \mathrm{trie\_module}.\self.\mathrm{Rebuilder} \oplus
+  \mathrm{delete\_on\_zero} \mapsto \mathrm{trie\_module}.\self.\mathrm{Rebuilder} \sqcup
   \{\mathrm{result} \mapsto \{
       \mathrm{at\_odd} \mapsto \mathrm{delete\_on\_zero}.\self.\mathrm{trie}.\mathrm{at\_odd},\;
   \mathrm{at\_even} \mapsto \mathrm{delete\_on\_zero}.\self.\mathrm{trie}.\mathrm{at\_even}\}\}
@@ -1210,9 +1217,9 @@ $\mathrm{at\_odd}$ with the recursively rebuilt subtrie:
 \begin{align*}
   \mathrm{delete\_on\_odd} &\mapsto \{
     \mathrm{argument} \mapsto \mathrm{trie\_module}.\self.\mathrm{Rebuilder},\;
-    \mathrm{result} \mapsto \mathrm{trie\_module}.\self.\mathrm{Rebuilder} \oplus \{\\
+    \mathrm{result} \mapsto \mathrm{trie\_module}.\self.\mathrm{Rebuilder} \sqcup \{\\
       &\qquad
-      \mathrm{applied} \mapsto \mathrm{delete\_on\_odd}.\self.\mathrm{argument} \oplus
+      \mathrm{applied} \mapsto \mathrm{delete\_on\_odd}.\self.\mathrm{argument} \sqcup
       \{\mathrm{trie} \mapsto \mathrm{delete\_on\_odd}.\self.\mathrm{trie}.\mathrm{at\_odd}\},\\
       &\qquad
       \mathrm{result} \mapsto \{
@@ -1229,12 +1236,12 @@ callbacks to obtain a Rebuilder, then applies it to the trie:
   \mathrm{Delete} &\mapsto \{\\
     &\quad \mathrm{key} \mapsto \mathrm{trie\_module}.\self.\mathrm{BinNat},\\
     &\quad \mathrm{trie\_input} \mapsto \{\},\\
-    &\quad \mathrm{applied\_key} \mapsto \mathrm{Delete}.\self.\mathrm{key} \oplus \{
+    &\quad \mathrm{applied\_key} \mapsto \mathrm{Delete}.\self.\mathrm{key} \sqcup \{
       \mathrm{on\_zero} \mapsto \mathrm{trie\_module}.\self.\mathrm{delete\_on\_zero},\;
       \mathrm{on\_odd} \mapsto \mathrm{trie\_module}.\self.\mathrm{delete\_on\_odd},\;
     \mathrm{on\_even} \mapsto \mathrm{trie\_module}.\self.\mathrm{delete\_on\_even}\},\\
     &\quad \mathrm{applied\_rebuilder} \mapsto
-    \mathrm{Delete}.\self.\mathrm{applied\_key}.\mathrm{result} \oplus
+    \mathrm{Delete}.\self.\mathrm{applied\_key}.\mathrm{result} \sqcup
     \{\mathrm{trie} \mapsto \mathrm{Delete}.\self.\mathrm{trie\_input}\},\\
   &\quad \mathrm{result} \mapsto \mathrm{Delete}.\self.\mathrm{applied\_rebuilder}.\mathrm{result}\}
 \end{align*}
@@ -1248,10 +1255,10 @@ output lives in the \emph{result} property, one must first project
 out the rebuilt trie before composing with the new singleton.
 In ANF style:
 \begin{align*}
-  \mathrm{deleted} &\mapsto \mathrm{trie\_module}.\self.\mathrm{Delete} \oplus \{
+  \mathrm{deleted} &\mapsto \mathrm{trie\_module}.\self.\mathrm{Delete} \sqcup \{
     \mathrm{key} \mapsto k,\;
   \mathrm{trie\_input} \mapsto \mathrm{trie}\}\\
-  \mathrm{result} &\mapsto \mathrm{Update}.\self.\mathrm{deleted}.\mathrm{result} \oplus
+  \mathrm{result} &\mapsto \mathrm{Update}.\self.\mathrm{deleted}.\mathrm{result} \sqcup
   \{\mathrm{at\_odd} \mapsto \{\mathrm{at\_even} \mapsto
   \{\mathrm{value} \mapsto v\}\}\}
 \end{align*}
@@ -1292,31 +1299,31 @@ single module mixin; references use qualified this accordingly.
         \mathrm{on\_false} \mapsto \{\},\;
       \mathrm{result} \mapsto \{\}\},
       \\[6pt]
-      \mathrm{True} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \oplus
+      \mathrm{True} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \sqcup
       \{\mathrm{result} \mapsto \mathrm{True}.\self.\mathrm{on\_true}\},
       \\
-      \mathrm{False} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \oplus
+      \mathrm{False} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \sqcup
       \{\mathrm{result} \mapsto \mathrm{False}.\self.\mathrm{on\_false}\},
       \\[6pt]
-      \mathrm{Not} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \oplus \{\\
+      \mathrm{Not} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \sqcup \{\\
         &\qquad \mathrm{operand} \mapsto \mathrm{boolean}.\self.\mathrm{Boolean},\\
-        &\qquad \mathrm{applied\_operand} \mapsto \mathrm{Not}.\self.\mathrm{operand} \oplus \{\\
+        &\qquad \mathrm{applied\_operand} \mapsto \mathrm{Not}.\self.\mathrm{operand} \sqcup \{\\
           &\qquad\qquad \mathrm{on\_true} \mapsto \mathrm{Not}.\self.\mathrm{on\_false},\\
         &\qquad\qquad \mathrm{on\_false} \mapsto \mathrm{Not}.\self.\mathrm{on\_true}\},\\
       &\qquad \mathrm{result} \mapsto \mathrm{Not}.\self.\mathrm{applied\_operand}.\mathrm{result}\},
       \\[6pt]
-      \mathrm{And} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \oplus \{\\
+      \mathrm{And} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \sqcup \{\\
         &\qquad \mathrm{left} \mapsto \mathrm{boolean}.\self.\mathrm{Boolean},\\
         &\qquad \mathrm{right} \mapsto \mathrm{boolean}.\self.\mathrm{Boolean},\\
-        &\qquad \mathrm{applied\_left} \mapsto \mathrm{And}.\self.\mathrm{left} \oplus \{\\
+        &\qquad \mathrm{applied\_left} \mapsto \mathrm{And}.\self.\mathrm{left} \sqcup \{\\
           &\qquad\qquad \mathrm{on\_true} \mapsto \mathrm{And}.\self.\mathrm{right},\\
         &\qquad\qquad \mathrm{on\_false} \mapsto \mathrm{boolean}.\self.\mathrm{False}\},\\
       &\qquad \mathrm{result} \mapsto \mathrm{And}.\self.\mathrm{applied\_left}.\mathrm{result}\},
       \\[6pt]
-      \mathrm{Or} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \oplus \{\\
+      \mathrm{Or} &\mapsto \mathrm{boolean}.\self.\mathrm{Boolean} \sqcup \{\\
         &\qquad \mathrm{left} \mapsto \mathrm{boolean}.\self.\mathrm{Boolean},\\
         &\qquad \mathrm{right} \mapsto \mathrm{boolean}.\self.\mathrm{Boolean},\\
-        &\qquad \mathrm{applied\_left} \mapsto \mathrm{Or}.\self.\mathrm{left} \oplus \{\\
+        &\qquad \mathrm{applied\_left} \mapsto \mathrm{Or}.\self.\mathrm{left} \sqcup \{\\
           &\qquad\qquad \mathrm{on\_true} \mapsto \mathrm{boolean}.\self.\mathrm{True},\\
         &\qquad\qquad \mathrm{on\_false} \mapsto \mathrm{Or}.\self.\mathrm{right}\},\\
       &\qquad \mathrm{result} \mapsto \mathrm{Or}.\self.\mathrm{applied\_left}.\mathrm{result}\}
@@ -1345,11 +1352,11 @@ Within the $\mathrm{boolean}$ module:
 
 \paragraph{Worked example.}
 Consider the expression
-$\mathrm{root}.\self.\mathrm{boolean}.\mathrm{Not} \oplus \{\mathrm{operand} \mapsto \mathrm{root}.\self.\mathrm{boolean}.\mathrm{True}\}
-\oplus \{\mathrm{on\_true} \mapsto A,\; \mathrm{on\_false} \mapsto B\}$
+$\mathrm{root}.\self.\mathrm{boolean}.\mathrm{Not} \sqcup \{\mathrm{operand} \mapsto \mathrm{root}.\self.\mathrm{boolean}.\mathrm{True}\}
+\sqcup \{\mathrm{on\_true} \mapsto A,\; \mathrm{on\_false} \mapsto B\}$
 at the root scope level,
 where $A$ and $B$ are arbitrary expressions.
-The result is an object whose $\mathrm{result}$ key contains the same observable tree as $B$,
+The result is an object whose $\mathrm{result}$ label contains the same observable tree as $B$,
 because $\mathrm{Not}$ swaps $\mathrm{on\_true}$ and $\mathrm{on\_false}$,
 and $\mathrm{True}$ selects $\mathrm{on\_true}$,
 which after swapping becomes $B$.
@@ -1367,25 +1374,25 @@ constructors ($\mathrm{Zero}$, $\mathrm{Succ}$), and an operation
         \mathrm{zero} \mapsto \{\},\;
       \mathrm{result} \mapsto \{\}\},
       \\[6pt]
-      \mathrm{Zero} &\mapsto \mathrm{natural}.\self.\mathrm{Nat} \oplus
+      \mathrm{Zero} &\mapsto \mathrm{natural}.\self.\mathrm{Nat} \sqcup
       \{\mathrm{result} \mapsto \mathrm{Zero}.\self.\mathrm{zero}\},
       \\[6pt]
-      \mathrm{Succ} &\mapsto \mathrm{natural}.\self.\mathrm{Nat} \oplus \{\\
+      \mathrm{Succ} &\mapsto \mathrm{natural}.\self.\mathrm{Nat} \sqcup \{\\
         &\qquad \mathrm{predecessor} \mapsto \mathrm{natural}.\self.\mathrm{Nat},\\
-        &\qquad \mathrm{applied\_predecessor} \mapsto \mathrm{Succ}.\self.\mathrm{predecessor} \oplus \{\\
+        &\qquad \mathrm{applied\_predecessor} \mapsto \mathrm{Succ}.\self.\mathrm{predecessor} \sqcup \{\\
           &\qquad\qquad \mathrm{successor} \mapsto \mathrm{Succ}.\self.\mathrm{successor},\\
         &\qquad\qquad \mathrm{zero} \mapsto \mathrm{Succ}.\self.\mathrm{zero}\},\\
-        &\qquad \mathrm{applied\_successor} \mapsto \mathrm{Succ}.\self.\mathrm{successor} \oplus \{\\
+        &\qquad \mathrm{applied\_successor} \mapsto \mathrm{Succ}.\self.\mathrm{successor} \sqcup \{\\
         &\qquad\qquad \mathrm{argument} \mapsto \mathrm{Succ}.\self.\mathrm{applied\_predecessor}.\mathrm{result}\},\\
       &\qquad \mathrm{result} \mapsto \mathrm{Succ}.\self.\mathrm{applied\_successor}.\mathrm{result}\},
       \\[6pt]
-      \mathrm{Add} &\mapsto \mathrm{natural}.\self.\mathrm{Nat} \oplus \{\\
+      \mathrm{Add} &\mapsto \mathrm{natural}.\self.\mathrm{Nat} \sqcup \{\\
         &\qquad \mathrm{augend} \mapsto \mathrm{natural}.\self.\mathrm{Nat},\\
         &\qquad \mathrm{addend} \mapsto \mathrm{natural}.\self.\mathrm{Nat},\\
-        &\qquad \mathrm{applied\_addend} \mapsto \mathrm{Add}.\self.\mathrm{addend} \oplus \{\\
+        &\qquad \mathrm{applied\_addend} \mapsto \mathrm{Add}.\self.\mathrm{addend} \sqcup \{\\
           &\qquad\qquad \mathrm{successor} \mapsto \mathrm{Add}.\self.\mathrm{successor},\\
         &\qquad\qquad \mathrm{zero} \mapsto \mathrm{Add}.\self.\mathrm{zero}\},\\
-        &\qquad \mathrm{applied\_augend} \mapsto \mathrm{Add}.\self.\mathrm{augend} \oplus \{\\
+        &\qquad \mathrm{applied\_augend} \mapsto \mathrm{Add}.\self.\mathrm{augend} \sqcup \{\\
           &\qquad\qquad \mathrm{successor} \mapsto \mathrm{Add}.\self.\mathrm{successor},\\
         &\qquad\qquad \mathrm{zero} \mapsto \mathrm{Add}.\self.\mathrm{applied\_addend}.\mathrm{result}\},\\
       &\qquad \mathrm{result} \mapsto \mathrm{Add}.\self.\mathrm{applied\_augend}.\mathrm{result}\}
@@ -1394,11 +1401,11 @@ constructors ($\mathrm{Zero}$, $\mathrm{Succ}$), and an operation
 
 \paragraph{Concrete example.}
 At the root scope level,
-$\mathrm{one} \mapsto \mathrm{root}.\self.\mathrm{natural}.\mathrm{Succ} \oplus \{\mathrm{predecessor} \mapsto \mathrm{root}.\self.\mathrm{natural}.\mathrm{Zero}\}$.
+$\mathrm{one} \mapsto \mathrm{root}.\self.\mathrm{natural}.\mathrm{Succ} \sqcup \{\mathrm{predecessor} \mapsto \mathrm{root}.\self.\mathrm{natural}.\mathrm{Zero}\}$.
 Applying this with a Peano-style successor and zero:
-$\mathrm{root}.\self.\mathrm{one} \oplus \{\mathrm{successor} \mapsto S,\; \mathrm{zero} \mapsto Z\}$
-produces an object whose $\mathrm{result}$ key contains the same observable tree as
-$S \oplus \{\mathrm{argument} \mapsto Z.\mathrm{result}\}.\mathrm{result}$,
+$\mathrm{root}.\self.\mathrm{one} \sqcup \{\mathrm{successor} \mapsto S,\; \mathrm{zero} \mapsto Z\}$
+produces an object whose $\mathrm{result}$ label contains the same observable tree as
+$S \sqcup \{\mathrm{argument} \mapsto Z.\mathrm{result}\}.\mathrm{result}$,
 i.e., successor applied once to zero.
 Here $S$ and $Z$ are arbitrary expressions representing
 a successor operation and a zero value respectively.
