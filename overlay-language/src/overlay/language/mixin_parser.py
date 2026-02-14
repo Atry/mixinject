@@ -1,7 +1,7 @@
 """
-Parser for MIXIN specification files (YAML/JSON/TOML).
+Parser for Overlay Language specification files (YAML/JSON/TOML).
 
-This module provides parsing of MIXIN files into Definition objects that can be
+This module provides parsing of Overlay files into Definition objects that can be
 evaluated by the overlay runtime.
 
 .. todo::
@@ -30,7 +30,7 @@ evaluated by the overlay runtime.
    - **Structural recursion**: Tree structure + naming convention enforce that
      recursive calls are made only on structurally smaller values.
 
-   This combination enables MIXIN to support both finite structures (via
+   This combination enables Overlay Language to support both finite structures (via
    recursion/termination) and infinite structures (via corecursion/productivity),
    similar to Haskell's lazy evaluation or Coq's coinductive types.
 """
@@ -63,7 +63,7 @@ JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class FileMixinDefinition(ScopeDefinition):
     """
-    Definition for a mixin parsed from a MIXIN file.
+    Definition for a mixin parsed from an Overlay file.
 
     This holds the parsed properties from the file. The `underlying` field
     stores the raw parsed data, and properties are resolved lazily via
@@ -133,13 +133,13 @@ class ParsedMixinValue:
 
 def parse_reference(array: list[JsonValue]) -> ResourceReference:
     """
-    Parse a MIXIN array reference into a ResourceReference.
+    Parse an Overlay array reference into a ResourceReference.
 
     Distinguishes between:
     - Regular inheritance: [str, str, ...] → LexicalReference
     - Qualified this: [str, null, str, ...] → QualifiedThisReference
 
-    :param array: The array from the MIXIN file.
+    :param array: The array from the Overlay file.
     :return: A ResourceReference.
     :raises ValueError: If the array is empty or has invalid format.
     """
@@ -177,11 +177,11 @@ def _is_reference_array(value: JsonValue) -> bool:
     """
     Check if a value is a reference array (inheritance or qualified this).
 
-    In MIXIN, arrays are ONLY used for references:
+    In Overlay Language, arrays are ONLY used for references:
     - Inheritance: [str, str, ...] - all strings
     - Qualified this: [str, null, str, ...] - string, null, then strings
 
-    MIXIN does not have first-class list/array type.
+    Overlay Language does not have first-class list/array type.
     """
     if not isinstance(value, list) or len(value) == 0:
         return False
@@ -230,10 +230,10 @@ def parse_mixin_value(
     source_file: Path,  # noqa: ARG001 - reserved for future error messages
 ) -> ParsedMixinValue:
     """
-    Parse a MIXIN value into inheritances, properties, and scalar values.
+    Parse an Overlay value into inheritances, properties, and scalar values.
 
-    In MIXIN language, arrays are ONLY used for references (inheritance or qualified this).
-    There is no first-class list type in MIXIN.
+    In Overlay Language, arrays are ONLY used for references (inheritance or qualified this).
+    There is no first-class list type in Overlay Language.
 
     A mixin value can be:
     - A reference array: [str, str, ...] or [str, null, str, ...] → inheritance
@@ -315,7 +315,7 @@ def _parse_top_level_mixin(
 
 def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefinition]]:
     """
-    Parse a MIXIN file (YAML/JSON/TOML) into definitions.
+    Parse an Overlay file (YAML/JSON/TOML) into definitions.
 
     :param file_path: Path to the mixin file.
     :return: Mapping of top-level mixin names to sequences of definitions (multiple origins).
@@ -339,7 +339,7 @@ def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefiniti
 
     if not isinstance(data, dict):
         raise ValueError(
-            f"MIXIN file must contain a mapping at top level, got {type(data).__name__}"
+            f"Overlay file must contain a mapping at top level, got {type(data).__name__}"
         )
 
     return dict(

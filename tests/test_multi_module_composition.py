@@ -433,7 +433,7 @@ class TestDeBruijnCompositionNavigation:
     Each reference uses a qualified-this reference [ScopeName, ~]
     which resolves to the scope itself at de_bruijn=N.
 
-    De Bruijn navigation uses lexical_outer to trace from composition-site back
+    De Bruijn navigation uses qualified_this to trace from composition-site back
     to definition-site. Expected resolution at each level:
       de_bruijn=0 → {Composed}
       de_bruijn=1 → {Wrapper.AltTypes, Wrapper2.AltTypes2}  (2 indirect paths)
@@ -460,16 +460,16 @@ class TestDeBruijnCompositionNavigation:
                 name=f"de_bruijn_index_{index}_super_unions"
             )
 
-        # Verify de Bruijn resolution at each level via lexical_outer navigation.
+        # Verify de Bruijn resolution at each level via qualified_this navigation.
         # This traces the same path the runtime uses when resolving references.
         #
-        # De Bruijn navigation uses lexical_outer[definition_site] at each level:
+        # De Bruijn navigation uses qualified_this[definition_site] at each level:
         #   Level 0: definition_site = Container
-        #            composed.lexical_outer[Container] → {AltTypes, AltTypes2}
+        #            composed.qualified_this[Container] → {AltTypes, AltTypes2}
         #   Level 1: definition_site = Types
-        #            AltTypes.lexical_outer[Types] → {Library}
+        #            AltTypes.qualified_this[Types] → {Library}
         #   Level 2: definition_site = Library
-        #            Library.lexical_outer[Library] → {MultiModuleComposition}
+        #            Library.qualified_this[Library] → {MultiModuleComposition}
 
         types_symbol = library_symbol["Types"]
 
@@ -477,8 +477,8 @@ class TestDeBruijnCompositionNavigation:
         assert composed_symbol.path == ("MultiModuleComposition", "Composed")
 
         # DeBruijnIndex1 (de_bruijn=1): navigate 1 level up
-        # composed.lexical_outer[Container] gives AltTypes and AltTypes2
-        resolved_1 = composed_symbol.lexical_outer[container_symbol]
+        # composed.qualified_this[Container] gives AltTypes and AltTypes2
+        resolved_1 = composed_symbol.qualified_this[container_symbol]
         resolved_1_paths = {symbol.path for symbol in resolved_1}
         assert ("MultiModuleComposition", "Library", "Wrapper", "AltTypes") in resolved_1_paths, (
             f"DeBruijnIndex1: expected Wrapper.AltTypes in resolved paths, got {resolved_1_paths}"
@@ -493,7 +493,7 @@ class TestDeBruijnCompositionNavigation:
         resolved_2: frozenset[MixinSymbol] = frozenset()
         for level_1_symbol in resolved_1:
             resolved_2 = resolved_2 | frozenset(
-                level_1_symbol.lexical_outer.get(types_symbol, set())
+                level_1_symbol.qualified_this.get(types_symbol, set())
             )
         resolved_2_paths = {symbol.path for symbol in resolved_2}
         assert ("MultiModuleComposition", "Library") in resolved_2_paths, (
@@ -507,7 +507,7 @@ class TestDeBruijnCompositionNavigation:
         resolved_3: frozenset[MixinSymbol] = frozenset()
         for level_2_symbol in resolved_2:
             resolved_3 = resolved_3 | frozenset(
-                level_2_symbol.lexical_outer.get(library_symbol, set())
+                level_2_symbol.qualified_this.get(library_symbol, set())
             )
         resolved_3_paths = {symbol.path for symbol in resolved_3}
         assert ("MultiModuleComposition",) in resolved_3_paths, (

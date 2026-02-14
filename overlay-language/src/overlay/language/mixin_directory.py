@@ -1,7 +1,7 @@
 """
-Directory-based MIXIN file discovery and evaluation.
+Directory-based Overlay file discovery and evaluation.
 
-This module provides support for evaluating MIXIN files from filesystem
+This module provides support for evaluating Overlay files from filesystem
 directories (not Python packages).
 """
 
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class DirectoryMixinDefinition(ScopeDefinition):
     """
-    Scope definition for a directory of MIXIN files.
+    Scope definition for a directory of Overlay files.
 
     Recursively discovers *.overlay.yaml/json/toml files and subdirectories.
     """

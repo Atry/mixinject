@@ -1,97 +1,97 @@
-# MIXIN Language Specification
+# Overlay Language Specification
 
 ## 1. Introduction
 
-MIXIN (Multi-language Interoperable eXtensible Interface Notion) is a programming language designed to facilitate the flexible composition and configuration of logic and data structures through the use of _mixins_. Unlike traditional programming languages that use classes or functions as the primary building blocks, MIXIN employs a unified concept where everything is represented as a mixin. This approach allows for greater modularity, reusability, and flexibility.
+Overlay Language is a programming language designed to facilitate the flexible composition and configuration of logic and data structures through the use of _mixins_. Unlike traditional programming languages that use classes or functions as the primary building blocks, Overlay Language employs a unified concept where everything is represented as a mixin. This approach allows for greater modularity, reusability, and flexibility.
 
-MIXIN is a lazily-evaluated, immutable language, meaning that values are only computed when necessary, and once created, they cannot be changed. This design makes MIXIN particularly well-suited for applications that require functional purity, such as configuration management, domain-specific language (DSL) creation, and code generation.
+Overlay Language is a lazily-evaluated, immutable language, meaning that values are only computed when necessary, and once created, they cannot be changed. This design makes Overlay Language particularly well-suited for applications that require functional purity, such as configuration management, domain-specific language (DSL) creation, and code generation.
 
-MIXIN is not limited to a specific platform or target language. It can generate code for multiple languages by representing abstract syntax trees (ASTs) that correspond to various programming languages. This makes MIXIN an ideal choice for scenarios involving cross-language interoperability, complex configuration files, and even software synthesis.
+Overlay Language is not limited to a specific platform or target language. It can generate code for multiple languages by representing abstract syntax trees (ASTs) that correspond to various programming languages. This makes Overlay Language an ideal choice for scenarios involving cross-language interoperability, complex configuration files, and even software synthesis.
 
 ### 1.1 Comparison with Other Languages
 
 #### 1.1.1 Object-Oriented Languages
 
-In traditional object-oriented languages like Java or C++, classes and objects are used to encapsulate state and behavior. However, this approach has several limitations that MIXIN addresses through its unique design:
+In traditional object-oriented languages like Java or C++, classes and objects are used to encapsulate state and behavior. However, this approach has several limitations that Overlay Language addresses through its unique design:
 
 - **Complex Inheritance Hierarchies**: Object-oriented languages often require complex class hierarchies to represent different behaviors, leading to rigidity and difficulty in maintenance. Multiple inheritance, in particular, can introduce the "diamond problem," where the same method or property is inherited from multiple sources, causing ambiguity and conflicts.
 
-  - **MIXIN Solution**: MIXIN uses a flexible composition model where mixins can be combined and inherited without conflict. Properties are automatically merged, and there is no need for complex inheritance trees. This eliminates the diamond problem and allows for clean, modular inheritance structures.
+  - **Overlay Language Solution**: Overlay Language uses a flexible composition model where mixins can be combined and inherited without conflict. Properties are automatically merged, and there is no need for complex inheritance trees. This eliminates the diamond problem and allows for clean, modular inheritance structures.
 
 - **Static and Inflexible Object Models**: Once a class is defined in an object-oriented language, its structure and behavior are fixed. Modifying or extending the behavior often requires creating subclasses or using design patterns like decorators, which can add complexity and reduce clarity.
 
-  - **MIXIN Solution**: Mixins in MIXIN can be dynamically composed and configured, allowing for flexible adjustments without altering existing definitions. This dynamic composition model enables developers to easily modify and extend behavior by combining mixins, without the need for static class hierarchies or complex design patterns.
+  - **Overlay Language Solution**: Mixins in Overlay Language can be dynamically composed and configured, allowing for flexible adjustments without altering existing definitions. This dynamic composition model enables developers to easily modify and extend behavior by combining mixins, without the need for static class hierarchies or complex design patterns.
 
 - **Method Overriding and the Risk of Ad Hoc Behavior**: Traditional object-oriented languages rely on method overriding to modify inherited behavior. This can lead to unpredictable behavior, especially in deep inheritance hierarchies, where methods in subclasses may inadvertently override those in parent classes, introducing subtle bugs.
 
-  - **MIXIN Solution**: MIXIN does not support method overriding. Instead, it merges properties from multiple parent mixins, ensuring that all inherited properties coexist without conflict. This approach avoids the risks associated with method overriding, such as accidental method shadowing or breaking polymorphic behavior, providing a more predictable and safer inheritance model.
+  - **Overlay Language Solution**: Overlay Language does not support method overriding. Instead, it merges properties from multiple parent mixins, ensuring that all inherited properties coexist without conflict. This approach avoids the risks associated with method overriding, such as accidental method shadowing or breaking polymorphic behavior, providing a more predictable and safer inheritance model.
 
 - **Overreliance on Design Patterns**: To address limitations in object-oriented design, developers often resort to complex design patterns like Singleton, Factory, and Strategy. While these patterns solve specific problems, they can introduce additional complexity and boilerplate code.
 
-  - **MIXIN Solution**: MIXIN can be seen as a metaprogramming language designed to generate code for other languages. Instead of using design patterns to address language limitations, developers can use MIXIN to generate consistent and reusable code across multiple languages. By representing abstract syntax trees (ASTs) and configurations as mixins, MIXIN allows for the creation of domain-specific languages (DSLs) and the automated generation of language constructs, reducing the need for complex design patterns and enabling more expressive and maintainable code.
+  - **Overlay Language Solution**: Overlay Language can be seen as a metaprogramming language designed to generate code for other languages. Instead of using design patterns to address language limitations, developers can use Overlay Language to generate consistent and reusable code across multiple languages. By representing abstract syntax trees (ASTs) and configurations as mixins, Overlay Language allows for the creation of domain-specific languages (DSLs) and the automated generation of language constructs, reducing the need for complex design patterns and enabling more expressive and maintainable code.
 
-Overall, MIXIN provides a more modular and flexible alternative to traditional object-oriented languages by using mixin composition instead of class inheritance. Its support for property merging and dynamic composition allows developers to build complex systems more easily and safely. As a metaprogramming language, MIXIN excels in generating code for multiple languages, making it a powerful tool for scenarios requiring cross-language interoperability and code generation.
+Overall, Overlay Language provides a more modular and flexible alternative to traditional object-oriented languages by using mixin composition instead of class inheritance. Its support for property merging and dynamic composition allows developers to build complex systems more easily and safely. As a metaprogramming language, Overlay Language excels in generating code for multiple languages, making it a powerful tool for scenarios requiring cross-language interoperability and code generation.
 
 #### 1.1.2 Functional Languages
 
-Functional programming languages like Haskell and Scala emphasize immutability and functional purity, offering benefits such as easier reasoning about code and avoidance of side effects. However, they also come with certain limitations that MIXIN addresses through its design:
+Functional programming languages like Haskell and Scala emphasize immutability and functional purity, offering benefits such as easier reasoning about code and avoidance of side effects. However, they also come with certain limitations that Overlay Language addresses through its design:
 
 - **Complexity of Function Composition Syntax**: Functional languages often use advanced and abstract syntax for function composition, such as higher-order functions, monads, and combinators. While powerful, these constructs can be difficult to read and understand, especially for those new to functional programming.
 
-  - **MIXIN Solution**: MIXIN employs a more intuitive and declarative approach by representing logic and data structures through mixin composition and configuration. Using familiar data serialization formats like YAML or JSON, MIXIN allows developers to define complex behaviors in a hierarchical and readable manner. This reduces the syntactic complexity associated with function composition in traditional functional languages.
+  - **Overlay Language Solution**: Overlay Language employs a more intuitive and declarative approach by representing logic and data structures through mixin composition and configuration. Using familiar data serialization formats like YAML or JSON, Overlay Language allows developers to define complex behaviors in a hierarchical and readable manner. This reduces the syntactic complexity associated with function composition in traditional functional languages.
 
 - **Complexity of Context Management**: In functional programming, managing context, such as state or environment, often requires explicit passing of context through function parameters or using monads, which can make code verbose and harder to maintain.
 
-  - **MIXIN Solution**: MIXIN simplifies context management by allowing mixins to automatically inherit and access properties from their lexical scope. This means that shared context or state can be accessed without the need for explicit parameter passing or complex monadic structures. The unified scoping and inheritance rules in MIXIN reduce boilerplate code and make the logic more straightforward.
+  - **Overlay Language Solution**: Overlay Language simplifies context management by allowing mixins to automatically inherit and access properties from their lexical scope. This means that shared context or state can be accessed without the need for explicit parameter passing or complex monadic structures. The unified scoping and inheritance rules in Overlay Language reduce boilerplate code and make the logic more straightforward.
 
 - **The Expression Problem**: The Expression Problem refers to the difficulty of extending both the set of data types and the set of operations over them in a type-safe and modular way. In functional languages, adding new data types is straightforward, but adding new operations can be challenging without modifying existing code.
 
-  - **MIXIN Solution**: MIXIN addresses the Expression Problem by allowing both mixins (representing data types) and properties or methods (representing operations) to be extended and composed modularly. Since mixins can inherit and combine properties from multiple sources without conflicts, developers can add new data types and operations independently. This flexibility enables MIXIN to support extensibility in both dimensions, overcoming the limitations faced in traditional functional programming languages.
+  - **Overlay Language Solution**: Overlay Language addresses the Expression Problem by allowing both mixins (representing data types) and properties or methods (representing operations) to be extended and composed modularly. Since mixins can inherit and combine properties from multiple sources without conflicts, developers can add new data types and operations independently. This flexibility enables Overlay Language to support extensibility in both dimensions, overcoming the limitations faced in traditional functional programming languages.
 
-Overall, MIXIN provides a more accessible and flexible alternative to functional programming languages by reducing syntactic complexity, simplifying context management, and addressing the Expression Problem. Its mixin-based composition model allows for the modular and conflict-free extension of both data structures and operations, facilitating the development of complex systems in a more intuitive and maintainable way.
+Overall, Overlay Language provides a more accessible and flexible alternative to functional programming languages by reducing syntactic complexity, simplifying context management, and addressing the Expression Problem. Its mixin-based composition model allows for the modular and conflict-free extension of both data structures and operations, facilitating the development of complex systems in a more intuitive and maintainable way.
 
 #### 1.1.3 Declarative Configuration Languages
 
-Declarative configuration languages like JSON, YAML, and Nix are widely used to represent static data and configurations. They offer simplicity and readability but often lack the ability to express dynamic logic and complex relationships. MIXIN extends these ideas, providing a more powerful and flexible alternative.
+Declarative configuration languages like JSON, YAML, and Nix are widely used to represent static data and configurations. They offer simplicity and readability but often lack the ability to express dynamic logic and complex relationships. Overlay Language extends these ideas, providing a more powerful and flexible alternative.
 
 - **Static Configuration Limitations**: Traditional configuration languages like JSON and YAML are limited to representing static data structures. They cannot express dynamic relationships or logic, such as conditional values, calculations, or dependencies between configurations.
 
-  - **MIXIN Solution**: MIXIN allows for dynamic logic and configuration through mixin composition and inheritance. Properties can be inherited, combined, or overridden based on context, enabling dynamic configurations that adapt to changing conditions. This makes MIXIN suitable for scenarios where complex dependencies and conditional configurations are required.
+  - **Overlay Language Solution**: Overlay Language allows for dynamic logic and configuration through mixin composition and inheritance. Properties can be inherited, combined, or overridden based on context, enabling dynamic configurations that adapt to changing conditions. This makes Overlay Language suitable for scenarios where complex dependencies and conditional configurations are required.
 
 - **Lack of Modularity and Reusability**: In static configuration formats, it is difficult to create modular and reusable components. While YAML supports features like anchors and aliases, these are limited and can lead to complex and error-prone configurations.
 
-  - **MIXIN Solution**: MIXIN enables modular and reusable configuration components through its mixin system. Each mixin can encapsulate a piece of configuration or logic, which can then be combined and reused in different contexts. This modular approach not only improves maintainability but also allows for the creation of complex configurations by composing simpler, reusable mixins.
+  - **Overlay Language Solution**: Overlay Language enables modular and reusable configuration components through its mixin system. Each mixin can encapsulate a piece of configuration or logic, which can then be combined and reused in different contexts. This modular approach not only improves maintainability but also allows for the creation of complex configurations by composing simpler, reusable mixins.
 
 - **Difficulty in Representing Relationships**: Declarative configuration languages often lack the ability to represent complex relationships between different parts of a configuration. Dependencies and relationships must be managed manually, which can lead to errors and inconsistencies.
 
-  - **MIXIN Solution**: MIXIN uses inheritance to represent relationships between mixins, enabling clear and maintainable configurations. By using a unified inheritance model, MIXIN allows for the automatic resolution of dependencies and relationships, reducing the risk of errors and inconsistencies.
+  - **Overlay Language Solution**: Overlay Language uses inheritance to represent relationships between mixins, enabling clear and maintainable configurations. By using a unified inheritance model, Overlay Language allows for the automatic resolution of dependencies and relationships, reducing the risk of errors and inconsistencies.
 
 - **Limited Expressiveness for Code Generation**: While declarative languages like Nix provide some level of code generation through lazy evaluation and functional constructs, they are primarily designed for configuration management and package management. Extending them for general-purpose code generation or complex logical expressions can be cumbersome.
 
-  - **MIXIN Solution**: MIXIN, as a metaprogramming language, is designed to generate code and configurations for multiple target languages. By representing abstract syntax trees (ASTs) and logical structures as mixins, MIXIN can be used to generate code in different languages consistently. This capability makes MIXIN ideal for building DSLs, automating code generation, and ensuring consistency across different language environments.
+  - **Overlay Language Solution**: Overlay Language, as a metaprogramming language, is designed to generate code and configurations for multiple target languages. By representing abstract syntax trees (ASTs) and logical structures as mixins, Overlay Language can be used to generate code in different languages consistently. This capability makes Overlay Language ideal for building DSLs, automating code generation, and ensuring consistency across different language environments.
 
-Overall, MIXIN extends the capabilities of traditional declarative configuration languages by supporting dynamic logic, modularity, and complex relationships. Its mixin-based approach enables more expressive and maintainable configurations, and its metaprogramming capabilities make it a powerful tool for code generation and cross-language interoperability.
+Overall, Overlay Language extends the capabilities of traditional declarative configuration languages by supporting dynamic logic, modularity, and complex relationships. Its mixin-based approach enables more expressive and maintainable configurations, and its metaprogramming capabilities make it a powerful tool for code generation and cross-language interoperability.
 
 ### 1.2 Key Use Cases
 
 #### 1.2.1 Multi-language Code Generation
 
-MIXIN can generate code in multiple target languages, making it a versatile tool for building DSLs or serving as the core module of a compiler. By representing the ASTs of various languages as mixins, MIXIN can translate a single logical structure into multiple programming languages, ensuring consistency and reducing duplication across projects.
+Overlay Language can generate code in multiple target languages, making it a versatile tool for building DSLs or serving as the core module of a compiler. By representing the ASTs of various languages as mixins, Overlay Language can translate a single logical structure into multiple programming languages, ensuring consistency and reducing duplication across projects.
 
 #### 1.2.2 Cross-language Interoperability
 
-MIXIN provides a unified way to define data structures and logic that can be shared across different programming environments. For instance, a complex business logic model defined in MIXIN can be translated into both a backend service in Scala and a frontend component in JavaScript, ensuring consistent behavior and data flow.
+Overlay Language provides a unified way to define data structures and logic that can be shared across different programming environments. For instance, a complex business logic model defined in Overlay Language can be translated into both a backend service in Scala and a frontend component in JavaScript, ensuring consistent behavior and data flow.
 
 #### 1.2.3 Complex System Configuration
 
-As a configuration language, MIXIN excels in defining complex systems with interdependent components. Through the use of mixin composition and inheritance, configuration files can be modular, reusable, and adaptable, enabling powerful and flexible system configurations that go beyond the capabilities of traditional static formats like JSON or YAML.
+As a configuration language, Overlay Language excels in defining complex systems with interdependent components. Through the use of mixin composition and inheritance, configuration files can be modular, reusable, and adaptable, enabling powerful and flexible system configurations that go beyond the capabilities of traditional static formats like JSON or YAML.
 
 ### 1.3 A Simple Example
 
-The following example demonstrates how to use MIXIN to define a basic arithmetic operation represented as an AST:
+The following example demonstrates how to use Overlay Language to define a basic arithmetic operation represented as an AST:
 
 ```yaml
-# math_operations.mixin.yaml
+# math_operations.overlay.yaml
 
 Number:
   - {} # A mixin that represents a number type.
@@ -108,7 +108,7 @@ multiply:
 ```
 
 ```yaml
-# test.mixin.yaml
+# test.overlay.yaml
 
 example_calculation:
   - [add]
@@ -121,24 +121,24 @@ example_calculation:
 
 **Explanation**:
 
-1. The `Number` mixin represents a basic number type with no initial value, aligning with MIXIN's immutable and lazy-evaluated nature.
+1. The `Number` mixin represents a basic number type with no initial value, aligning with Overlay Language's immutable and lazy-evaluated nature.
 2. The `add` mixin inherits from `Number` and defines two properties, `addend1` and `addend2`, both of which are also `Number`.
 3. The `multiply` mixin defines a multiplication operation with two properties: `multiplicand` and `multiplier`.
-4. In `test.mixin.yaml`, the `example_calculation` mixin uses the `add` operation to add two numbers:
+4. In `test.overlay.yaml`, the `example_calculation` mixin uses the `add` operation to add two numbers:
    - `addend1` is a multiplication of `2` and `3`, represented using the `multiply` mixin.
    - `addend2` is the constant `4`.
 
-This example illustrates how MIXIN can be used to represent complex logic in a modular and declarative manner. The `example_calculation` mixin serves as the root of an AST, with each operation (e.g., `add` and `multiply`) acting as nodes, and their properties (`addend1`, `addend2`, `multiplicand`, `multiplier`) as sub-nodes. This structure can be evaluated directly within MIXIN or used to generate equivalent code in another language.
+This example illustrates how Overlay Language can be used to represent complex logic in a modular and declarative manner. The `example_calculation` mixin serves as the root of an AST, with each operation (e.g., `add` and `multiply`) acting as nodes, and their properties (`addend1`, `addend2`, `multiplicand`, `multiplier`) as sub-nodes. This structure can be evaluated directly within Overlay Language or used to generate equivalent code in another language.
 
 ## 2. Mixin Definitions and Data Types
 
 ### 2.1 Basic Structure and Data Types
 
-MIXIN supports a range of data types, all of which map directly to JSON data types. These types form the foundational elements of the language and define how data is represented and manipulated within MIXIN.
+Overlay Language supports a range of data types, all of which map directly to JSON data types. These types form the foundational elements of the language and define how data is represented and manipulated within Overlay Language.
 
 #### 2.1.1 Primitive Data Types
 
-The primitive data types in MIXIN correspond directly to JSON’s scalar types:
+The primitive data types in Overlay Language correspond directly to JSON's scalar types:
 
 - **Strings**: Represented as sequences of characters, corresponding to JSON strings.
 
@@ -157,7 +157,7 @@ The primitive data types in MIXIN correspond directly to JSON’s scalar types:
 
 #### 2.1.2 Mixins as Data Types
 
-In MIXIN, the primary data type is the mixin itself, which corresponds to JSON objects. Each mixin represents a collection of properties and can inherit from other mixins, enabling complex compositions and configurations.
+In Overlay Language, the primary data type is the mixin itself, which corresponds to JSON objects. Each mixin represents a collection of properties and can inherit from other mixins, enabling complex compositions and configurations.
 
 - **Mixin**: Corresponds to a JSON object, with each key representing a property name and each value representing a mixin, primitive type, or an inheritance to another mixin.
 
@@ -180,14 +180,14 @@ In MIXIN, the primary data type is the mixin itself, which corresponds to JSON o
 
 #### 2.1.3 Relationship to JSON
 
-MIXIN's data types map directly to JSON types:
+Overlay Language's data types map directly to JSON types:
 
 - **JSON Object → Mixin**: A mixin is defined by a JSON object where keys are property names, and values can be mixins or primitive data types.
-- **JSON Scalar Types → Primitive Data Types**: JSON strings, numbers, booleans, and null values map directly to MIXIN's corresponding primitive data types.
+- **JSON Scalar Types → Primitive Data Types**: JSON strings, numbers, booleans, and null values map directly to Overlay Language's corresponding primitive data types.
 
 #### 2.1.4 No First-class List Support
 
-Unlike JSON, MIXIN does not support lists as a first-class type within the language itself. This means that you cannot directly define or manipulate lists in the core MIXIN language as you would in JSON. Instead, lists are defined and manipulated through the MIXIN standard library. This design choice maintains the simplicity and consistency of the language by focusing on mixin composition and inheritance. For scenarios requiring list-like structures or operations, MIXIN encourages using custom mixins to represent collections or sequences of data.
+Unlike JSON, Overlay Language does not support lists as a first-class type within the language itself. This means that you cannot directly define or manipulate lists in the core Overlay Language as you would in JSON. Instead, lists are defined and manipulated through the Overlay Language standard library. This design choice maintains the simplicity and consistency of the language by focusing on mixin composition and inheritance. For scenarios requiring list-like structures or operations, Overlay Language encourages using custom mixins to represent collections or sequences of data.
 
 ### 2.2 Properties
 
@@ -198,7 +198,7 @@ Properties are the fundamental components of a mixin, defining its internal stat
 
 #### Property Definition Syntax
 
-The definition of a property resembles key-value pairs in JSON or YAML. Unlike most programming languages, property names in MIXIN do not need to be unique. If the same property name is defined multiple times, all definitions will always be automatically merged through multiple inheritance. This allows for the creation of complex and modular structures without conflict.
+The definition of a property resembles key-value pairs in JSON or YAML. Unlike most programming languages, property names in Overlay Language do not need to be unique. If the same property name is defined multiple times, all definitions will always be automatically merged through multiple inheritance. This allows for the creation of complex and modular structures without conflict.
 
 Example:
 
@@ -230,7 +230,7 @@ In this example, the `person_with_address` mixin inherits from `Person` and incl
 
 ### 2.3 Inheritance
 
-In MIXIN, inheritance is the mechanism by which the current mixin inherits all properties and scalar values from another mixin. An inheritance is represented as an array of strings that indicate the path to the target mixin.
+In Overlay Language, inheritance is the mechanism by which the current mixin inherits all properties and scalar values from another mixin. An inheritance is represented as an array of strings that indicate the path to the target mixin.
 
 #### Grouping Property Definitions in Lists
 
@@ -264,11 +264,11 @@ In this valid example, each element within the `my_car` node begins with the `-`
 
 #### Multiple Inheritance and Scalar Values
 
-MIXIN supports conflict-free multiple inheritance and allows scalar values to be inherited from multiple sources. This means a mixin can combine properties and scalar values from multiple parent mixins without any conflict. All inherited properties and values are integrated seamlessly, resulting in a unified set of properties for the child mixin.
+Overlay Language supports conflict-free multiple inheritance and allows scalar values to be inherited from multiple sources. This means a mixin can combine properties and scalar values from multiple parent mixins without any conflict. All inherited properties and values are integrated seamlessly, resulting in a unified set of properties for the child mixin.
 
 **Example of Multiple Inheritance with Scalar Values**
 
-MIXIN allows scalar values to coexist and be inherited along with other properties, as shown below:
+Overlay Language allows scalar values to coexist and be inherited along with other properties, as shown below:
 
 ```yaml
 Number:
@@ -283,10 +283,10 @@ In this example, `my_number` has both a scalar value `42` and inherits the `Numb
 
 **Conflict-Free Inheritance**
 
-In MIXIN, properties with the same name defined in multiple parent mixins are always automatically merged:
+In Overlay Language, properties with the same name defined in multiple parent mixins are always automatically merged:
 
 ```yaml
-# basic_features.mixin.yaml
+# basic_features.overlay.yaml
 Vehicle:
   - wheels: [Number]
   - engine: {}
@@ -295,7 +295,7 @@ Motor:
   - engine:
       gasoline: true # Defines a default scalar value for 'engine'
 
-# advanced_features.mixin.yaml
+# advanced_features.overlay.yaml
 hybrid_car:
   - ["basic_features", Vehicle]
   - ["basic_features", Motor]
@@ -311,21 +311,21 @@ In this example, `hybrid_car` inherits the `engine` property from both `Vehicle`
 
 ### 3.1 Lexical Structure
 
-MIXIN is a language that leverages the lexical structures of JSON, YAML, and TOML, focusing on their ability to represent structured data in a clear and readable manner. This section outlines the core syntax and grammar of MIXIN, emphasizing its usage of these formats and how they correspond to MIXIN's data and logic constructs.
+Overlay Language is a language that leverages the lexical structures of JSON, YAML, and TOML, focusing on their ability to represent structured data in a clear and readable manner. This section outlines the core syntax and grammar of Overlay Language, emphasizing its usage of these formats and how they correspond to Overlay Language's data and logic constructs.
 
-MIXIN does not have its own unique lexical structure; instead, it directly adopts the lexical structures of JSON, YAML, and TOML. This means that any syntax that can be converted into JSON is valid in MIXIN. Specifically:
+Overlay Language does not have its own unique lexical structure; instead, it directly adopts the lexical structures of JSON, YAML, and TOML. This means that any syntax that can be converted into JSON is valid in Overlay Language. Specifically:
 
 - **JSON**: Fully supported, including all standard JSON types and structures.
 
 - **YAML**: Supported as long as it can be losslessly converted into JSON. This means that only a subset of YAML is used, excluding features such as:
 
   - **Anchors and Aliases**: YAML constructs like `&` (anchor) and `*` (alias) are not supported as they cannot be directly represented in JSON.
-  - **Tags**: YAML's type tags (e.g., `!!str`, `!!int`) are not supported, as MIXIN uses its own data type system.
+  - **Tags**: YAML's type tags (e.g., `!!str`, `!!int`) are not supported, as Overlay Language uses its own data type system.
   - **Complex Data Types**: Data types like sets, timestamps, and ordered mappings are not supported.
 
 - **TOML**: Supported in its JSON-compatible subset, which includes basic data types like strings, finite numbers, booleans, and dates, but excludes date/time datatypes.
 
-By utilizing these existing formats, MIXIN ensures a seamless integration with widely-used data serialization standards, making it easy to define complex data structures and configurations.
+By utilizing these existing formats, Overlay Language ensures a seamless integration with widely-used data serialization standards, making it easy to define complex data structures and configurations.
 
 #### 3.1.1 Examples of Supported and Unsupported Syntax
 
@@ -378,17 +378,17 @@ data = 23:22:21.0123
 
 ### 4.1 Supported File Formats
 
-MIXIN supports the following file formats for representing source code:
+Overlay Language supports the following file formats for representing source code:
 
-- **YAML**: File extension `.mixin.yaml`.
-- **JSON**: File extension `.mixin.json`.
-- **TOML**: File extension `.mixin.toml`.
+- **YAML**: File extension `.overlay.yaml`.
+- **JSON**: File extension `.overlay.json`.
+- **TOML**: File extension `.overlay.toml`.
 
-MIXIN uses these formats to define mixins in a structured and human-readable manner. The formats share the following characteristics:
+Overlay Language uses these formats to define mixins in a structured and human-readable manner. The formats share the following characteristics:
 
 1. **JSON Compatibility**: All supported formats must be serializable to JSON. This means that only the subset of YAML and TOML that can be converted to JSON without loss of information is supported.
 
-2. **File Extensions**: The file extension must indicate the format and its use as a MIXIN file, such as `.mixin.yaml`, `.mixin.json`, or `.mixin.toml`.
+2. **File Extensions**: The file extension must indicate the format and its use as an Overlay file, such as `.overlay.yaml`, `.overlay.json`, or `.overlay.toml`.
 
 3. **Lossless Conversion**: The language only uses features that can be converted between the supported formats without loss of information.
 
@@ -396,15 +396,15 @@ MIXIN uses these formats to define mixins in a structured and human-readable man
 
 #### 4.2.1 File Naming Conventions
 
-- **Format**: Use lowercase letters with underscores to separate words. File names must include the `.mixin.` segment to indicate they are MIXIN files.
+- **Format**: Use lowercase letters with underscores to separate words. File names must include the `.overlay.` segment to indicate they are Overlay files.
 
-- **Type Definition**: Use singular nouns if defining a primary concept (e.g., `vehicle.mixin.yaml`). Use plural nouns if the file contains multiple instances or variations (e.g., `vehicles.mixin.yaml`).
+- **Type Definition**: Use singular nouns if defining a primary concept (e.g., `vehicle.overlay.yaml`). Use plural nouns if the file contains multiple instances or variations (e.g., `vehicles.overlay.yaml`).
 
 **Examples**:
 
-- `vehicle.mixin.yaml`
-- `vehicles.mixin.yaml`
-- `test_cases.mixin.json`
+- `vehicle.overlay.yaml`
+- `vehicles.overlay.yaml`
+- `test_cases.overlay.json`
 
 #### 4.2.2 Mixin Naming Conventions
 
@@ -425,7 +425,7 @@ Mixin names within files must follow these conventions based on their intended u
 
 ### 4.3 Cross-File Inheritance
 
-MIXIN allows inheriting mixins defined in different files. The rules for cross-file inheritance are as follows:
+Overlay Language allows inheriting mixins defined in different files. The rules for cross-file inheritance are as follows:
 
 1. **Inheritance Format**:
 
@@ -439,7 +439,7 @@ MIXIN allows inheriting mixins defined in different files. The rules for cross-f
 
 3. **Lexical Scope Resolution**:
 
-   - MIXIN automatically searches for inheritances starting in the current directory. If not found, it searches in the parent directory, and then the parent's parent directory, continuing upwards until the root is reached.
+   - Overlay Language automatically searches for inheritances starting in the current directory. If not found, it searches in the parent directory, and then the parent's parent directory, continuing upwards until the root is reached.
    - The first segment of the inheritance looks for the mixin name in the current lexical scope, which includes:
 
      - **Current File**: Mixins defined in the same file.
@@ -454,7 +454,7 @@ MIXIN allows inheriting mixins defined in different files. The rules for cross-f
 
 5. **No `..` Syntax for Parent Directory**:
 
-   - MIXIN does not support the `..` syntax to navigate to parent directories. Instead, the language automatically searches upward through the directory structure, starting from the current directory.
+   - Overlay Language does not support the `..` syntax to navigate to parent directories. Instead, the language automatically searches upward through the directory structure, starting from the current directory.
 
 #### 4.3.1 Example of Cross-File Inheritance
 
@@ -464,17 +464,17 @@ MIXIN allows inheriting mixins defined in different files. The rules for cross-f
 project/
 │
 ├── module/
-│   ├── vehicle.mixin.yaml
-│   ├── electric.mixin.yaml
-│   └── car.mixin.yaml
+│   ├── vehicle.overlay.yaml
+│   ├── electric.overlay.yaml
+│   └── car.overlay.yaml
 │
 ├── config/
-│   └── settings.mixin.yaml
+│   └── settings.overlay.yaml
 └── test/
-    └── test_car.mixin.yaml
+    └── test_car.overlay.yaml
 ```
 
-**vehicle.mixin.yaml**:
+**vehicle.overlay.yaml**:
 
 ```yaml
 Vehicle:
@@ -482,7 +482,7 @@ Vehicle:
   wheels: [Number]
 ```
 
-**electric.mixin.yaml**:
+**electric.overlay.yaml**:
 
 ```yaml
 Electric:
@@ -491,7 +491,7 @@ Electric:
   - battery_capacity: [Number]
 ```
 
-**car.mixin.yaml**:
+**car.overlay.yaml**:
 
 ```yaml
 Car:
@@ -500,11 +500,11 @@ Car:
   - model: [String]
 ```
 
-**test_car.mixin.yaml**:
+**test_car.overlay.yaml**:
 
 ```yaml
 test_car:
-  - [module, Car] # Cross-directory inheritance to Car in module/car.mixin.yaml
+  - [module, Car] # Cross-directory inheritance to Car in module/car.overlay.yaml
   - model: "Test Model"
   - test_battery:
       - [module, Electric, battery_capacity] # Inheritance to battery_capacity in Electric
@@ -512,7 +512,7 @@ test_car:
 
 In this example:
 
-- The `test_car` mixin in `test_car.mixin.yaml` inherits `Car` and `Electric` from the `module` directory using the format `[module, Car]` and `[module, Electric, battery_capacity]`.
+- The `test_car` mixin in `test_car.overlay.yaml` inherits `Car` and `Electric` from the `module` directory using the format `[module, Car]` and `[module, Electric, battery_capacity]`.
 - The first segment of the inheritance (`module`) indicates the directory in which the target mixins are located.
 - The inheritance format and scope rules ensure that mixins are correctly resolved based on the file and directory structure.
 
@@ -521,9 +521,9 @@ In this example:
 
 ### 5.1 Scope Definition
 
-In the MIXIN language, scope determines the visibility and inheritance relationships of mixins and properties within the current context. The scope structure includes sibling mixins, parent mixins, directory scope, and cross-file inheritance.
+In Overlay Language, scope determines the visibility and inheritance relationships of mixins and properties within the current context. The scope structure includes sibling mixins, parent mixins, directory scope, and cross-file inheritance.
 
-**Scope in MIXIN consists of the following levels**:
+**Scope in Overlay Language consists of the following levels**:
 
 - **Sibling Mixins**: The names of other mixins in the same file are visible in the current scope and can be inherited using the format `[mixin_name]`. Inheritance from sibling mixins takes precedence over parent mixin inheritance.
 
@@ -533,11 +533,11 @@ In the MIXIN language, scope determines the visibility and inheritance relations
 
 - **Cross-File Inheritance**: When inheriting mixins across different directories, the path must include the relative path from the current file to the target mixin.
 
-MIXIN does not distinguish between types and values. Any mixin can represent either a data value or a type. However, in practice, type-like mixins are usually named using the UpperCamelCase convention and represent structures or behaviors to be inherited. Value-like mixins are named using lowercase letters with underscores and typically represent individual values or instances.
+Overlay Language does not distinguish between types and values. Any mixin can represent either a data value or a type. However, in practice, type-like mixins are usually named using the UpperCamelCase convention and represent structures or behaviors to be inherited. Value-like mixins are named using lowercase letters with underscores and typically represent individual values or instances.
 
 ### 5.2 Inheritance Resolution
 
-Inheritances in MIXIN are resolved **dynamically at the time of mixin evaluation or inheritance**. The first segment of the inheritance determines how the target is identified based on the current context.
+Inheritances in Overlay Language are resolved **dynamically at the time of mixin evaluation or inheritance**. The first segment of the inheritance determines how the target is identified based on the current context.
 
 #### 5.2.1 First Segment Resolution
 
@@ -600,7 +600,7 @@ In this example:
 
 #### 5.2.4 Qualified This Syntax
 
-When a reference needs to access the dynamic `self` of an enclosing mixin (analogous to `Outer.this` in Java), MIXIN provides an explicit **qualified this** syntax:
+When a reference needs to access the dynamic `self` of an enclosing mixin (analogous to `Outer.this` in Java), Overlay Language provides an explicit **qualified this** syntax:
 
 ```yaml
 - [OuterMixin, ~, property, path]
@@ -648,11 +648,11 @@ When inheriting mixins across different directories, the path must include relat
 
 - **First Segment**: `path` is interpreted relative to the directory structure of the current file.
 
-- **Resolution**: MIXIN will automatically search for the inherited mixin by traversing the directory hierarchy.
+- **Resolution**: Overlay Language will automatically search for the inherited mixin by traversing the directory hierarchy.
 
 ### 5.3 Multiple Inheritance and Scalar Value Handling
 
-MIXIN supports **conflict-free multiple inheritance**, allowing mixins to inherit properties and scalar values from multiple parent mixins without conflicts. This feature enables the flexible composition of complex structures by combining the functionalities of various mixins.
+Overlay Language supports **conflict-free multiple inheritance**, allowing mixins to inherit properties and scalar values from multiple parent mixins without conflicts. This feature enables the flexible composition of complex structures by combining the functionalities of various mixins.
 
 #### 5.3.1 Inheritance and Property Merging
 
@@ -661,7 +661,7 @@ When a mixin inherits from multiple parent mixins, the properties from all paren
 **Example:**
 
 ```yaml
-# basic_features.mixin.yaml
+# basic_features.overlay.yaml
 Vehicle:
   - wheels: [Number]
   - engine: {}
@@ -670,7 +670,7 @@ Motor:
   - engine:
       gasoline: true # Scalar value for 'engine'
 
-# advanced_features.mixin.yaml
+# advanced_features.overlay.yaml
 hybrid_car:
   - ["basic_features", Vehicle]
   - ["basic_features", Motor]
@@ -686,26 +686,26 @@ In this example:
   - `hybrid_car` inherits from both `Vehicle` and `Motor`.
 - **Property Merging**:
   - The `engine` property is defined in both parent mixins.
-  - MIXIN automatically merges the `engine` property without conflict.
+  - Overlay Language automatically merges the `engine` property without conflict.
 - **Resulting Properties**:
   - `hybrid_car` has access to all properties from both parents: `wheels`, `engine`, and `battery_capacity`.
 
 #### 5.3.2 Scalar Value Merging
 
-Scalar values (e.g., strings, numbers, booleans) can coexist with properties within a mixin and can be inherited from multiple parent mixins. MIXIN does not define specific rules for merging scalar values from different parents; instead, scalar values from all parents are included in the child mixin without causing errors. The **specific merging behavior** of scalar values is defined by the libraries used in conjunction with MIXIN, allowing for different strategies depending on the application's needs.
+Scalar values (e.g., strings, numbers, booleans) can coexist with properties within a mixin and can be inherited from multiple parent mixins. Overlay Language does not define specific rules for merging scalar values from different parents; instead, scalar values from all parents are included in the child mixin without causing errors. The **specific merging behavior** of scalar values is defined by the libraries used in conjunction with Overlay Language, allowing for different strategies depending on the application's needs.
 
 **Example:**
 
 ```yaml
-# number.mixin.yaml
+# number.overlay.yaml
 Number:
   - {} # Represents a number type mixin
 
-# value.mixin.yaml
+# value.overlay.yaml
 value_42:
   - 42 # Defines scalar value 42
 
-# my_number.mixin.yaml
+# my_number.overlay.yaml
 my_number:
   - [Number]
   - [value_42]
@@ -722,20 +722,20 @@ In this example:
 
 #### 5.3.3 Merging Scalar Values with Properties
 
-A mixin can have both scalar values and properties, and these can be inherited from multiple parents. MIXIN allows this combination without conflicts, enabling more expressive and flexible mixin definitions.
+A mixin can have both scalar values and properties, and these can be inherited from multiple parents. Overlay Language allows this combination without conflicts, enabling more expressive and flexible mixin definitions.
 
 **Example:**
 
 ```yaml
-# person.mixin.yaml
+# person.overlay.yaml
 PersonDetails:
   name: [String]
   age: [Number]
 
-# height.mixin.yaml
+# height.overlay.yaml
 height_value: 180 # Scalar value representing height
 
-# combined_person.mixin.yaml
+# combined_person.overlay.yaml
 combined_person:
   - [PersonDetails]
   - name: "John Doe"
@@ -754,7 +754,7 @@ In this example:
 
 #### 5.3.4 Conflict-Free Inheritance
 
-MIXIN's approach to inheritance ensures that properties and scalar values from multiple parents are merged seamlessly. This conflict-free inheritance model eliminates issues commonly associated with multiple inheritance in other languages, such as the diamond problem.
+Overlay Language's approach to inheritance ensures that properties and scalar values from multiple parents are merged seamlessly. This conflict-free inheritance model eliminates issues commonly associated with multiple inheritance in other languages, such as the diamond problem.
 
 - **Automatic Merging**: Properties with the same name are automatically merged.
 - **No Overwriting**: Scalar values and properties from different parents do not overwrite each other unless explicitly redefined in the child mixin.
@@ -763,7 +763,7 @@ MIXIN's approach to inheritance ensures that properties and scalar values from m
 **Example of Conflict-Free Inheritance:**
 
 ```yaml
-# basic_features.mixin.yaml
+# basic_features.overlay.yaml
 Vehicle:
   - wheels: [Number]
   - engine:
@@ -772,7 +772,7 @@ Vehicle:
 Motor:
   - engine: {} # Defines 'engine' property
 
-# advanced_features.mixin.yaml
+# advanced_features.overlay.yaml
 hybrid_car:
   - ["basic_features", Vehicle]
   - ["basic_features", Motor]
@@ -793,11 +793,11 @@ In this example:
 
 ## 6. Binding Rules and Examples
 
-Inheritances in MIXIN can be resolved using either **early binding** or **late binding** mechanisms. Understanding these binding rules is crucial for determining how mixins and properties are inherited and resolved during evaluation. The following example illustrates the differences between early and late binding within a single mixin structure.
+Inheritances in Overlay Language can be resolved using either **early binding** or **late binding** mechanisms. Understanding these binding rules is crucial for determining how mixins and properties are inherited and resolved during evaluation. The following example illustrates the differences between early and late binding within a single mixin structure.
 
 ### 6.1 Example
 
-Consider the following MIXIN definition:
+Consider the following Overlay Language definition:
 
 ```yaml
 test_binding:
@@ -864,7 +864,7 @@ test_binding:
 
 ### 6.3 Practical Guidelines
 
-To effectively use early and late binding in MIXIN:
+To effectively use early and late binding in Overlay Language:
 
 - **Use Early Binding When**:
 
@@ -877,7 +877,7 @@ To effectively use early and late binding in MIXIN:
 
 ### 6.4 Summary
 
-In MIXIN, choosing between early and late binding allows you to control how inheritances are resolved during inheritance and evaluation:
+In Overlay Language, choosing between early and late binding allows you to control how inheritances are resolved during inheritance and evaluation:
 
 - **Early Binding**: Ensures a fixed inheritance that remains constant across all contexts.
 - **Late Binding**: Provides flexibility by adapting to the current context, making it suitable for dynamic and extensible mixin definitions.
@@ -886,11 +886,11 @@ By understanding these binding rules and how the first segment of an inheritance
 
 ## 7. Appendices
 
-This section provides additional resources and references to aid in the understanding of the MIXIN language. It includes a JSON Schema reference, which defines the structure of MIXIN files, and a glossary of terms used throughout the language specification.
+This section provides additional resources and references to aid in the understanding of Overlay Language. It includes a JSON Schema reference, which defines the structure of Overlay files, and a glossary of terms used throughout the language specification.
 
 ### 7.1 JSON Schema Reference
 
-The JSON Schema that defines the structure of MIXIN files is maintained in [`mixin.schema.json`](mixin.schema.json). It specifies the types and constraints for mixin definitions, including inheritances, qualified `this` references, properties, and inheritance rules. This schema is useful for validating MIXIN files to ensure they conform to the expected format.
+The JSON Schema that defines the structure of Overlay files is maintained in [`mixin.schema.json`](mixin.schema.json). It specifies the types and constraints for mixin definitions, including inheritances, qualified `this` references, properties, and inheritance rules. This schema is useful for validating Overlay files to ensure they conform to the expected format.
 
 #### Explanation of the Schema
 
@@ -925,15 +925,15 @@ The JSON Schema that defines the structure of MIXIN files is maintained in [`mix
 
   - Represents a mixin definition. A mixin can be an inheritance to another mixin, a set of properties, or a combination of inheritance and properties.
 
-This schema provides a structured way to define and validate mixins in the MIXIN language, ensuring consistency and correct syntax across different files and formats.
+This schema provides a structured way to define and validate mixins in Overlay Language, ensuring consistency and correct syntax across different files and formats.
 
 ### 7.2 Glossary
 
-This section provides definitions of key terms used in the MIXIN language specification.
+This section provides definitions of key terms used in the Overlay Language specification.
 
-- **Mixin**: The fundamental building block in the MIXIN language. It represents a reusable unit that can contain properties, inheritances, or scalar values. Mixins can be inherited, composed, and combined to form complex data structures and logic.
+- **Mixin**: The fundamental building block in Overlay Language. It represents a reusable unit that can contain properties, inheritances, or scalar values. Mixins can be inherited, composed, and combined to form complex data structures and logic.
 
-- **Inheritance**: A mechanism for pointing to another mixin or module. An inheritance is represented as an array of strings, indicating the path to the target mixin. Inheritance in MIXIN is conflict-free, allowing multiple parent mixins to be combined without error.
+- **Inheritance**: A mechanism for pointing to another mixin or module. An inheritance is represented as an array of strings, indicating the path to the target mixin. Inheritance in Overlay Language is conflict-free, allowing multiple parent mixins to be combined without error.
 
 - **Property**: A named value within a mixin. Properties are named mixins, containing scalar values (e.g., strings, numbers), inheritances to other mixins, or nested properties. Properties define the internal structure or behavior of a mixin.
 
@@ -947,15 +947,15 @@ This section provides definitions of key terms used in the MIXIN language specif
 
 - **Directory Scope**: The scope defined by a directory. All mixins within a directory are part of the directory scope, and files within the directory can inherit mixins using the directory scope.
 
-- **Cross-File Inheritance**: An inheritance that points to a mixin defined in a different file. The inheritance format includes the file name and mixin name, and MIXIN will automatically search for the target mixin within the directory hierarchy.
+- **Cross-File Inheritance**: An inheritance that points to a mixin defined in a different file. The inheritance format includes the file name and mixin name, and Overlay Language will automatically search for the target mixin within the directory hierarchy.
 
-- **Schema**: A JSON Schema definition that describes the structure of a MIXIN file. The schema defines the types, constraints, and relationships between mixins, properties, and inheritances.
+- **Schema**: A JSON Schema definition that describes the structure of an Overlay file. The schema defines the types, constraints, and relationships between mixins, properties, and inheritances.
 
-- **File Format**: The supported formats for defining MIXIN source code. MIXIN supports YAML, JSON, and TOML, with restrictions to ensure compatibility with JSON serialization.
+- **File Format**: The supported formats for defining Overlay Language source code. Overlay Language supports YAML, JSON, and TOML, with restrictions to ensure compatibility with JSON serialization.
 
-- **Naming Convention**: The rules for naming mixins and files in the MIXIN language. These conventions help distinguish between type-like mixins, value-like mixins, and instances, and ensure clarity and consistency in code organization.
+- **Naming Convention**: The rules for naming mixins and files in Overlay Language. These conventions help distinguish between type-like mixins, value-like mixins, and instances, and ensure clarity and consistency in code organization.
 
-- **Conflict-Free Inheritance**: MIXIN's approach to inheritance ensures that properties and scalar values from multiple parents are merged seamlessly without conflicts. This model eliminates issues commonly associated with multiple inheritance in other languages, such as the diamond problem.
+- **Conflict-Free Inheritance**: Overlay Language's approach to inheritance ensures that properties and scalar values from multiple parents are merged seamlessly without conflicts. This model eliminates issues commonly associated with multiple inheritance in other languages, such as the diamond problem.
 
 - **Property Merging**: The process by which properties with the same name from multiple parent mixins are automatically combined into the child mixin without causing conflicts.
 

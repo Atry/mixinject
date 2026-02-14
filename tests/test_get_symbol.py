@@ -169,10 +169,10 @@ class TestGetSymbolInherited:
     ) -> None:
         """From Qux.Bar.Baz, de_bruijn_index=1 path=("Bar",) → {Qux.Bar}.
 
-        Navigation with get_symbols via lexical_outer:
+        Navigation with get_symbols via qualified_this:
         1. current = Qux.Bar, origin_symbol = Foo.Bar, definition_site = Foo.Bar
         2. Loop (1 iteration):
-           - lexical_outer[Foo.Bar] → {Qux} (Qux.Bar's outer for Foo.Bar union)
+           - qualified_this[Foo.Bar] → {Qux} (Qux.Bar's outer for Foo.Bar union)
            - currents = {Qux}
            - definition_site = Foo.Bar.outer = Foo
         3. Navigate "Bar": Qux["Bar"] = Qux.Bar

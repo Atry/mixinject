@@ -1,6 +1,6 @@
 """Test that MixinSymbol.outer tracks structural parent correctly.
 
-For a MIXIN structure like:
+For an Overlay Language structure like:
     Foo:
       Bar:
         Baz: []

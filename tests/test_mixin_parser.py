@@ -1,4 +1,4 @@
-"""Tests for MIXIN file parsing and evaluation."""
+"""Tests for Overlay file parsing and evaluation."""
 
 from pathlib import Path
 

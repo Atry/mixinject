@@ -1173,7 +1173,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                 raise ValueError("Multiple pure merger definitions found")
 
     @cached_property
-    def lexical_outer(self) -> Mapping["MixinSymbol", Collection[MixinSymbol]]:
+    def qualified_this(self) -> Mapping["MixinSymbol", Collection[MixinSymbol]]:
         result = defaultdict(set)
         for super_symbol in self._generate_super_references():
             for union in super_symbol.unions:
@@ -2538,9 +2538,9 @@ class ResolvedReference:
 
         for _ in range(self.de_bruijn_index):
             currents = frozenset(
-                lexical_outer
+                qualified_this
                 for current in currents
-                for lexical_outer in current.lexical_outer[definition_site]
+                for qualified_this in current.qualified_this[definition_site]
             )
             definition_site = definition_site.outer
 
@@ -2557,7 +2557,7 @@ class ResolvedReference:
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class LexicalReference:
     """
-    A lexical reference following MIXIN spec resolution algorithm.
+    A lexical reference following Overlay Language spec resolution algorithm.
 
     This reference type implements **lexical scoping with late-binding**.
 

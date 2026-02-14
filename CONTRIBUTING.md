@@ -14,7 +14,7 @@
 
 ```bash
 # ✗ FORBIDDEN - Never use git checkout to discard changes
-git checkout src/ol
+git checkout overlay-language/src/overlay/language
 git checkout .
 
 # ✓ REQUIRED - Use named git stash with descriptive message
@@ -693,9 +693,9 @@ def fetch(url: str, policy: CachePolicy) -> Response:
 - Only when the user explicitly requests it
 - Never use it autonomously
 
-## MIXIN Language Coding Conventions
+## Overlay Language Coding Conventions
 
-MIXIN adopts C#-like naming conventions. The UpperCamelCase/lowerCamelCase distinction is not merely stylistic — it carries semantic meaning for the compiler's totality checker: UpperCamelCase symbols are **scopes** (can be instantiated at runtime), while lowerCamelCase symbols are **resources** (lazily evaluated). This naming convention enables automatic totality verification without manual proofs (see `mixin_totality.tex`).
+Overlay Language adopts C#-like naming conventions. The UpperCamelCase/lowerCamelCase distinction is not merely stylistic — it carries semantic meaning for the compiler's totality checker: UpperCamelCase symbols are **scopes** (can be instantiated at runtime), while lowerCamelCase symbols are **resources** (lazily evaluated). This naming convention enables automatic totality verification without manual proofs (see `mixin_totality.tex`).
 
 ### Naming Convention Summary
 
@@ -718,7 +718,7 @@ Top-level groupings. Analogous to **ECS systems**. In abstract algebra, the coll
 
 A namespace declares its **sort dependencies** by inheriting other namespaces. For example, `NatEquality` inherits `[NatVisitor]` (input sort: Nat, with dispatch capability) and `[Boolean]` (output sort: Boolean). The inherited entities (`True`, `False`) become part of `NatEquality`'s scope, and are referenced via qualified this (`[NatEquality, ~, "True"]`) so they participate in composition.
 
-This is how MIXIN natively solves the **expression problem**: namespaces can be freely composed. Composing `NatEquality` with `BooleanNegation` automatically gives the returned booleans a `not` operation — without modifying either namespace:
+This is how Overlay Language natively solves the **expression problem**: namespaces can be freely composed. Composing `NatEquality` with `BooleanNegation` automatically gives the returned booleans a `not` operation — without modifying either namespace:
 
 ```yaml
 # Sort definitions (carriers)
@@ -767,7 +767,7 @@ NatPlus:
 
 ### Nested Class / Method (UpperCamelCase)
 
-Prefer **nouns and adjectives** over verbs to reflect MIXIN's declarative nature:
+Prefer **nouns and adjectives** over verbs to reflect Overlay Language's declarative nature:
 
 ```yaml
 # ✓ GOOD - nouns and adjectives (declarative)
