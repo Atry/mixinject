@@ -59,7 +59,7 @@
   mixin and trait systems simply does not arise. We demonstrate Turing
   completeness by giving a straightforward translation from the
   $\lambda$-calculus into Overlay-Calculus, showing that function application
-  is derivable from symmetric mixin composition.
+  is derivable from symmetric overlay composition.
   Programs are inherently in A-normal form; unlike compiler-internal ANF
   which targets a fixed monad, Overlay-Calculus ANF supports dependency
   injection, making programs CPS-agnostic---the same code serves as either
@@ -233,7 +233,7 @@ system.
 Another observation concerns the linearization problem that has long plagued
 mixin-based systems~\cite{bracha1990mixin,c3linearization}. In traditional
 mixin or trait calculi~\cite{scharli2003traits,ducasse2006traits}, composing
-mixins that define the same field raises conflicts that must be resolved by
+mixins that define the same property raises conflicts that must be resolved by
 a linearization order. In Overlay-Calculus, because there are no scalar values,
 the observable behavior at every node is solely \emph{property presence}---a set
 of labels. Composition ($\sqcup$) is therefore commutative, idempotent, and
@@ -259,7 +259,7 @@ mechanically verified against expected output snapshots.
 \paragraph{Contributions.}
 \begin{itemize}
   \item We present Overlay-Calculus, a minimal computational model for
-    declarative programming that contains only mixin constructs (record,
+    declarative programming that contains only overlay constructs (record,
     reference, composition) and no functions or scalar types.
   \item We observe that composition ($\sqcup$) is commutative, idempotent,
     and associative, and provide an intuitive explanation for why this
@@ -363,7 +363,7 @@ and new cases.
 
 Note that $\mathrm{magnitude} \mapsto \{\}$ in $\mathrm{Constant}$
 resembles a type annotation but is purely structural in Overlay-Calculus:
-the evaluator works as long as the required fields appear somewhere in
+the evaluator works as long as the required properties appear somewhere in
 the composition chain, regardless of any schema declarations.
 
 \section{Syntax}
@@ -381,7 +381,7 @@ Let $k$ denote a non-negative integer (path length).
   && \text{(composition)}
 \end{align*}
 
-The $\mapsto$ in $\{\ell \mapsto e\}$ defines a mixin property, not a let-binding.
+The $\mapsto$ in $\{\ell \mapsto e\}$ defines a property, not a let-binding.
 There is no variable binding in Overlay-Calculus.
 In pursuit of a minimal computational model, Overlay-Calculus contains no
 scalar types. This does not limit computational power: just as the
@@ -403,8 +403,8 @@ The suffix $\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ then projects pr
 dynamic self.
 
 A new scope level is created at each $\{\ldots\}$ (record literal).
-The scope contains all properties of that mixin, including those introduced by $\sqcup$.
-In particular, $\{a \mapsto \{\}\} \sqcup \{b \mapsto \{\}\}$ is a single mixin whose scope
+The scope contains all properties of that overlay, including those introduced by $\sqcup$.
+In particular, $\{a \mapsto \{\}\} \sqcup \{b \mapsto \{\}\}$ is a single overlay whose scope
 contains both $a$ and $b$.
 The operator $\sqcup$ does not create additional scope levels.
 
@@ -984,7 +984,7 @@ syntactic reshuffling.
 
 Commutativity and idempotence of $\sqcup$ make Overlay-Calculus
 transparent to linearization order.
-Deduplication of inherited mixins is purely an optimization.
+Deduplication of inherited overlays is purely an optimization.
 
 \subsection{Relationship to Practical Systems}
 
@@ -996,7 +996,7 @@ The NixOS module system~\cite{dolstra2008nixos,nixosmodules}---whose
 recursive attribute merging motivated this work---can be understood as an
 implementation of Overlay-Calculus with additional features (type checking,
 error reporting, FFI to the Nix language). The module system's
-expressiveness stems from the properties described in Section~4: composition
+expressiveness stems from the properties described in Section~3: composition
 is commutative, idempotent, and associative, so the linearization
 problem does not arise. Other configuration languages exhibit similar patterns:
 Jsonnet~\cite{jsonnet} provides inheritance-based composition over JSON;
@@ -1010,7 +1010,7 @@ Scala traits~\cite{odersky2004overview}, Ruby mixins~\cite{flanagan2008ruby},
 and similar object-oriented mechanisms use symmetric composition to extend
 classes. Traditional mixin calculi~\cite{bracha1990mixin,scharli2003traits}
 face the linearization problem when composing mixins with conflicting
-fields. In Overlay-Calculus, this problem does not arise (Section~4) because eliminating
+properties. In Overlay-Calculus, this problem does not arise (Section~3) by eliminating
 scalar values: only property presence is observable, making composition
 naturally commutative. This explains why trait systems with
 conflict-resolution strategies (e.g., Scala's linearization) require
@@ -1029,7 +1029,7 @@ monad machinery.
 \paragraph{Modular software architectures.}
 Plugin systems, component frameworks, and dependency injection frameworks
 enable software extensibility through declarative composition. The
-symmetric, associative nature of $\sqcup$ (Section~4) explains why such
+symmetric, associative nature of $\sqcup$ (Section~3) explains why such
 systems work: components can be composed in any order without changing
 behavior. Overlay-Calculus formalizes the composition patterns that these
 systems implement ad hoc.
@@ -1057,7 +1057,7 @@ declarative programming: one declares types to guide meta-computation
 (type checking, type inference) without specifying operational steps.
 Since Overlay-Calculus demonstrates that declarative programming can be
 Turing complete, applying this insight to the type level yields a type
-system built from the same mixin primitives.
+system built from the same overlay primitives.
 TOC would relate to the DOT calculus~\cite{amin2016dot} in a manner
 analogous to how Overlay-Calculus relates to the $\lambda$-calculus:
 TOC can be viewed as DOT without $\lambda$, retaining
@@ -1114,7 +1114,7 @@ sequence that was used for insertion. For the same key~$5$:
 \[
   \mathrm{enclosing\_scope}.\self.\mathrm{trie}.\mathrm{at\_odd}.\mathrm{at\_even}.\mathrm{value}
 \]
-where $\mathrm{enclosing\_scope}$ is the qualified this scope name
+where $\mathrm{enclosing\_scope}$ is the qualified-this scope name
 containing the trie definition.
 The reference mechanism traverses the nested record structure---which
 \emph{is} the trie---returning the value at the final node.
@@ -1123,7 +1123,7 @@ The reference mechanism traverses the nested record structure---which
 When the key is a BinNat value constructed at runtime via
 $\mathrm{Zero}$, $\mathrm{Odd}$, and $\mathrm{Even}$, the lookup
 path must be computed dynamically. This is achieved by folding the
-BinNat key into a \emph{Selector}---a mixin that, given a trie,
+BinNat key into a \emph{Selector}---an overlay that, given a trie,
 navigates to the appropriate node and returns the stored entry.
 A Selector declares the trie shape and a result slot:
 \[
@@ -1190,7 +1190,7 @@ remove them---deletion cannot be expressed as a single composition.
 Instead, deletion \emph{reconstructs} the trie, copying every subtrie
 except at the targeted key.
 
-We fold the BinNat key into a \emph{Rebuilder}---a mixin that, given
+We fold the BinNat key into a \emph{Rebuilder}---an overlay that, given
 an input trie, produces a new trie as its result.
 A Rebuilder declares the trie shape on both its input and output:
 \[
@@ -1277,7 +1277,7 @@ This appendix demonstrates that standard data types can be encoded in
 Overlay-Calculus without scalar types, using Church encoding. These
 encodings serve as a proof of concept that a standard library can be
 built entirely within Overlay-Calculus. Each encoding is presented as a
-module mixin. In practical implementations, more efficient
+module overlay. In practical implementations, more efficient
 representations (e.g., binary naturals) or FFI to host language
 primitives would typically be used.
 \selfcite{The implementation~\cite{mixin2025} includes}{The supplementary material includes} executable implementations of these
@@ -1291,7 +1291,7 @@ addition, all verified against expected output snapshots.
 The boolean module contains a schema ($\mathrm{Boolean}$), constructors
 ($\mathrm{True}$, $\mathrm{False}$), and operations ($\mathrm{Not}$,
 $\mathrm{And}$, $\mathrm{Or}$). All definitions are siblings within a
-single module mixin; references use qualified this accordingly.
+single module overlay; references use qualified this accordingly.
 
 \begin{align*}
   \{ \quad \mathrm{boolean} \mapsto \{ \quad
