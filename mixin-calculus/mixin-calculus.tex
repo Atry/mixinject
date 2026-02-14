@@ -18,19 +18,19 @@
   \if@ACM@anonymous{#2}\else{#1}\fi
 }
 
-\DeclareMathOperator{\Path}{Path}
-\DeclareMathOperator{\dom}{dom}
-\DeclareMathOperator{\keys}{properties}
-\DeclareMathOperator{\unions}{overlays}
-\DeclareMathOperator{\supers}{supers}
-\DeclareMathOperator{\references}{references}
-\DeclareMathOperator{\ownmembers}{own\text{-}properties}
-\DeclareMathOperator{\edges}{edges}
-\DeclareMathOperator{\navigate}{resolve}
-\DeclareMathOperator{\navigateup}{this}
+\newcommand{\Path}{\mathtt{Path}}
+\newcommand{\dom}{\mathtt{dom}}
+\newcommand{\properties}{\mathtt{properties}}
+\newcommand{\overlays}{\mathtt{overlays}}
+\newcommand{\supers}{\mathtt{supers}}
+\newcommand{\references}{\mathtt{references}}
+\newcommand{\ownproperties}{\mathtt{ownproperties}}
+\newcommand{\bases}{\mathtt{bases}}
+\newcommand{\resolve}{\mathtt{resolve}}
+\newcommand{\this}{\mathtt{this}}
 \newcommand{\snoc}{\mathbin{\triangleright}}
-\DeclareMathOperator{\init}{init}
-\DeclareMathOperator{\last}{last}
+\newcommand{\init}{\mathtt{init}}
+\newcommand{\last}{\mathtt{last}}
 \newcommand{\self}{\mathbf{this}}
 
 \begin{document}
@@ -422,6 +422,24 @@ The operator $\sqcup$ does not create additional scope levels.
 Given an AST, what are the \emph{properties} visible at
 each position in the tree? This section answers the question by
 defining a collection of mutually recursive functions over paths.
+
+Most of these functions have direct analogues in object-oriented languages:
+$\Path$ identifies a position in the tree,
+$\init$ and $\last$ navigate paths,
+$\ownproperties$ extracts the locally defined members from the AST,
+$\references$ extracts the inheritance declarations from the AST,
+$\properties$ computes all visible members at a path including both locally defined and inherited ones,
+$\supers$ computes the transitive inheritance closure,
+and $\bases$ collects the direct base classes.
+One function has no object-oriented analogue:
+$\overlays$ collects the identity-sharing paths that arise
+when composition ($\sqcup$) introduces multiple definitions
+of the same label at the same scope level.
+Two functions, the reference resolution function $\resolve$
+and the qualified this resolution function $\this$,
+have object-oriented analogues whose semantics differ significantly;
+they are discussed in detail below.
+
 All functions are pure and may be cached (memoised) without
 changing semantics.
 
@@ -436,9 +454,9 @@ We write $p$ for a path.
 The \emph{root path} is the empty sequence $()$.
 Given a path $p$ and a label $\ell$,
 $p \snoc \ell$ is the sequence $p$ extended with $\ell$.
-For a non-root path, $\init(p)$ is $p$ with
+For a non-root path, the parent path $\init(p)$ is $p$ with
 its last element removed,
-and $\last(p)$ is the last element of $p$.
+and the final label $\last(p)$ is the last element of $p$.
 For convenience, we sometimes write $\ell$ for $\last(p)$
 when the path is clear from context.
 With paths in hand, we can state what the AST provides
@@ -448,7 +466,7 @@ at each path.
 An expression $e$ (Section~2) is parsed into an AST.
 The AST provides two primitive functions at each path $p$:
 \begin{itemize}
-  \item $\ownmembers(p)$: the set of labels
+  \item $\ownproperties(p)$: the set of labels
     that have subtrees at $p$.
   \item $\references(p)$: the set of reference pairs
     $(n,\; \ell_{\mathrm{down},*})$,
@@ -467,20 +485,20 @@ after that occurrence, i.e., $n = |p| - |p_{\mathrm{def}}|$.
 The projections are
 $\ell_{\mathrm{down},*} = (\ell_{\mathrm{down},1}, \ldots, \ell_{\mathrm{down},k})$.
 
-Parsing populates $\ownmembers$ and $\references$ as follows:
+Parsing populates $\ownproperties$ and $\references$ as follows:
 \begin{itemize}
   \item A record $\{\ell_1 \mapsto e_1, \ldots, \ell_n \mapsto e_n\}$
-    contributes $\{\ell_1, \ldots, \ell_n\}$ to $\ownmembers(p)$
+    contributes $\{\ell_1, \ldots, \ell_n\}$ to $\ownproperties(p)$
     and nothing to $\references(p)$.
   \item A reference $\ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
     contributes one pair
     $(n,\; \ell_{\mathrm{down},*})$
     to $\references(p)$
-    and nothing to $\ownmembers(p)$.
+    and nothing to $\ownproperties(p)$.
   \item A composition $e_1 \sqcup e_2$ merges both
-    $\ownmembers$ and $\references$ from $e_1$ and $e_2$ at the same path.
+    $\ownproperties$ and $\references$ from $e_1$ and $e_2$ at the same path.
 \end{itemize}
-Both $\ownmembers$ and $\references$ are pure data; they are not functions
+Both $\ownproperties$ and $\references$ are pure data; they are not functions
 of runtime state.
 Given these two primitives, we can now answer the question
 posed at the beginning of this section.
@@ -489,10 +507,10 @@ posed at the beginning of this section.
 The properties of a path are its own properties together with
 those inherited from all supers:
 \[
-  \keys(p) =
+  \properties(p) =
   \bigl\{\; \ell \;\big|\;
   (\_,\; p_{\mathrm{overlay}}) \in \supers(p),\;
-  \ell \in \ownmembers(p_{\mathrm{overlay}})
+  \ell \in \ownproperties(p_{\mathrm{overlay}})
   \;\bigr\}
 \]
 The remainder of this section defines $\supers$,
@@ -500,32 +518,36 @@ the transitive inheritance closure,
 and its dependencies.
 
 \paragraph{Supers.}
-The \emph{supers} of $p$ are the overlays of every path in
-the reflexive transitive closure of the reference targets $\edges$,
-each paired with the composition-site context
-$\init(p_{\mathrm{edge}})$ through which it is reached.
-This provenance is needed by qualified this resolution, i.e.\ the $\navigateup$ function defined below,
+Intuitively, $\supers(p)$ collects every path that $p$ inherits from:
+the identity-sharing paths $\overlays$ of $p$ itself,
+plus the $\overlays$ of each
+direct base $\bases$ of $p$, and so on transitively.
+Each result is paired with the composition-site context
+$\init(p_{\mathrm{base}})$ through which it is reached.
+This provenance is needed by qualified this resolution, i.e.\ the $\this$ function defined below,
 to map a definition-site overlay back to
 the composition-site paths that incorporate it:
 \[
   \supers(p) =
-  \bigl\{\; (\init(p_{\mathrm{edge}}),\; p_{\mathrm{overlay}}) \;\big|\;
-  p_{\mathrm{edge}} \in \edges^*(p),\;
-  p_{\mathrm{overlay}} \in \unions(p_{\mathrm{edge}})
+  \bigl\{\; (\init(p_{\mathrm{base}}),\; p_{\mathrm{overlay}}) \;\big|\;
+  p_{\mathrm{base}} \in \bases^*(p),\;
+  p_{\mathrm{overlay}} \in \overlays(p_{\mathrm{base}})
   \;\bigr\}
 \]
 The $\supers$ formula depends on two functions:
-the identity-sharing paths $\unions$ and the reference targets $\edges$.
-We define $\unions$ first.
+the identity-sharing paths $\overlays$ and the one-hop reference targets $\bases$.
+We define $\overlays$ first.
 
 \paragraph{Overlays.}
-$\unions(p)$ is the set of paths that share
-the \emph{same identity} as $p$.
-When $p \neq ()$,
-its overlays include itself and $p_{\mathrm{branch}} \snoc \last(p)$ for every
+Intuitively, composition ($\sqcup$) can introduce multiple
+definitions of the same label at the same scope level;
+$\overlays(p)$ collects all such paths that share the
+\emph{same identity} as $p$.
+Concretely, the overlays of $p$ include $p$ itself
+and $p_{\mathrm{branch}} \snoc \last(p)$ for every
 branch $p_{\mathrm{branch}}$ of $\init(p)$ that also defines $\last(p)$:
 \[
-  \unions(p) =
+  \overlays(p) =
   \begin{cases}
     \{p\} & \text{if } p = ()  \\[6pt]
     \{p\}
@@ -533,66 +555,102 @@ branch $p_{\mathrm{branch}}$ of $\init(p)$ that also defines $\last(p)$:
     \left\{\; p_{\mathrm{branch}} \snoc \last(p) \;\left|\;
     \begin{aligned}
       &(\_,\; p_{\mathrm{branch}}) \in \supers(\init(p)), \\
-      &\text{s.t.}\; \last(p) \in \ownmembers(p_{\mathrm{branch}})
+      &\text{s.t.}\; \last(p) \in \ownproperties(p_{\mathrm{branch}})
     \end{aligned}
     \right.\right\}
     & \text{if } p \neq ()
   \end{cases}
 \]
-It remains to define $\edges$, the other dependency of $\supers$.
+It remains to define $\bases$, the other dependency of $\supers$.
 
-\paragraph{Edges.}
-The \emph{edges} of $p$ are the paths reachable by resolving
-its references one step:
+\paragraph{Bases.}
+Intuitively, $\bases(p)$ are the paths that $p$ directly
+inherits from via references---analogous to the direct base
+classes in object-oriented languages.
+Concretely, $\bases$ resolves every reference in
+$p$'s $\overlays$ one step:
 \[
-  \edges(p) =
+  \bases(p) =
   \left\{\; p_{\mathrm{target}} \;\left|\;
   \begin{aligned}
-    &p_{\mathrm{overlay}} \in \unions(p), \\
+    &p_{\mathrm{overlay}} \in \overlays(p), \\
     &(n,\; \ell_{\mathrm{down},*}) \in \references(p_{\mathrm{overlay}}), \\
-    &p_{\mathrm{target}} \in \navigate(\init(p),\; p_{\mathrm{overlay}},\; n,\; \ell_{\mathrm{down},*})
+    &p_{\mathrm{target}} \in \resolve(\init(p),\; p_{\mathrm{overlay}},\; n,\; \ell_{\mathrm{down},*})
   \end{aligned}
   \right.\right\}
 \]
-The $\edges$ formula calls the reference resolution function $\navigate$, which we define next.
+The $\bases$ formula calls the reference resolution function $\resolve$, which we define next.
 
 \paragraph{Reference resolution.}
-The function $\navigate(p_{\mathrm{site}},\; p_{\mathrm{def}},\; n,\; \ell_{\mathrm{down},*})$
-takes a composition-site path $p_{\mathrm{site}}$,
+Intuitively, $\resolve$ turns a syntactic reference into the
+set of paths it points to in the fully composed tree.
+It takes a composition-site path $p_{\mathrm{site}}$,
 a definition-site path $p_{\mathrm{def}}$,
 a de~Bruijn index $n$,
-and downward projections $\ell_{\mathrm{down},*}$,
-and returns a set of target paths.
-
-Resolution proceeds in two phases: first, $\navigateup$ resolves
-the qualified this by performing $n$ upward steps, mapping
-the definition-site path to composition-site paths;
+and downward projections $\ell_{\mathrm{down},*}$.
+Resolution proceeds in two phases: first, the qualified this resolution function $\this$ performs $n$ upward steps
+starting from the enclosing scope $\init(p_{\mathrm{def}})$,
+mapping the definition-site path to composition-site paths;
 then the downward projections $\ell_{\mathrm{down},*}$ are appended:
 \[
-  \navigate(p_{\mathrm{site}},\; p_{\mathrm{def}},\; n,\; \ell_{\mathrm{down},*})
+  \resolve(p_{\mathrm{site}},\; p_{\mathrm{def}},\; n,\; \ell_{\mathrm{down},*})
   =
   \bigl\{\;
   p_{\mathrm{current}} \snoc \ell_{\mathrm{down},1} \snoc \cdots \snoc \ell_{\mathrm{down},k}
   \;\big|\;
   p_{\mathrm{current}} \in
-  \navigateup(\{p_{\mathrm{site}}\},\; p_{\mathrm{def}},\; n)
+  \this(\{p_{\mathrm{site}}\},\; \init(p_{\mathrm{def}}),\; n)
   \;\bigr\}
 \]
 When multiple routes exist (due to multi-path inheritance from $\sqcup$),
 they may yield different target paths; all are collected.
-We now define $\navigateup$.
+We now define $\this$.
 
 \paragraph{Qualified this resolution.}
-$\navigateup(S,\; p_{\mathrm{def}},\; n)$ performs $n$ upward steps
-over a frontier $S$ of composition-site paths accumulated so far.
-At each step it selects, from $\supers(p_{\mathrm{current}})$,
-every pair whose overlay component equals $p_{\mathrm{def}}$,
-and collects the corresponding composition-site paths:
+Intuitively, $\this$ answers the question:
+``in the fully composed tree, where does
+the definition-site scope $p_{\mathrm{def}}$ actually live?''
+The design of $\this$ reconciles two historically opposing
+approaches to scope resolution.
+Early Lisp implementations used dynamic scope~\cite{mccarthy1978history},
+where variable references are resolved against the run-time call stack;
+this is flexible but unpredictable.
+Scheme~\cite{sussman1975scheme} corrected this with lexical scope,
+where a de~Bruijn index resolves in a single step by indexing
+into the statically determined environment;
+this is predictable but rigid.
+Scala~\cite{odersky2004overview} and the NixOS module
+system~\cite{nixosmodules} follow the lexical approach:
+each \texttt{this} reference is bound to a single
+statically known path.
+When composition introduces multiple inheritance routes
+to the same scope, Scala rejects the ambiguity at compile time
+and the NixOS module system enters an infinite loop---neither
+can express that all routes are equally valid.
+
+Overlay-Calculus combines the strengths of both approaches.
+The reference itself is lexically determined at the definition site
+as a de~Bruijn index, so what $\this$ looks up is predictable.
+But because composition ($\sqcup$) interleaves scopes from
+different overlays, the result depends on the composed tree
+structure: $\this$ walks upward one scope level at a time,
+consulting $\supers$ at each level, and naturally tracks a
+\emph{set} of composition-site paths rather than a single one.
+All routes contribute equally to the composed result, and since
+$\sqcup$ is idempotent, duplicated contributions are harmless.
+The only observable is property presence, making
+multi-path resolution well-defined without disambiguation.
+
+Concretely, each step finds, among the supers of every path in the
+frontier $S$, those whose overlay component matches
+$p_{\mathrm{def}}$, and collects the corresponding
+composition-site paths as the new frontier.
+After $n$ steps the frontier contains the answer:
 \[
-  \navigateup(S,\; p_{\mathrm{def}},\; n) =
+  \this(S,\; p_{\mathrm{def}},\; n) =
   \begin{cases}
     S & \text{if } n = 0 \\[6pt]
-    \navigateup\!\left(
+    \this\!\left(
     \left\{\; p_{\mathrm{site}} \;\left|\;
     \begin{aligned}
       &p_{\mathrm{current}} \in S, \\
@@ -607,28 +665,11 @@ and collects the corresponding composition-site paths:
     & \text{if } n > 0
   \end{cases}
 \]
-Intuitively, each recursive step answers:
-``in the fully composed path $p_{\mathrm{current}}$, at which
-composition-site paths does the definition-site path
-$p_{\mathrm{def}}$ appear as a super?''
-Then $\init$ shortens $p_{\mathrm{def}}$ by one label
+At each step $\init$ shortens $p_{\mathrm{def}}$ by one label
 and $n$ decreases by one.
 Since $n$ is a non-negative integer, the recursion terminates.
 
-Note that $\navigateup$ collects a \emph{set} of paths, not a single path.
-When $\sqcup$ introduces multiple inheritance routes to the same
-definition-site scope, the set may contain more than one element.
-This is a deliberate feature of Overlay-Calculus:
-all routes contribute equally to the composed result, and since
-$\sqcup$ is idempotent, duplicated contributions are harmless.
-In contrast, Scala rejects such ambiguity at compile
-time~\cite{odersky2004overview}, and the NixOS module system
-raises a merge conflict when multiple paths provide values for the
-same attribute~\cite{nixosmodules}. Overlay-Calculus avoids both
-problems because the only observable is property presence, making
-multi-path resolution well-defined without disambiguation.
-
-This completes the chain of definitions needed to compute $\keys(p)$.
+This completes the chain of definitions needed to compute $\properties(p)$.
 We conclude this section with the algebraic properties of $\sqcup$.
 
 \paragraph{Properties of $\sqcup$.}
@@ -636,7 +677,7 @@ Composition is commutative, idempotent, and associative.
 The identity element is the empty record $\{\}$.
 
 \medskip\noindent\textit{Intuition.}\quad
-Evaluation merges $\references$ and $\ownmembers$ for each label recursively.
+Evaluation merges $\references$ and $\ownproperties$ for each label recursively.
 At every leaf the only observable is property presence---a set of labels.
 Since there are no scalars, the only observable at any node is which properties exist.
 Set union is commutative and idempotent:
@@ -650,7 +691,7 @@ implementations may deduplicate references (e.g., by path)
 to avoid the exponential blowup from diamond inheritance.
 
 The only externally observable fact is property presence:
-$\ell \in \keys(p)$.
+$\ell \in \properties(p)$.
 
 
 \section{Relationship to Other Computational Models}
@@ -950,7 +991,7 @@ the $\lambda$-calculus with different syntax.
 The semantic domain of Overlay-Calculus (Section~3) is entirely
 first-order: paths are label sequences, overlays are the record trees
 produced by evaluation, AST nodes are pure data,
-and the resolution functions ($\unions$, $\supers$, $\navigate$, etc.)
+and the resolution functions ($\overlays$, $\supers$, $\resolve$, etc.)
 are ordinary set-valued functions over these structures.
 No function types appear in the object language or its semantics.
 The crucial question is not what notation is used, but what
