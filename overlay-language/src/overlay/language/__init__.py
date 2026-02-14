@@ -1191,7 +1191,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         pending: deque[MixinSymbol] = deque((self,))
         while pending:
             current = pending.popleft()
-            for union in current.unions:
+            for union in current.overlays:
                 outers = visited[union]
                 if current.outer is OuterSentinel.ROOT:
                     continue
@@ -1202,7 +1202,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                     pending.extend(resolved_reference.get_symbols(current.outer))
         return visited
 
-    def _generate_unions(self) -> Iterator["MixinSymbol"]:
+    def _generate_overlays(self) -> Iterator["MixinSymbol"]:
         yield self
         match self.origin:
             case Nested(outer=outer, key=key):
@@ -1211,8 +1211,8 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         yield outer_union[key]
 
     @cached_property
-    def unions(self):
-        return frozenset(self._generate_unions())
+    def overlays(self):
+        return frozenset(self._generate_overlays())
 
 
 class OuterSentinel(Enum):
