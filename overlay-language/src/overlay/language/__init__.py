@@ -1644,17 +1644,17 @@ class PackageScopeDefinition(ObjectScopeDefinition):
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.overlay.yaml/json/toml files in the package directory."""
+        """Discover *.oyaml/ojson/otoml files in the package directory."""
         result: dict[str, Path] = {}
         package_paths = getattr(self.underlying, "__path__", None)
         if package_paths is None:
             return result
 
         overlay_extensions = (
-            ".overlay.yaml",
-            ".overlay.yml",
-            ".overlay.json",
-            ".overlay.toml",
+            ".oyaml",
+            ".oyml",
+            ".ojson",
+            ".otoml",
         )
         for package_path in package_paths:
             package_dir = Path(package_path)
@@ -1666,7 +1666,7 @@ class PackageScopeDefinition(ObjectScopeDefinition):
                 name_lower = file_path.name.lower()
                 for extension in overlay_extensions:
                     if name_lower.endswith(extension):
-                        # Extract stem: foo.overlay.yaml -> foo
+                        # Extract stem: Foo.oyaml -> Foo
                         stem = file_path.name[: -len(extension)]
                         if stem not in result:
                             result[stem] = file_path

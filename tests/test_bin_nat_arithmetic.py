@@ -1,7 +1,7 @@
 """Tests for binary natural number arithmetic and equality.
 
-Tests the Overlay language definitions in BinNatArithmeticTest.overlay.yaml which compose
-BinNatPlus and BinNatEquality from Builtin.overlay.yaml to verify:
+Tests the Overlay language definitions in BinNatArithmeticTest.oyaml which compose
+BinNatPlus and BinNatEquality from Builtin.oyaml to verify:
 - Binary numeral construction (Zero, Even, Odd)
 - Increment operation
 - Addition (Plus operation)

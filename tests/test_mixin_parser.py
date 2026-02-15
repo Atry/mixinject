@@ -63,7 +63,7 @@ class TestParseMixinValue:
     def test_object_value(self) -> None:
         """Object value should be parsed as properties only."""
         value = {"name": "test", "value": 42}
-        result = parse_mixin_value(value, source_file=Path("test.overlay.yaml"))
+        result = parse_mixin_value(value, source_file=Path("test.oyaml"))
 
         assert result.inheritances == ()
         assert result.property_definitions == ({"name": "test", "value": 42},)
@@ -71,7 +71,7 @@ class TestParseMixinValue:
 
     def test_scalar_value(self) -> None:
         """Scalar value should be parsed as scalar_values."""
-        result = parse_mixin_value(42, source_file=Path("test.overlay.yaml"))
+        result = parse_mixin_value(42, source_file=Path("test.oyaml"))
 
         assert result.inheritances == ()
         assert result.property_definitions == ()
@@ -80,7 +80,7 @@ class TestParseMixinValue:
     def test_array_with_inheritance(self) -> None:
         """Array with inheritance reference should be parsed."""
         value = [["ParentMixin"], {"property": "value"}]
-        result = parse_mixin_value(value, source_file=Path("test.overlay.yaml"))
+        result = parse_mixin_value(value, source_file=Path("test.oyaml"))
 
         assert len(result.inheritances) == 1
         assert isinstance(result.inheritances[0], LexicalReference)
@@ -90,7 +90,7 @@ class TestParseMixinValue:
     def test_array_with_scalar(self) -> None:
         """Array with scalar value should be parsed."""
         value = [42, ["ParentMixin"]]
-        result = parse_mixin_value(value, source_file=Path("test.overlay.yaml"))
+        result = parse_mixin_value(value, source_file=Path("test.oyaml"))
 
         assert len(result.inheritances) == 1
         assert result.scalar_values == (42,)
@@ -117,7 +117,7 @@ test_late_binding:
     late_binding:
       - [my_mixin1, ~, inner]
 """
-        yaml_file = tmp_path / "foo.overlay.yaml"
+        yaml_file = tmp_path / "foo.oyaml"
         yaml_file.write_text(yaml_content)
 
         result = parse_mixin_file(yaml_file)
@@ -134,7 +134,7 @@ test_late_binding:
     def test_parse_json_file(self, tmp_path: Path) -> None:
         """Parse a JSON mixin file."""
         json_content = '{"TestMixin": {"value": 42}}'
-        json_file = tmp_path / "test.overlay.json"
+        json_file = tmp_path / "test.ojson"
         json_file.write_text(json_content)
 
         result = parse_mixin_file(json_file)
@@ -150,7 +150,7 @@ test_late_binding:
 value = 42
 name = "test"
 """
-        toml_file = tmp_path / "test.overlay.toml"
+        toml_file = tmp_path / "test.otoml"
         toml_file.write_text(toml_content)
 
         result = parse_mixin_file(toml_file)
@@ -174,7 +174,7 @@ MultiOriginMixin:
   - field1: "value1"
   - field2: "value2"
 """
-        yaml_file = tmp_path / "multi.overlay.yaml"
+        yaml_file = tmp_path / "multi.oyaml"
         yaml_file.write_text(yaml_content)
 
         result = parse_mixin_file(yaml_file)
@@ -202,7 +202,7 @@ class TestFileMixinDefinition:
             is_public=True,
             underlying={"prop1": "value1", "prop2": "value2"},
             scalar_values=(),
-            source_file=Path("test.overlay.yaml"),
+            source_file=Path("test.oyaml"),
         )
 
         keys = list(definition)
@@ -216,7 +216,7 @@ class TestFileMixinDefinition:
             is_public=True,
             underlying={"child": {"nested": "value"}},
             scalar_values=(),
-            source_file=Path("test.overlay.yaml"),
+            source_file=Path("test.oyaml"),
         )
 
         children = definition["child"]
@@ -230,8 +230,8 @@ class TestDirectoryMixinDefinition:
     """Tests for DirectoryMixinDefinition class."""
 
     def test_discovers_mixin_files(self, tmp_path: Path) -> None:
-        """Should discover *.overlay.yaml files in directory."""
-        mixin_file = tmp_path / "test.overlay.yaml"
+        """Should discover *.oyaml files in directory."""
+        mixin_file = tmp_path / "test.oyaml"
         mixin_file.write_text("TestMixin:\n  value: 42\n")
 
         definition = DirectoryMixinDefinition(
@@ -259,9 +259,9 @@ class TestDirectoryMixinDefinition:
 
     def test_discovers_multiple_formats(self, tmp_path: Path) -> None:
         """Should discover yaml, json, and toml files."""
-        (tmp_path / "yaml_test.overlay.yaml").write_text("A: {}")
-        (tmp_path / "json_test.overlay.json").write_text('{"B": {}}')
-        (tmp_path / "toml_test.overlay.toml").write_text("[C]\n")
+        (tmp_path / "yaml_test.oyaml").write_text("A: {}")
+        (tmp_path / "json_test.ojson").write_text('{"B": {}}')
+        (tmp_path / "toml_test.otoml").write_text("[C]\n")
 
         definition = DirectoryMixinDefinition(
             bases=(),
@@ -285,7 +285,7 @@ TestMixin:
   value: 42
   name: "test"
 """
-        (tmp_path / "test.overlay.yaml").write_text(yaml_content)
+        (tmp_path / "test.oyaml").write_text(yaml_content)
 
         scope = evaluate_mixin_directory(tmp_path)
 
@@ -297,7 +297,7 @@ TestMixin:
         """Evaluate a directory with subdirectories."""
         subdir = tmp_path / "subdir"
         subdir.mkdir()
-        (subdir / "nested.overlay.yaml").write_text("NestedMixin:\n  value: 1\n")
+        (subdir / "nested.oyaml").write_text("NestedMixin:\n  value: 1\n")
 
         scope = evaluate_mixin_directory(tmp_path)
 
@@ -323,7 +323,7 @@ Derived:
   - [Base]
   - derived_value: "from_derived"
 """
-        (tmp_path / "test.overlay.yaml").write_text(yaml_content)
+        (tmp_path / "test.oyaml").write_text(yaml_content)
 
         scope = evaluate_mixin_directory(tmp_path)
 

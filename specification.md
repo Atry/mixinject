@@ -91,7 +91,7 @@ As a configuration language, the Overlay language excels in defining complex sys
 The following example demonstrates how to use the Overlay language to define a basic arithmetic operation represented as an AST:
 
 ```yaml
-# math_operations.overlay.yaml
+# math_operations.oyaml
 
 Number:
   - {} # A mixin that represents a number type.
@@ -108,7 +108,7 @@ multiply:
 ```
 
 ```yaml
-# test.overlay.yaml
+# test.oyaml
 
 example_calculation:
   - [add]
@@ -124,7 +124,7 @@ example_calculation:
 1. The `Number` mixin represents a basic number type with no initial value, aligning with the Overlay language's immutable and lazy-evaluated nature.
 2. The `add` mixin inherits from `Number` and defines two properties, `addend1` and `addend2`, both of which are also `Number`.
 3. The `multiply` mixin defines a multiplication operation with two properties: `multiplicand` and `multiplier`.
-4. In `test.overlay.yaml`, the `example_calculation` mixin uses the `add` operation to add two numbers:
+4. In `test.oyaml`, the `example_calculation` mixin uses the `add` operation to add two numbers:
    - `addend1` is a multiplication of `2` and `3`, represented using the `multiply` mixin.
    - `addend2` is the constant `4`.
 
@@ -286,7 +286,7 @@ In this example, `my_number` has both a scalar value `42` and inherits the `Numb
 In the Overlay language, properties with the same name defined in multiple parent mixins are always automatically merged:
 
 ```yaml
-# basic_features.overlay.yaml
+# basic_features.oyaml
 Vehicle:
   - wheels: [Number]
   - engine: {}
@@ -295,7 +295,7 @@ Motor:
   - engine:
       gasoline: true # Defines a default scalar value for 'engine'
 
-# advanced_features.overlay.yaml
+# advanced_features.oyaml
 hybrid_car:
   - ["basic_features", Vehicle]
   - ["basic_features", Motor]
@@ -380,15 +380,15 @@ data = 23:22:21.0123
 
 the Overlay language supports the following file formats for representing source code:
 
-- **YAML**: File extension `.overlay.yaml`.
-- **JSON**: File extension `.overlay.json`.
-- **TOML**: File extension `.overlay.toml`.
+- **YAML**: File extension `.oyaml`.
+- **JSON**: File extension `.ojson`.
+- **TOML**: File extension `.otoml`.
 
 The Overlay language uses these formats to define mixins in a structured and human-readable manner. The formats share the following characteristics:
 
 1. **JSON Compatibility**: All supported formats must be serializable to JSON. This means that only the subset of YAML and TOML that can be converted to JSON without loss of information is supported.
 
-2. **File Extensions**: The file extension must indicate the format and its use as an Overlay file, such as `.overlay.yaml`, `.overlay.json`, or `.overlay.toml`.
+2. **File Extensions**: The file extension must indicate the format and its use as an Overlay file: `.oyaml`, `.ojson`, or `.otoml`.
 
 3. **Lossless Conversion**: The language only uses features that can be converted between the supported formats without loss of information.
 
@@ -396,15 +396,15 @@ The Overlay language uses these formats to define mixins in a structured and hum
 
 #### 4.2.1 File Naming Conventions
 
-- **Format**: Use lowercase letters with underscores to separate words. File names must include the `.overlay.` segment to indicate they are Overlay files.
+- **Format**: Use lowercase letters with underscores to separate words. File names must use the `.o` prefix before the format extension (e.g., `.oyaml`, `.ojson`, `.otoml`) to indicate they are Overlay files.
 
-- **Type Definition**: Use singular nouns if defining a primary concept (e.g., `vehicle.overlay.yaml`). Use plural nouns if the file contains multiple instances or variations (e.g., `vehicles.overlay.yaml`).
+- **Type Definition**: Use singular nouns if defining a primary concept (e.g., `vehicle.oyaml`). Use plural nouns if the file contains multiple instances or variations (e.g., `vehicles.oyaml`).
 
 **Examples**:
 
-- `vehicle.overlay.yaml`
-- `vehicles.overlay.yaml`
-- `test_cases.overlay.json`
+- `vehicle.oyaml`
+- `vehicles.oyaml`
+- `test_cases.ojson`
 
 #### 4.2.2 Mixin Naming Conventions
 
@@ -464,17 +464,17 @@ the Overlay language allows inheriting mixins defined in different files. The ru
 project/
 │
 ├── module/
-│   ├── vehicle.overlay.yaml
-│   ├── electric.overlay.yaml
-│   └── car.overlay.yaml
+│   ├── vehicle.oyaml
+│   ├── electric.oyaml
+│   └── car.oyaml
 │
 ├── config/
-│   └── settings.overlay.yaml
+│   └── settings.oyaml
 └── test/
-    └── test_car.overlay.yaml
+    └── test_car.oyaml
 ```
 
-**vehicle.overlay.yaml**:
+**vehicle.oyaml**:
 
 ```yaml
 Vehicle:
@@ -482,7 +482,7 @@ Vehicle:
   wheels: [Number]
 ```
 
-**electric.overlay.yaml**:
+**electric.oyaml**:
 
 ```yaml
 Electric:
@@ -491,7 +491,7 @@ Electric:
   - battery_capacity: [Number]
 ```
 
-**car.overlay.yaml**:
+**car.oyaml**:
 
 ```yaml
 Car:
@@ -500,11 +500,11 @@ Car:
   - model: [String]
 ```
 
-**test_car.overlay.yaml**:
+**test_car.oyaml**:
 
 ```yaml
 test_car:
-  - [module, Car] # Cross-directory inheritance to Car in module/car.overlay.yaml
+  - [module, Car] # Cross-directory inheritance to Car in module/car.oyaml
   - model: "Test Model"
   - test_battery:
       - [module, Electric, battery_capacity] # Inheritance to battery_capacity in Electric
@@ -512,7 +512,7 @@ test_car:
 
 In this example:
 
-- The `test_car` mixin in `test_car.overlay.yaml` inherits `Car` and `Electric` from the `module` directory using the format `[module, Car]` and `[module, Electric, battery_capacity]`.
+- The `test_car` mixin in `test_car.oyaml` inherits `Car` and `Electric` from the `module` directory using the format `[module, Car]` and `[module, Electric, battery_capacity]`.
 - The first segment of the inheritance (`module`) indicates the directory in which the target mixins are located.
 - The inheritance format and scope rules ensure that mixins are correctly resolved based on the file and directory structure.
 
@@ -661,7 +661,7 @@ When a mixin inherits from multiple parent mixins, the properties from all paren
 **Example:**
 
 ```yaml
-# basic_features.overlay.yaml
+# basic_features.oyaml
 Vehicle:
   - wheels: [Number]
   - engine: {}
@@ -670,7 +670,7 @@ Motor:
   - engine:
       gasoline: true # Scalar value for 'engine'
 
-# advanced_features.overlay.yaml
+# advanced_features.oyaml
 hybrid_car:
   - ["basic_features", Vehicle]
   - ["basic_features", Motor]
@@ -697,15 +697,15 @@ Scalar values (e.g., strings, numbers, booleans) can coexist with properties wit
 **Example:**
 
 ```yaml
-# number.overlay.yaml
+# number.oyaml
 Number:
   - {} # Represents a number type mixin
 
-# value.overlay.yaml
+# value.oyaml
 value_42:
   - 42 # Defines scalar value 42
 
-# my_number.overlay.yaml
+# my_number.oyaml
 my_number:
   - [Number]
   - [value_42]
@@ -727,15 +727,15 @@ A mixin can have both scalar values and properties, and these can be inherited f
 **Example:**
 
 ```yaml
-# person.overlay.yaml
+# person.oyaml
 PersonDetails:
   name: [String]
   age: [Number]
 
-# height.overlay.yaml
+# height.oyaml
 height_value: 180 # Scalar value representing height
 
-# combined_person.overlay.yaml
+# combined_person.oyaml
 combined_person:
   - [PersonDetails]
   - name: "John Doe"
@@ -763,7 +763,7 @@ the Overlay language's approach to inheritance ensures that properties and scala
 **Example of Conflict-Free Inheritance:**
 
 ```yaml
-# basic_features.overlay.yaml
+# basic_features.oyaml
 Vehicle:
   - wheels: [Number]
   - engine:
@@ -772,7 +772,7 @@ Vehicle:
 Motor:
   - engine: {} # Defines 'engine' property
 
-# advanced_features.overlay.yaml
+# advanced_features.oyaml
 hybrid_car:
   - ["basic_features", Vehicle]
   - ["basic_features", Motor]

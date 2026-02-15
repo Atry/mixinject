@@ -1,6 +1,10 @@
 {
   "files.associations": {
-    ".envrc.private": "shellscript"
+    ".envrc.private": "shellscript",
+    "*.oyaml": "yaml",
+    "*.oyml": "yaml",
+    "*.ojson": "json",
+    "*.otoml": "toml"
   },
   "python.testing.pytestArgs": [
     "tests"
@@ -8,6 +12,9 @@
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "yaml.schemas": {
-    "./overlay.schema.json": "*.overlay.yaml"
+    "./overlay.schema.json": [
+      "*.oyml",
+      "*.oyaml"
+    ]
   }
 }

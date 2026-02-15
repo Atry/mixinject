@@ -1,4 +1,4 @@
-"""Port of stdlib.overlay.yaml to Python API to test resource/scope semantics.
+"""Port of stdlib.oyaml to Python API to test resource/scope semantics.
 
 Convention tested:
 - Names starting with `_` → private (no @public decorator)

@@ -324,16 +324,16 @@ def load_overlay_file(file_path: Path) -> JsonValue:
     content = file_path.read_text(encoding="utf-8")
 
     name = file_path.name.lower()
-    if name.endswith(".overlay.yaml") or name.endswith(".overlay.yml"):
+    if name.endswith(".oyaml") or name.endswith(".oyml"):
         return yaml.safe_load(content)
-    elif name.endswith(".overlay.json"):
+    elif name.endswith(".ojson"):
         return json.loads(content)
-    elif name.endswith(".overlay.toml"):
+    elif name.endswith(".otoml"):
         return tomllib.loads(content)
     else:
         raise ValueError(
             f"Unrecognized Overlay file format: {file_path.name}. "
-            f"Expected .overlay.yaml, .overlay.json, or .overlay.toml"
+            f"Expected .oyaml, .ojson, or .otoml"
         )
 
 
