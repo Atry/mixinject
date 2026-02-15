@@ -1,117 +1,118 @@
-# Composed namespace: NatPlus + NatEquality
-# Provides Zero/Successor with Plus and Equal operations, plus True/False
-NatArithmetic:
-  - [Builtin, NatPlus]
-  - [Builtin, NatEquality]
-  - [Builtin, NatToPython]
-  - [Builtin, BooleanToPython]
+- [Builtin, NatEquality]
+  # Algebraic structure: NatPlus (endomorphism Nat → Nat)
+- Nat:
+    - [Builtin, NatPlus]
+    - [Builtin, NatToPython]
 
-# =============================================================================
-# Concrete Church numerals
-# =============================================================================
+  Boolean:
+    - [Builtin, BooleanToPython]
 
-Zero:
-  - [NatArithmetic, Zero]
+  # =============================================================================
+  # Concrete Church numerals
+  # =============================================================================
 
-One:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [Zero]
+  Zero:
+    - [Nat, Zero]
 
-Two:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [One]
+  One:
+    - [Nat, Successor]
+    - predecessor:
+        - [Zero]
 
-Three:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [Two]
+  Two:
+    - [Nat, Successor]
+    - predecessor:
+        - [One]
 
-Four:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [Three]
+  Three:
+    - [Nat, Successor]
+    - predecessor:
+        - [Two]
 
-Five:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [Four]
+  Four:
+    - [Nat, Successor]
+    - predecessor:
+        - [Three]
 
-Six:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [Five]
+  Five:
+    - [Nat, Successor]
+    - predecessor:
+        - [Four]
 
-Seven:
-  - [NatArithmetic, Successor]
-  - predecessor:
-      - [Six]
+  Six:
+    - [Nat, Successor]
+    - predecessor:
+        - [Five]
 
-# =============================================================================
-# Addition tests
-# =============================================================================
+  Seven:
+    - [Nat, Successor]
+    - predecessor:
+        - [Six]
 
-# 3 + 4
-threePlusFour:
-  - [Three, Plus]
-  - addend:
-      - [Four]
+  # =============================================================================
+  # Addition tests
+  # =============================================================================
 
-# 5 + 2
-fivePlusTwo:
-  - [Five, Plus]
-  - addend:
-      - [Two]
+  # 3 + 4
+  threePlusFour:
+    - [Three, Plus]
+    - addend:
+        - [Four]
 
-# 0 + 3
-zeroPlusThree:
-  - [Zero, Plus]
-  - addend:
-      - [Three]
+  # 5 + 2
+  fivePlusTwo:
+    - [Five, Plus]
+    - addend:
+        - [Two]
 
-# =============================================================================
-# Direct equality tests (without addition)
-# =============================================================================
+  # 0 + 3
+  zeroPlusThree:
+    - [Zero, Plus]
+    - addend:
+        - [Three]
 
-# 0 == 0
-zeroEqualsZero:
-  - [Zero, Equal]
-  - other:
-      - [Zero]
+  # =============================================================================
+  # Direct equality tests (without addition)
+  # =============================================================================
 
-# 3 == 3
-threeEqualsThree:
-  - [Three, Equal]
-  - other:
-      - [Three]
+  # 0 == 0
+  zeroEqualsZero:
+    - [Zero, Equal]
+    - other:
+        - [Zero]
 
-# 3 == 4
-threeEqualsFour:
-  - [Three, Equal]
-  - other:
-      - [Four]
+  # 3 == 3
+  threeEqualsThree:
+    - [Three, Equal]
+    - other:
+        - [Three]
 
-# =============================================================================
-# Equality tests with addition results
-# =============================================================================
+  # 3 == 4
+  threeEqualsFour:
+    - [Three, Equal]
+    - other:
+        - [Four]
 
-# (3 + 4) == 7
-threePlusFourEqualsSeven:
-  - [Seven, Equal]
-  - other: [threePlusFour, sum]
+  # =============================================================================
+  # Equality tests with addition results
+  # =============================================================================
 
-# (5 + 2) == 7
-fivePlusTwoEqualsSeven:
-  - [Seven, Equal]
-  - other: [fivePlusTwo, sum]
+  # (3 + 4) == 7
+  threePlusFourEqualsSeven:
+    - [Seven, Equal]
+    - other: [threePlusFour, sum]
 
-# (5 + 2) == 2
-fivePlusTwoEqualsTwo:
-  - [Two, Equal]
-  - other: [fivePlusTwo, sum]
+  # (5 + 2) == 7
+  fivePlusTwoEqualsSeven:
+    - [Seven, Equal]
+    - other: [fivePlusTwo, sum]
 
-# (0 + 3) == 3
-zeroPlusThreeEqualsThree:
-  - [Three, Equal]
-  - other: [zeroPlusThree, sum]
+  # (5 + 2) == 2
+  fivePlusTwoEqualsTwo:
+    - [Two, Equal]
+    - other: [fivePlusTwo, sum]
+
+  # (0 + 3) == 3
+  zeroPlusThreeEqualsThree:
+    - [Three, Equal]
+    - other: [zeroPlusThree, sum]

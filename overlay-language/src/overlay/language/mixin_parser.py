@@ -313,29 +313,43 @@ def _parse_top_level_mixin(
     return (mixin_name, definitions)
 
 
-def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefinition]]:
+def load_overlay_file(file_path: Path) -> JsonValue:
     """
-    Parse an Overlay file (YAML/JSON/TOML) into definitions.
+    Load and parse an Overlay file (YAML/JSON/TOML) into raw JSON data.
 
-    :param file_path: Path to the mixin file.
-    :return: Mapping of top-level mixin names to sequences of definitions (multiple origins).
-    :raises ValueError: If the file format is not recognized or parsing fails.
+    :param file_path: Path to the Overlay file.
+    :return: The parsed JSON-compatible data (dict, list, or scalar).
+    :raises ValueError: If the file format is not recognized.
     """
     content = file_path.read_text(encoding="utf-8")
 
-    # Determine format from the full filename pattern
     name = file_path.name.lower()
     if name.endswith(".overlay.yaml") or name.endswith(".overlay.yml"):
-        data = yaml.safe_load(content)
+        return yaml.safe_load(content)
     elif name.endswith(".overlay.json"):
-        data = json.loads(content)
+        return json.loads(content)
     elif name.endswith(".overlay.toml"):
-        data = tomllib.loads(content)
+        return tomllib.loads(content)
     else:
         raise ValueError(
             f"Unrecognized Overlay file format: {file_path.name}. "
             f"Expected .overlay.yaml, .overlay.json, or .overlay.toml"
         )
+
+
+def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefinition]]:
+    """
+    Parse an Overlay file (YAML/JSON/TOML) containing named top-level mixins.
+
+    The file must contain a mapping at the top level, where each key is a mixin
+    name. For files where the top level is a mixin definition itself (list or
+    scalar), use :func:`parse_mixin_value` with :func:`load_overlay_file` instead.
+
+    :param file_path: Path to the mixin file.
+    :return: Mapping of top-level mixin names to sequences of definitions (multiple origins).
+    :raises ValueError: If the file format is not recognized or top level is not a mapping.
+    """
+    data = load_overlay_file(file_path)
 
     if not isinstance(data, dict):
         raise ValueError(

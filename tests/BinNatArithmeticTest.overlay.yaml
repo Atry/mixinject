@@ -1,125 +1,126 @@
-# Composed namespace: BinNatPlus + BinNatEquality
-# Provides Zero/Even/Odd with Plus, Increment, and Equal operations, plus True/False
-BinNatArithmetic:
-  - [Builtin, BinNatPlus]
-  - [Builtin, BinNatEquality]
-  - [Builtin, BinNatToPython]
-  - [Builtin, BooleanToPython]
+- [Builtin, BinNatEquality]
+  # Algebraic structure: BinNatPlus (endomorphism BinNat → BinNat)
+- BinNat:
+    - [Builtin, BinNatPlus]
+    - [Builtin, BinNatToPython]
 
-# =============================================================================
-# Concrete binary natural numbers
-# =============================================================================
+  Boolean:
+    - [Builtin, BooleanToPython]
 
-# 0
-Zero:
-  - [BinNatArithmetic, Zero]
+  # =============================================================================
+  # Concrete binary natural numbers
+  # =============================================================================
 
-# 1 = Odd(0)
-One:
-  - [BinNatArithmetic, Odd]
-  - half:
-      - [Zero]
+  # 0
+  Zero:
+    - [BinNat, Zero]
 
-# 2 = Even(1)
-Two:
-  - [BinNatArithmetic, Even]
-  - half:
-      - [One]
+  # 1 = Odd(0)
+  One:
+    - [BinNat, Odd]
+    - half:
+        - [Zero]
 
-# 3 = Odd(1)
-Three:
-  - [BinNatArithmetic, Odd]
-  - half:
-      - [One]
+  # 2 = Even(1)
+  Two:
+    - [BinNat, Even]
+    - half:
+        - [One]
 
-# 4 = Even(2)
-Four:
-  - [BinNatArithmetic, Even]
-  - half:
-      - [Two]
+  # 3 = Odd(1)
+  Three:
+    - [BinNat, Odd]
+    - half:
+        - [One]
 
-# 5 = Odd(2)
-Five:
-  - [BinNatArithmetic, Odd]
-  - half:
-      - [Two]
+  # 4 = Even(2)
+  Four:
+    - [BinNat, Even]
+    - half:
+        - [Two]
 
-# 6 = Even(3)
-Six:
-  - [BinNatArithmetic, Even]
-  - half:
-      - [Three]
+  # 5 = Odd(2)
+  Five:
+    - [BinNat, Odd]
+    - half:
+        - [Two]
 
-# 7 = Odd(3)
-Seven:
-  - [BinNatArithmetic, Odd]
-  - half:
-      - [Three]
+  # 6 = Even(3)
+  Six:
+    - [BinNat, Even]
+    - half:
+        - [Three]
 
-# =============================================================================
-# Addition tests
-# =============================================================================
+  # 7 = Odd(3)
+  Seven:
+    - [BinNat, Odd]
+    - half:
+        - [Three]
 
-# 3 + 4
-threePlusFour:
-  - [Three, Plus]
-  - addend:
-      - [Four]
+  # =============================================================================
+  # Addition tests
+  # =============================================================================
 
-# 5 + 2
-fivePlusTwo:
-  - [Five, Plus]
-  - addend:
-      - [Two]
+  # 3 + 4
+  threePlusFour:
+    - [Three, Plus]
+    - addend:
+        - [Four]
 
-# 0 + 3
-zeroPlusThree:
-  - [Zero, Plus]
-  - addend:
-      - [Three]
+  # 5 + 2
+  fivePlusTwo:
+    - [Five, Plus]
+    - addend:
+        - [Two]
 
-# =============================================================================
-# Direct equality tests (without addition)
-# =============================================================================
+  # 0 + 3
+  zeroPlusThree:
+    - [Zero, Plus]
+    - addend:
+        - [Three]
 
-# 0 == 0
-zeroEqualsZero:
-  - [Zero, Equal]
-  - other:
-      - [Zero]
+  # =============================================================================
+  # Direct equality tests (without addition)
+  # =============================================================================
 
-# 3 == 3
-threeEqualsThree:
-  - [Three, Equal]
-  - other:
-      - [Three]
+  # 0 == 0
+  zeroEqualsZero:
+    - [Zero, Equal]
+    - other:
+        - [Zero]
 
-# 3 == 4
-threeEqualsFour:
-  - [Three, Equal]
-  - other:
-      - [Four]
+  # 3 == 3
+  threeEqualsThree:
+    - [Three, Equal]
+    - other:
+        - [Three]
 
-# =============================================================================
-# Equality tests with addition results
-# =============================================================================
+  # 3 == 4
+  threeEqualsFour:
+    - [Three, Equal]
+    - other:
+        - [Four]
 
-# (3 + 4) == 7
-threePlusFourEqualsSeven:
-  - [Seven, Equal]
-  - other: [threePlusFour, sum]
+  # =============================================================================
+  # Equality tests with addition results
+  # =============================================================================
 
-# (5 + 2) == 7
-fivePlusTwoEqualsSeven:
-  - [Seven, Equal]
-  - other: [fivePlusTwo, sum]
+  # (3 + 4) == 7
+  threePlusFourEqualsSeven:
+    - [Seven, Equal]
+    - other: [threePlusFour, sum]
 
-# (5 + 2) == 2
-fivePlusTwoEqualsTwo:
-  - [Two, Equal]
-  - other: [fivePlusTwo, sum]
+  # (5 + 2) == 7
+  fivePlusTwoEqualsSeven:
+    - [Seven, Equal]
+    - other: [fivePlusTwo, sum]
 
-# (0 + 3) == 3
-zeroPlusThreeEqualsThree:
-  - [Three, Equal]
-  - other: [zeroPlusThree, sum]
+  # (5 + 2) == 2
+  fivePlusTwoEqualsTwo:
+    - [Two, Equal]
+    - other: [fivePlusTwo, sum]
+
+  # (0 + 3) == 3
+  zeroPlusThreeEqualsThree:
+    - [Three, Equal]
+    - other: [zeroPlusThree, sum]

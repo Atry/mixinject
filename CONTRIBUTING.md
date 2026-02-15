@@ -699,10 +699,13 @@ The Overlay language adopts C#-like naming conventions. The UpperCamelCase/lower
 
 ### Naming Convention Summary
 
-| Element | Casing | Examples | C# Analogy | ECS Analogy |
-|---------|--------|----------|-------------|-------------|
-| namespace | UpperCamelCase | `Nat`, `NatPlus`, `BooleanAnd` | namespace | system |
-| class | UpperCamelCase | `Zero`, `Successor`, `True`, `False` | class | entity (name as identity) |
+| Element | Casing | Examples | C# Analogy | Math Analogy |
+|---------|--------|----------|------------|--------------|
+| namespace | UpperCamelCase | `Builtin` | namespace | category / multi-sorted algebra |
+| sort (class) | UpperCamelCase | `Nat`, `Boolean`, `BinNat` | class | sort (carrier set) |
+| algebraic structure (partial class) | UpperCamelCase | `NatPlus`, `BooleanAnd` | partial class | endomorphism (Sort → Sort) |
+| category | UpperCamelCase | `NatEquality`, `BinNatEquality` | — | morphism (Sort₁ → Sort₂) |
+| entity | UpperCamelCase | `Zero`, `Successor`, `True`, `False` | — | element of a sort |
 | nested class/method | UpperCamelCase | `Visitor`, `Plus`, `Equal`, `And`, `Or` | method/nested class | — |
 | field | lowerCamelCase | `predecessor`, `addend`, `sum` | field | — |
 | parameter | lowerCamelCase | `addend`, `other`, `operand0` | parameter | — |
@@ -710,41 +713,114 @@ The Overlay language adopts C#-like naming conventions. The UpperCamelCase/lower
 
 ### Namespace (UpperCamelCase)
 
-Top-level groupings. Analogous to **ECS systems**. In abstract algebra, the collection of namespaces forms a **multi-sorted algebraic structure**:
+Borrowed from C#. A namespace corresponds to a **category** (or equivalently, a **multi-sorted algebra**). It contains sorts, algebraic structures, and categories as its members.
 
-- **Sort definitions** establish carrier sets (data types): `Nat` defines `Zero` and `Successor`, `Boolean` defines `True` and `False`
-- **Endomorphic operations** operate within a single sort: `NatPlus` (Nat × Nat → Nat), `BooleanNegation` (Boolean → Boolean)
-- **Cross-sort operations** connect different sorts: `NatEquality` (Nat × Nat → Boolean)
+Example: `Builtin` is a namespace containing sorts (`Nat`, `Boolean`, `BinNat`), algebraic structures (`NatPlus`, `BooleanNegation`), and categories (`NatEquality`, `BinNatEquality`).
 
-A namespace declares its **sort dependencies** by inheriting other namespaces. For example, `NatEquality` inherits `[NatVisitor]` (input sort: Nat, with dispatch capability) and `[Boolean]` (output sort: Boolean). The inherited entities (`True`, `False`) become part of `NatEquality`'s scope, and are referenced via qualified this (`[NatEquality, ~, "True"]`) so they participate in composition.
+### Sort — C# class (UpperCamelCase)
 
-This is how the Overlay language natively solves the **expression problem**: namespaces can be freely composed. Composing `NatEquality` with `BooleanNegation` automatically gives the returned booleans a `not` operation — without modifying either namespace:
+Borrowed from C#'s class concept. A sort corresponds to a **carrier set** in multi-sorted algebra. It defines the data constructors (entities) of a type:
 
 ```yaml
-# Sort definitions (carriers)
-Nat:               # Sort: natural numbers (Zero, Successor)
-Boolean:           # Sort: booleans (True, False)
+Nat:               # Sort: natural numbers
+  Data: []
+  Zero:
+    - [Data]
+  Successor:
+    - [Data]
+    - predecessor: [Data]
 
-# Endomorphic operations (Sort → Sort)
-NatPlus:           # Nat × Nat → Nat (addition)
-BooleanNegation:   # Boolean → Boolean (negation)
+Boolean:           # Sort: booleans
+  Data: []
+  "True": [Data]
+  "False": [Data]
+```
+
+### Algebraic Structure — C# partial class (UpperCamelCase)
+
+Borrowed from C#'s partial class concept. An algebraic structure adds operations to an existing sort, like a partial class adds methods to an existing class. It corresponds to an **endomorphism** (Sort → Sort) in multi-sorted algebra. Since only one sort is involved, it naturally inherits that sort directly:
+
+```yaml
+# NatPlus is a partial class of Nat, adding the Plus operation
+NatPlus:
+  - [Nat]              # Extends the Nat sort
+  - Zero:
+      Plus:
+        addend: []
+        sum: [addend]  # 0 + m = m
+    Successor:
+      Plus:
+        addend: []
+        sum: ...       # S(n) + m = S(n + m)
+```
+
+Examples: `NatPlus` (Nat × Nat → Nat), `BooleanNegation` (Boolean → Boolean), `BooleanAnd` (Boolean × Boolean → Boolean), `BooleanOr`, `BooleanEquality`, `BinNatPlus`, `BinNatIncrement`.
+
+### Category — cross-sort morphism (UpperCamelCase)
+
+A category encodes operations across different sorts (Sort₁ → Sort₂). Since multiple distinct sorts are involved, each sort is placed in a separate nested attribute so that qualified this can reference across sort boundaries:
+
+```yaml
+# NatEquality encodes the morphism Nat × Nat → Boolean
+NatEquality:
+  Nat:                           # Input sort: nested attribute
+    - [NatVisitor]
+    - Zero:
+        Equal:
+          equal: [NatEquality, ~, Boolean, "True"]   # Qualified this crosses sort boundary
+      Successor:
+        Equal:
+          equal: ...
+  Boolean:                       # Output sort: nested attribute
+    - [Builtin, Boolean]
+```
+
+An algebraic structure inherits its sort directly (since there is only one), while a category places each sort in a separate nested attribute (since there are multiple sorts that must remain distinct). This follows from the mathematical structure being encoded, not from any language-level distinction.
+
+When instantiating a category, sort-specific behavior is injected into each nested attribute:
+
+```yaml
+# Instantiating a category: inherit NatEquality and inject sort implementations
+- [Builtin, NatEquality]
+- Nat:
+    - [Builtin, NatPlus]         # Inject algebraic structure into Nat sort
+    - [Builtin, NatToPython]     # Inject FFI into Nat sort
+  Boolean:
+    - [Builtin, BooleanToPython] # Inject FFI into Boolean sort
+```
+
+This is how the Overlay language natively solves the **expression problem**: namespaces can be freely composed. Composing `NatEquality` with `BooleanNegation` (injected into the Boolean sort) automatically gives the returned booleans a `not` operation — without modifying either namespace.
+
+### Library overview
+
+```yaml
+# Sorts (carrier sets, analogous to C# classes)
+Nat:               # Natural numbers: Zero, Successor
+Boolean:           # Booleans: True, False
+BinNat:            # Binary natural numbers: Zero, Even, Odd
+
+# Algebraic structures (endomorphisms, analogous to C# partial classes)
+NatPlus:           # Nat × Nat → Nat
+BooleanNegation:   # Boolean → Boolean
 BooleanAnd:        # Boolean × Boolean → Boolean
 BooleanOr:         # Boolean × Boolean → Boolean
+BooleanEquality:   # Boolean × Boolean → Boolean
 
-# Cross-sort operations (Sort₁ → Sort₂)
-NatEquality:       # Nat × Nat → Boolean (equality)
+# Categories (cross-sort morphisms Sort₁ → Sort₂)
+NatEquality:       # Nat × Nat → Boolean
+BinNatEquality:    # BinNat × BinNat → Boolean
 
 # Infrastructure
 NatVisitor:        # Dispatch mechanism for Nat
 BooleanVisitor:    # Dispatch mechanism for Boolean
-BooleanEquality:   # Boolean × Boolean → Boolean
+BinNatVisitor:     # Dispatch mechanism for BinNat
 ```
 
-### Class (UpperCamelCase)
+### Entity (UpperCamelCase)
 
-Concrete data variants/constructors. The class **name** is the entity — an identity that persists across compositions. Each individual **definition** of that class within a namespace is a component.
+Concrete data variants/constructors. The entity **name** is its identity — it persists across compositions. Each individual **definition** of that entity within a sort or algebraic structure is a component.
 
-When namespaces are composed, components with the same class name merge onto the same entity. For example, `Nat.Zero`, `NatVisitor.Zero`, and `NatPlus.Zero` are three separate components that all merge onto the entity `Zero`:
+When overlays are composed, components with the same entity name merge onto the same entity. For example, `Nat.Zero`, `NatVisitor.Zero`, and `NatPlus.Zero` are three separate components that all merge onto the entity `Zero`:
 
 ```yaml
 # In Nat: Zero is defined as a data variant
@@ -753,7 +829,7 @@ Nat:
   Successor:
     predecessor: []
 
-# In NatPlus: Zero gets a Plus component overlaid
+# In NatPlus: Zero gets a Plus component overlaid (partial class)
 NatPlus:
   - [Nat]
   - Zero:

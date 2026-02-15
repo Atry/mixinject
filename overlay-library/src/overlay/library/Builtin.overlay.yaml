@@ -1,14 +1,14 @@
 Nat:
-  Nat: []
+  Data: []
   Zero:
-    - [Nat]
+    - [Data]
   Successor:
-    - [Nat]
-    - predecessor: [Nat]
+    - [Data]
+    - predecessor: [Data]
 
 NatVisitor:
   - [Nat]
-  - Nat:
+  - Data:
       Visitor:
         Visit: []
     Zero:
@@ -17,7 +17,7 @@ NatVisitor:
           Visit: [VisitZero]
 
     Successor:
-      predecessor: [Nat]
+      predecessor: [Data]
 
       Visitor:
         - VisitSuccessor: []
@@ -25,19 +25,19 @@ NatVisitor:
 
 NatPlus:
   - [Nat]
-  - Nat:
+  - Data:
       Plus:
-        sum: [Nat]
+        sum: [Data]
     Zero:
       Plus:
-        addend: [Nat]
+        addend: [Data]
         sum: [addend]
     Successor:
       predecessor:
         Plus:
-          sum: [Nat]
+          sum: [Data]
       Plus:
-        addend: [Nat]
+        addend: [Data]
         _increasedAddend:
           - [Successor]
           - predecessor: [addend]
@@ -47,59 +47,61 @@ NatPlus:
         sum: [_recursiveAddition, sum]
 
 NatEquality:
-  - [NatVisitor]
-  - [Boolean]
-  - Nat:
-      Equal:
-        other: [Nat]
-        equal: [Boolean]
-    Zero:
-      Equal:
-        other: [Nat]
-        _OtherVisitor:
-          - [other, Visitor]
-          - VisitZero:
-              equal: [NatEquality, ~, "True"]
-            VisitSuccessor:
-              equal: [NatEquality, ~, "False"]
-            Visit:
-              equal: [NatEquality, ~, Boolean]
-        equal: [_OtherVisitor, Visit, equal]
-    Successor:
-      predecessor:
+  Nat:
+    - [NatVisitor]
+    - Data:
         Equal:
-          equal: [Boolean]
-      Equal:
-        other:
-          - [Nat]
-          - predecessor: [Nat]
-        _recursiveEquality:
-          - [Successor, ~, predecessor, Equal]
-          - other: [Equal, ~, other, predecessor]
-        _OtherVisitor:
-          - [other, Visitor]
-          - VisitZero:
-              equal: [NatEquality, ~, "False"]
-            VisitSuccessor:
-              equal: [_recursiveEquality, equal]
-            Visit:
-              equal: [Boolean]
-        equal: [_OtherVisitor, Visit, equal]
+          other: [Data]
+          equal: [NatEquality, ~, Boolean, Data]
+      Zero:
+        Equal:
+          other: [Data]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [NatEquality, ~, Boolean, "True"]
+              VisitSuccessor:
+                equal: [NatEquality, ~, Boolean, "False"]
+              Visit:
+                equal: [NatEquality, ~, Boolean, Data]
+          equal: [_OtherVisitor, Visit, equal]
+      Successor:
+        predecessor:
+          Equal:
+            equal: [NatEquality, ~, Boolean, Data]
+        Equal:
+          other:
+            - [Data]
+            - predecessor: [Data]
+          _recursiveEquality:
+            - [Successor, ~, predecessor, Equal]
+            - other: [Equal, ~, other, predecessor]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [NatEquality, ~, Boolean, "False"]
+              VisitSuccessor:
+                equal: [_recursiveEquality, equal]
+              Visit:
+                equal: [NatEquality, ~, Boolean, Data]
+          equal: [_OtherVisitor, Visit, equal]
+  Boolean:
+    - [Builtin, Boolean]
 
 BinNat:
-  BinNat: []
+  Data: []
   Zero:
-    - [BinNat]
+    - [Data]
   Even:
-    - [BinNat]
-    - half: [BinNat]
+    - [Data]
+    - half: [Data]
   Odd:
-    - [BinNat]
-    - half: [BinNat]
+    - [Data]
+    - half: [Data]
 
 BinNatVisitor:
   - [BinNat]
-  - BinNat:
+  - Data:
       Visitor:
         Visit: []
     Zero:
@@ -107,20 +109,20 @@ BinNatVisitor:
         - VisitZero: []
           Visit: [VisitZero]
     Even:
-      half: [BinNat]
+      half: [Data]
       Visitor:
         - VisitEven: []
           Visit: [VisitEven]
     Odd:
-      half: [BinNat]
+      half: [Data]
       Visitor:
         - VisitOdd: []
           Visit: [VisitOdd]
 
 BinNatIncrement:
   - [BinNat]
-  - BinNat:
-      increment: [BinNat]
+  - Data:
+      increment: [Data]
     Zero:
       increment:
         - [Odd]
@@ -128,13 +130,13 @@ BinNatIncrement:
             - [Zero]
     Even:
       half:
-        increment: [BinNat]
+        increment: [Data]
       increment:
         - [Odd]
         - half: [Even, ~, half]
     Odd:
       half:
-        increment: [BinNat]
+        increment: [Data]
       increment:
         - [Even]
         - half: [Odd, ~, half, increment]
@@ -142,21 +144,21 @@ BinNatIncrement:
 BinNatPlus:
   - [BinNatVisitor]
   - [BinNatIncrement]
-  - BinNat:
+  - Data:
       Plus:
-        sum: [BinNat]
+        sum: [Data]
     Zero:
       Plus:
-        addend: [BinNat]
+        addend: [Data]
         sum: [addend]
     Even:
       half:
         Plus:
-          sum: [BinNat]
+          sum: [Data]
       Plus:
         addend:
-          - [BinNat]
-          - half: [BinNat]
+          - [Data]
+          - half: [Data]
         _recursiveAddition:
           - [Even, ~, half, Plus]
           - addend: [Plus, ~, addend, half]
@@ -173,17 +175,17 @@ BinNatPlus:
                 - [Odd]
                 - half: [_recursiveAddition, sum]
             Visit:
-              sum: [BinNat]
+              sum: [Data]
         sum: [_AddendVisitor, Visit, sum]
     Odd:
       half:
         Plus:
-          sum: [BinNat]
-        increment: [BinNat]
+          sum: [Data]
+        increment: [Data]
       Plus:
         addend:
-          - [BinNat]
-          - half: [BinNat]
+          - [Data]
+          - half: [Data]
         _recursiveAddition:
           - [Odd, ~, half, Plus]
           - addend: [Plus, ~, addend, half]
@@ -200,83 +202,85 @@ BinNatPlus:
                 - [Even]
                 - half: [_recursiveAddition, sum, increment]
             Visit:
-              sum: [BinNat]
+              sum: [Data]
         sum: [_AddendVisitor, Visit, sum]
 
 BinNatEquality:
-  - [BinNatVisitor]
-  - [Boolean]
-  - BinNat:
-      Equal:
-        other: [BinNat]
-        equal: [Boolean]
-    Zero:
-      Equal:
-        other: [BinNat]
-        _OtherVisitor:
-          - [other, Visitor]
-          - VisitZero:
-              equal: [BinNatEquality, ~, "True"]
-            VisitEven:
-              equal: [BinNatEquality, ~, "False"]
-            VisitOdd:
-              equal: [BinNatEquality, ~, "False"]
-            Visit:
-              equal: [BinNatEquality, ~, Boolean]
-        equal: [_OtherVisitor, Visit, equal]
-    Even:
-      half:
+  BinNat:
+    - [Builtin, BinNatVisitor]
+    - Data:
         Equal:
-          equal: [Boolean]
-      Equal:
-        other:
-          - [BinNat]
-          - half: [BinNat]
-        _recursiveEquality:
-          - [Even, ~, half, Equal]
-          - other: [Equal, ~, other, half]
-        _OtherVisitor:
-          - [other, Visitor]
-          - VisitZero:
-              equal: [BinNatEquality, ~, "False"]
-            VisitEven:
-              equal: [_recursiveEquality, equal]
-            VisitOdd:
-              equal: [BinNatEquality, ~, "False"]
-            Visit:
-              equal: [Boolean]
-        equal: [_OtherVisitor, Visit, equal]
-    Odd:
-      half:
+          other: [Data]
+          equal: [BinNatEquality, ~, Boolean, Data]
+      Zero:
         Equal:
-          equal: [Boolean]
-      Equal:
-        other:
-          - [BinNat]
-          - half: [BinNat]
-        _recursiveEquality:
-          - [Odd, ~, half, Equal]
-          - other: [Equal, ~, other, half]
-        _OtherVisitor:
-          - [other, Visitor]
-          - VisitZero:
-              equal: [BinNatEquality, ~, "False"]
-            VisitEven:
-              equal: [BinNatEquality, ~, "False"]
-            VisitOdd:
-              equal: [_recursiveEquality, equal]
-            Visit:
-              equal: [Boolean]
-        equal: [_OtherVisitor, Visit, equal]
+          other: [Data]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [BinNatEquality, ~, Boolean, "True"]
+              VisitEven:
+                equal: [BinNatEquality, ~, Boolean, "False"]
+              VisitOdd:
+                equal: [BinNatEquality, ~, Boolean, "False"]
+              Visit:
+                equal: [BinNatEquality, ~, Boolean, Data]
+          equal: [_OtherVisitor, Visit, equal]
+      Even:
+        half:
+          Equal:
+            equal: [BinNatEquality, ~, Boolean, Data]
+        Equal:
+          other:
+            - [Data]
+            - half: [Data]
+          _recursiveEquality:
+            - [Even, ~, half, Equal]
+            - other: [Equal, ~, other, half]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [BinNatEquality, ~, Boolean, "False"]
+              VisitEven:
+                equal: [_recursiveEquality, equal]
+              VisitOdd:
+                equal: [BinNatEquality, ~, Boolean, "False"]
+              Visit:
+                equal: [BinNatEquality, ~, Boolean, Data]
+          equal: [_OtherVisitor, Visit, equal]
+      Odd:
+        half:
+          Equal:
+            equal: [BinNatEquality, ~, Boolean, Data]
+        Equal:
+          other:
+            - [Data]
+            - half: [Data]
+          _recursiveEquality:
+            - [Odd, ~, half, Equal]
+            - other: [Equal, ~, other, half]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [BinNatEquality, ~, Boolean, "False"]
+              VisitEven:
+                equal: [BinNatEquality, ~, Boolean, "False"]
+              VisitOdd:
+                equal: [_recursiveEquality, equal]
+              Visit:
+                equal: [BinNatEquality, ~, Boolean, Data]
+          equal: [_OtherVisitor, Visit, equal]
+  Boolean:
+    - [Builtin, Boolean]
 
 Boolean:
-  Boolean: []
-  "True": [Boolean]
-  "False": [Boolean]
+  Data: []
+  "True": [Data]
+  "False": [Data]
 
 BooleanVisitor:
   - [Boolean]
-  - Boolean:
+  - Data:
       Visitor:
         Visit: []
     "True":
@@ -291,8 +295,8 @@ BooleanVisitor:
 
 BooleanNegation:
   - [Boolean]
-  - Boolean:
-      not: [Boolean]
+  - Data:
+      not: [Data]
     "True":
       not: ["False"]
     "False":
@@ -300,48 +304,48 @@ BooleanNegation:
 
 BooleanEquality:
   - [BooleanNegation]
-  - Boolean:
+  - Data:
       Equal:
-        other: [Boolean]
-        equal: [Boolean]
+        other: [Data]
+        equal: [Data]
     "True":
       Equal:
-        other: [Boolean]
+        other: [Data]
         equal: [other]
 
     "False":
       Equal:
-        other: [Boolean]
+        other: [Data]
         equal: [other, not]
 
 BooleanAnd:
   - [Boolean]
-  - Boolean:
+  - Data:
       And:
-        other: [Boolean]
-        and: [Boolean]
+        other: [Data]
+        and: [Data]
     "True":
       And:
-        other: [Boolean]
+        other: [Data]
         and: [other]
 
     "False":
       And:
-        other: [Boolean]
+        other: [Data]
         and: ["False"]
 
 BooleanOr:
   - [Boolean]
-  - Boolean:
+  - Data:
       Or:
-        other: [Boolean]
-        or: [Boolean]
+        other: [Data]
+        or: [Data]
     "True":
       Or:
-        other: [Boolean]
+        other: [Data]
         or: ["True"]
 
     "False":
       Or:
-        other: [Boolean]
+        other: [Data]
         or: [other]

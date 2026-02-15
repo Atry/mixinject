@@ -19,7 +19,12 @@ from overlay.language import (
     OuterSentinel,
     ScopeDefinition,
 )
-from overlay.language.mixin_parser import parse_mixin_file
+from overlay.language.mixin_parser import (
+    FileMixinDefinition,
+    load_overlay_file,
+    parse_mixin_file,
+    parse_mixin_value,
+)
 
 if TYPE_CHECKING:
     from overlay.language import runtime
@@ -86,11 +91,10 @@ class DirectoryMixinDefinition(ScopeDefinition):
         # Check for mixin file
         mixin_file = self._mixin_files.get(key)
         if mixin_file is not None:
-            definitions.append(
-                _DirectoryMixinFileScopeDefinition(
-                    bases=(),
+            definitions.extend(
+                _load_file_definitions(
+                    file_path=mixin_file,
                     is_public=self.is_public,
-                    underlying=mixin_file,
                 )
             )
 
@@ -111,10 +115,59 @@ class DirectoryMixinDefinition(ScopeDefinition):
         return tuple(definitions)
 
 
+def _load_file_definitions(
+    file_path: Path, is_public: bool
+) -> Sequence[Definition]:
+    """
+    Load an Overlay file and return definitions for the file-level mixin.
+
+    Supports two top-level formats:
+
+    - **Mapping** (dict): The file contains named top-level mixins. Returns a
+      single ``_DirectoryMixinFileScopeDefinition`` whose children are those
+      named mixins.
+    - **Mixin value** (list or scalar): The entire file *is* a single mixin
+      definition. Returns ``FileMixinDefinition`` instances directly, with
+      bases and properties parsed from the file content.
+    """
+    data = load_overlay_file(file_path)
+
+    if isinstance(data, dict):
+        return (
+            _DirectoryMixinFileScopeDefinition(
+                bases=(),
+                is_public=is_public,
+                underlying=file_path,
+            ),
+        )
+
+    parsed = parse_mixin_value(data, source_file=file_path)
+    if parsed.property_definitions:
+        return tuple(
+            FileMixinDefinition(
+                bases=parsed.inheritances if index == 0 else (),
+                is_public=is_public,
+                underlying=properties,
+                scalar_values=parsed.scalar_values if index == 0 else (),
+                source_file=file_path,
+            )
+            for index, properties in enumerate(parsed.property_definitions)
+        )
+    return (
+        FileMixinDefinition(
+            bases=parsed.inheritances,
+            is_public=is_public,
+            underlying={},
+            scalar_values=parsed.scalar_values,
+            source_file=file_path,
+        ),
+    )
+
+
 @final
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class _DirectoryMixinFileScopeDefinition(ScopeDefinition):
-    """Internal scope definition for a parsed mixin file in a directory."""
+    """Scope definition for an Overlay file with a mapping at the top level."""
 
     underlying: Path
 

@@ -16,7 +16,7 @@ from overlay.language.runtime import Scope
 class NatToPython:
     @public
     @scope
-    class Nat:
+    class Data:
         @public
         @scope
         class ToPython:
@@ -56,7 +56,7 @@ class NatToPython:
 class BinNatToPython:
     @public
     @scope
-    class BinNat:
+    class Data:
         @public
         @scope
         class ToPython:
@@ -140,10 +140,10 @@ class _FalseToPython:
 
 
 BooleanToPython = MappingScopeDefinition(
-    bases=(),
+    bases=(LexicalReference(path=("Boolean",)),),
     is_public=True,
     underlying={
-        "Boolean": _BooleanApi,
+        "Data": _BooleanApi,
         "True": _TrueToPython,
         "False": _FalseToPython,
     },
