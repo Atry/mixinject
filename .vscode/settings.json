@@ -1,10 +1,10 @@
 {
   "files.associations": {
-    ".envrc.private": "shellscript",
+    "*.ojson": "json",
+    "*.otoml": "toml",
     "*.oyaml": "yaml",
     "*.oyml": "yaml",
-    "*.ojson": "json",
-    "*.otoml": "toml"
+    ".envrc.private": "shellscript"
   },
   "python.testing.pytestArgs": [
     "tests"
