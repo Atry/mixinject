@@ -517,6 +517,88 @@ class TestCapturedScopes:
         assert root.counter == 0
         assert root.Inner.counter == 1
 
+    def test_lexical_reference_same_name_skip_single_level(self) -> None:
+        """LexicalReference skips first match when name matches symbol's key."""
+
+        @scope
+        class Root:
+            @public
+            @resource
+            def value() -> int:
+                return 10
+
+            @public
+            @scope
+            class Inner:
+                @public
+                @resource
+                def value(value: int) -> int:
+                    # value parameter should skip Inner.value itself
+                    # and reference Root.value instead
+                    return value + 1
+
+        root = evaluate(Root)
+        assert root.Inner.value == 11
+
+    def test_lexical_reference_same_name_skip_multiple_levels(self) -> None:
+        """LexicalReference same-name skip works across multiple nesting levels."""
+
+        @scope
+        class Root:
+            @public
+            @resource
+            def value() -> int:
+                return 10
+
+            @public
+            @scope
+            class Level1:
+                @public
+                @resource
+                def value(value: int) -> int:
+                    # Skip Level1 itself, reference Root.value
+                    return value + 1
+
+                @public
+                @scope
+                class Level2:
+                    @public
+                    @resource
+                    def value(value: int) -> int:
+                        # Skip Level2 itself, reference Level1.value
+                        return value + 1
+
+        root = evaluate(Root)
+        assert root.value == 10
+        assert root.Level1.value == 11
+        assert root.Level1.Level2.value == 12
+
+    def test_lexical_reference_same_name_with_path_navigation(self) -> None:
+        """LexicalReference same-name skip works when navigating nested paths."""
+
+        @scope
+        class Root:
+            @public
+            @scope
+            class Config:
+                @public
+                @resource
+                def timeout() -> int:
+                    return 30
+
+            @public
+            @scope
+            class Service:
+                @public
+                @resource
+                def max_timeout(Config: object) -> int:
+                    # Config parameter references Root.Config
+                    # Then navigate to Config.timeout
+                    return Config.timeout
+
+        root = evaluate(Root)
+        assert root.Service.max_timeout == 30
+
 
 class TestMerger:
     """Test merge decorator (ported from V1)."""

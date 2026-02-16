@@ -2597,15 +2597,19 @@ class LexicalReference:
     """
     A lexical reference following the Overlay language spec resolution algorithm.
 
-    This reference type implements **lexical scoping with late-binding**.
+    This reference type implements **lexical scoping with late-binding** and
+    **same-name skip semantics** (pytest fixture style).
 
     Symbol Level (Static Analysis)
     ==============================
 
-    Resolution starts from ``self.outer`` (not self). This prevents infinite
-    recursion when a symbol references its own name. The algorithm traverses up the
+    Resolution starts from ``self.outer`` (not self). The algorithm traverses up the
     static hierarchy (``outer``, ``outer.outer``, ...) to
     calculate the ``de_bruijn_index`` (number of levels to go up).
+
+    Same-name skip semantics: When ``path[0]`` matches the symbol's key, the first
+    match is skipped. This allows a symbol to reference an outer symbol with the
+    same name, similar to pytest fixtures shadowing outer fixtures.
 
     Runtime Level (Late Binding)
     ============================
@@ -2618,14 +2622,14 @@ class LexicalReference:
     ---------------------------------
 
     At each static level (``outer``, ...):
-    1. Is path[0] BOTH a property AND the scope's key? → raise ValueError (ambiguous)
-    2. Is path[0] a property of that level? → early binding, return full path
-    3. Is path[0] == that level's key? → self-reference, return path[1:]
-    4. Recurse to static outer
+    1. Is path[0] a property of that level?
+       - If path[0] == symbol.key and this is the first match → skip, continue to outer
+       - Otherwise → return full path
+    2. Recurse to static outer
 
     The returned RelativeReference has:
     - de_bruijn_index: Static levels to go up.
-    - path: For property match, returns full path. For self-reference, returns path[1:].
+    - path: Always the full path from the original reference.
     """
 
     path: Final[tuple[Hashable, ...]]
@@ -2636,10 +2640,16 @@ class LexicalReference:
         Strict lexical scoping: only search own definitions, not inherited.
         To reference inherited members, use QualifiedThisReference:
         ``["ScopeName", ~, "inherited_member"]``
+
+        Same-name skip semantics: When the first segment of the path matches
+        the symbol's key, the first match is skipped. This allows a symbol to
+        reference an outer symbol with the same name, similar to pytest fixtures
+        shadowing outer fixtures.
         """
         if not self.path:
             raise ValueError("LexicalReference path must not be empty")
         first_segment = self.path[0]
+        skip_first = first_segment == symbol.key
         de_bruijn_index = 0
         # Start from symbol.outer (not symbol) so de_bruijn counts from the
         # same starting point that callers provide as current/current_lexical.
@@ -2666,8 +2676,11 @@ class LexicalReference:
                     )
 
             if is_own_property:
-                hashable_path = self.path
-                break
+                if skip_first:
+                    skip_first = False
+                else:
+                    hashable_path = self.path
+                    break
             # Recurse to outer
             match current.outer:
                 case OuterSentinel.ROOT:
