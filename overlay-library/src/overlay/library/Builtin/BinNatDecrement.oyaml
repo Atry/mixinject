@@ -1,0 +1,45 @@
+- [BinNatVisitor]
+- BinNatFactory:
+    Product:
+      Decrement:
+        decreased: [Product]
+    Zero:
+      Decrement:
+        decreased: [Zero]
+    Even:
+      half:
+        Decrement:
+          decreased: [Product]
+      Decrement:
+        _HalfVisitor:
+          - [Even, ~, half, Visitor]
+          - VisitZero:
+              decreased: [Zero]
+            VisitEven:
+              decreased:
+                - [Odd]
+                - half: [Even, ~, half, Decrement, decreased]
+            VisitOdd:
+              decreased:
+                - [Odd]
+                - half: [Even, ~, half, Decrement, decreased]
+            Visit:
+              decreased: [Product]
+        decreased: [_HalfVisitor, Visit, decreased]
+    Odd:
+      Decrement:
+        _HalfVisitor:
+          - [Odd, ~, half, Visitor]
+          - VisitZero:
+              decreased: [Zero]
+            VisitEven:
+              decreased:
+                - [Even]
+                - half: [Odd, ~, half]
+            VisitOdd:
+              decreased:
+                - [Even]
+                - half: [Odd, ~, half]
+            Visit:
+              decreased: [Product]
+        decreased: [_HalfVisitor, Visit, decreased]

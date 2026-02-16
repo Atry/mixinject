@@ -1,0 +1,12 @@
+- [NatData]
+- NatFactory:
+    - Product:
+        IsZero:
+          isZero: [NatIsZero, ~, Boolean]
+      Zero:
+        IsZero:
+          isZero: [NatIsZero, ~, BooleanFactory, "True"]
+      Successor:
+        IsZero:
+          isZero: [NatIsZero, ~, BooleanFactory, "False"]
+- [BooleanData]

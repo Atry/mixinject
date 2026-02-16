@@ -1,0 +1,15 @@
+- [BinNatData]
+- BinNatFactory:
+    - Product:
+        IsZero:
+          isZero: [BinNatIsZero, ~, Boolean]
+      Zero:
+        IsZero:
+          isZero: [BinNatIsZero, ~, BooleanFactory, "True"]
+      Even:
+        IsZero:
+          isZero: [BinNatIsZero, ~, BooleanFactory, "False"]
+      Odd:
+        IsZero:
+          isZero: [BinNatIsZero, ~, BooleanFactory, "False"]
+- [BooleanData]

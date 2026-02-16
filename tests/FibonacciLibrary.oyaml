@@ -1,0 +1,77 @@
+- [Builtin, BooleanVisitor]
+- FibonacciFactory:
+    Product:
+      IsZero:
+        isZero: [FibonacciLibrary, ~, Boolean]
+      Decrement:
+        decreased: [Product]
+      Plus:
+        addend: [Product]
+        sum: [Product]
+      IsOne:
+        isOne: [Decrement, decreased, IsZero, isZero]
+    Zero: [Product]
+    One: [Product]
+
+    Fibonacci:
+      n:
+        - [Product]
+        - Decrement:
+            decreased:
+              - [Product]
+              - Decrement:
+                  decreased: [Product]
+      _IsZeroVisitor:
+        - [n, IsZero, isZero, Visitor]
+        - VisitTrue:
+            fibonacci: [Zero]
+          VisitFalse:
+            _IsOneVisitor:
+              - [n, IsOne, isOne, Visitor]
+              - VisitTrue:
+                  fibonacci: [One]
+                VisitFalse:
+                  _fibonacciDecreasedOnce:
+                    - [Fibonacci]
+                    - n: [Fibonacci, ~, n, Decrement, decreased]
+                  _fibonacciDecreasedTwice:
+                    - [Fibonacci]
+                    - n: [Fibonacci, ~, n, Decrement, decreased, Decrement, decreased]
+                  _addition:
+                    - [_fibonacciDecreasedOnce, fibonacci, Plus]
+                    - addend: [_fibonacciDecreasedTwice, fibonacci]
+                  fibonacci: [_addition, sum]
+                Visit:
+                  fibonacci: [Product]
+            fibonacci: [_IsOneVisitor, Visit, fibonacci]
+          Visit:
+            fibonacci: [Product]
+      fibonacci: [_IsZeroVisitor, Visit, fibonacci]
+
+    FibonacciAccumulator:
+      n:
+        - [Product]
+        - Decrement:
+            decreased: [Product]
+      _IsZeroVisitor:
+        - [n, IsZero, isZero, Visitor]
+        - VisitTrue:
+            _current: [Zero]
+            _next: [One]
+          VisitFalse:
+            _previousAccumulator:
+              - [FibonacciAccumulator]
+              - n: [FibonacciAccumulator, ~, n, Decrement, decreased]
+            _current: [_previousAccumulator, _next]
+            _addition:
+              - [_previousAccumulator, _next, Plus]
+              - addend: [_previousAccumulator, _current]
+            _next: [_addition, sum]
+          Visit:
+              _current: [Product]
+              _next: [Product]
+      _current: [_IsZeroVisitor, Visit, _current]
+      _next: [_IsZeroVisitor, Visit, _next]
+      fibonacci: [_current]
+
+- [Builtin, BooleanData]

@@ -1,0 +1,181 @@
+- [Builtin, BooleanVisitor]
+- [Builtin, NatPlus]
+- [Builtin, NatIsZero]
+- [Builtin, NatDecrement]
+- [Builtin, NatToPython]
+- [Builtin, NatEquality]
+- [Builtin, BinNatPlus]
+- [Builtin, BinNatIsZero]
+- [Builtin, BinNatDecrement]
+- [Builtin, BinNatToPython]
+- [Builtin, BinNatEquality]
+- [Builtin, BooleanToPython]
+- [FibonacciLibrary]
+
+- NatFactory:
+    - [FibonacciTest, ~, FibonacciFactory]
+    - One:
+        - [FibonacciTest, ~, NatFactory, Successor]
+        - predecessor:
+            - [FibonacciTest, ~, NatFactory, Zero]
+
+  BinNatFactory:
+    - [FibonacciTest, ~, FibonacciFactory]
+    - One:
+        - [FibonacciTest, ~, BinNatFactory, Odd]
+        - half:
+            - [FibonacciTest, ~, BinNatFactory, Zero]
+
+  # ===========================================================================
+  # Nat Fibonacci tests
+  # ===========================================================================
+
+  natZero:
+    - [FibonacciTest, ~, NatFactory, Zero]
+  natOne:
+    - [FibonacciTest, ~, NatFactory, Successor]
+    - predecessor:
+        - [natZero]
+  natTwo:
+    - [FibonacciTest, ~, NatFactory, Successor]
+    - predecessor:
+        - [natOne]
+  natThree:
+    - [FibonacciTest, ~, NatFactory, Successor]
+    - predecessor:
+        - [natTwo]
+  natFour:
+    - [FibonacciTest, ~, NatFactory, Successor]
+    - predecessor:
+        - [natThree]
+  natFive:
+    - [FibonacciTest, ~, NatFactory, Successor]
+    - predecessor:
+        - [natFour]
+  natSix:
+    - [FibonacciTest, ~, NatFactory, Successor]
+    - predecessor:
+        - [natFive]
+
+  # Direct Fibonacci (double recursion)
+  natFibZero:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natZero]
+  natFibOne:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natOne]
+  natFibTwo:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natTwo]
+  natFibThree:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natThree]
+  natFibFour:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natFour]
+  natFibFive:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natFive]
+  natFibSix:
+    - [FibonacciTest, ~, NatFactory, Fibonacci]
+    - n: [natSix]
+
+  # Accumulator Fibonacci (linear recursion)
+  natFibAccZero:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natZero]
+  natFibAccOne:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natOne]
+  natFibAccTwo:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natTwo]
+  natFibAccThree:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natThree]
+  natFibAccFour:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natFour]
+  natFibAccFive:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natFive]
+  natFibAccSix:
+    - [FibonacciTest, ~, NatFactory, FibonacciAccumulator]
+    - n: [natSix]
+
+  # ===========================================================================
+  # BinNat Fibonacci tests
+  # ===========================================================================
+
+  binNatZero:
+    - [FibonacciTest, ~, BinNatFactory, Zero]
+  binNatOne:
+    - [FibonacciTest, ~, BinNatFactory, Odd]
+    - half:
+        - [binNatZero]
+  binNatTwo:
+    - [FibonacciTest, ~, BinNatFactory, Even]
+    - half:
+        - [binNatOne]
+  binNatThree:
+    - [FibonacciTest, ~, BinNatFactory, Odd]
+    - half:
+        - [binNatOne]
+  binNatFour:
+    - [FibonacciTest, ~, BinNatFactory, Even]
+    - half:
+        - [binNatTwo]
+  binNatFive:
+    - [FibonacciTest, ~, BinNatFactory, Odd]
+    - half:
+        - [binNatTwo]
+  binNatSix:
+    - [FibonacciTest, ~, BinNatFactory, Even]
+    - half:
+        - [binNatThree]
+
+  # Direct Fibonacci (double recursion) on BinNat
+  binNatFibZero:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatZero]
+  binNatFibOne:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatOne]
+  binNatFibTwo:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatTwo]
+  binNatFibThree:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatThree]
+  binNatFibFour:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatFour]
+  binNatFibFive:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatFive]
+  binNatFibSix:
+    - [FibonacciTest, ~, BinNatFactory, Fibonacci]
+    - n: [binNatSix]
+
+  # Accumulator Fibonacci (linear recursion) on BinNat
+  binNatFibAccZero:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatZero]
+  binNatFibAccOne:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatOne]
+  binNatFibAccTwo:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatTwo]
+  binNatFibAccThree:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatThree]
+  binNatFibAccFour:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatFour]
+  binNatFibAccFive:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatFive]
+  binNatFibAccSix:
+    - [FibonacciTest, ~, BinNatFactory, FibonacciAccumulator]
+    - n: [binNatSix]

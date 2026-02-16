@@ -697,7 +697,7 @@ def fetch(url: str, policy: CachePolicy) -> Response:
 
 **Terminology note:** This project previously used the terms "mixin" and "union". These have been renamed to **overlay**. Legacy references to "mixin" or "union" in code, comments, or documentation should be read as "overlay".
 
-The Overlay language adopts C#-like naming conventions. The UpperCamelCase/lowerCamelCase distinction is not merely stylistic — it carries semantic meaning for the compiler's totality checker: UpperCamelCase symbols are **scopes** (can be instantiated at runtime), while lowerCamelCase symbols are **resources** (lazily evaluated). This naming convention enables automatic totality verification without manual proofs (see `mixin_totality.tex`).
+The Overlay language adopts C#-like naming conventions. The UpperCamelCase/lowerCamelCase distinction is not merely stylistic — it carries semantic meaning for the totality checker: UpperCamelCase symbols are **scopes** (instantiable at runtime), while lowerCamelCase symbols are written as if they are **resources** (lazily evaluated values, no new UpperCamelCase children defined within them). This naming convention enables automatic totality verification without manual proofs (see `mixin_totality.tex`). Note that the scope/resource distinction is a design intent, not yet enforced by the compiler — currently all symbols compile to scopes regardless of casing.
 
 ### Naming Convention Summary
 
@@ -719,79 +719,134 @@ Borrowed from C#. A namespace corresponds to a **category** (or equivalently, a 
 
 Example: `Builtin` is a namespace containing sorts (`Nat`, `Boolean`, `BinNat`), algebraic structures (`NatPlus`, `BooleanNegation`), and categories (`NatEquality`, `BinNatEquality`).
 
-### Sort — C# class (UpperCamelCase)
+### Sort / Entity (UpperCamelCase)
 
-Borrowed from C#'s class concept. A sort corresponds to a **carrier set** in multi-sorted algebra. It defines the data constructors (entities) of a type:
+A **sort** (mathematical term) is a carrier set — the Overlay language's equivalent of a C# class. Its data constructors are called **entities** (ECS term). These are two perspectives on the same concept: a sort is defined by its entities, and an entity belongs to a sort.
+
+Sorts are defined using a `*Factory` + `Product` pattern: the factory contains `Product` (the abstract element type) and all entity constructors, while the sort name is aliased to `[*Factory, Product]`:
 
 ```yaml
-Nat:               # Sort: natural numbers
-  Data: []
+NatFactory:        # Sort factory: natural numbers
+  Product: []      # Abstract element type
   Zero:
-    - [Data]
+    - [Product]
   Successor:
-    - [Data]
-    - predecessor: [Data]
+    - [Product]
+    - predecessor: [Product]
+Nat: [NatFactory, Product]   # Sort alias: Nat = NatFactory.Product
 
-Boolean:           # Sort: booleans
-  Data: []
-  "True": [Data]
-  "False": [Data]
+BooleanFactory:    # Sort factory: booleans
+  Product: []
+  "True": [Product]
+  "False": [Product]
+Boolean: [BooleanFactory, Product]
+```
+
+The `*Factory` indirection allows algebraic structures and categories to be composed onto the same factory without modifying the original sort definition. The sort alias (`Nat`, `Boolean`) provides a stable public name.
+
+**Constructing a value** of a sort means inheriting one of its entity constructors and supplying the required fields. This is the constructor design pattern:
+
+```yaml
+# To construct a Successor wrapping some value n:
+_wrappedN:
+  - [Successor]          # inherit the Successor constructor
+  - predecessor: [n]     # supply the required field
+
+# To construct an Odd BinNat from an Even half:
+_result:
+  - [Odd]                # inherit the Odd constructor
+  - half: [Even, ~, half]  # supply the required field
+```
+
+The result is then exposed via a projection field (e.g. `sum`, `decreased`, `increment`) so callers do not need to know which constructor was used — see Nested Class / Method below.
+
+The entity **name** is its identity — it persists across compositions. Each individual **definition** of that entity within a category is a component. When categories are composed, components with the same entity name merge onto the same entity. For example, `NatData.Zero`, `NatVisitor.Zero`, and `NatPlus.Zero` are three separate components that all merge onto the entity `Zero`:
+
+```yaml
+# In NatData.oyaml: Zero is defined as a data variant
+NatFactory:
+  Product: []
+  Zero:
+    - [Product]
+  Successor:
+    - [Product]
+    - predecessor: [Product]
+
+# In NatPlus.oyaml: Zero gets a Plus component overlaid
+- [NatData]
+- NatFactory:
+    Zero:
+      Plus:
+        addend: [Product]
+        sum: [addend]   # 0 + m = m
+
+# When composed, the entity Zero has both its original structure
+# and the Plus behavior merged together
 ```
 
 ### Algebraic Structure — C# partial class (UpperCamelCase)
 
-Borrowed from C#'s partial class concept. An algebraic structure adds operations to an existing sort, like a partial class adds methods to an existing class. It corresponds to an **endomorphism** (Sort → Sort) in multi-sorted algebra. Since only one sort is involved, it naturally inherits that sort directly:
+Borrowed from C#'s partial class concept. An algebraic structure adds operations to an existing sort, like a partial class adds methods to an existing class. It corresponds to an **endomorphism** (Sort → Sort) in multi-sorted algebra.
 
 ```yaml
-# NatPlus is a partial class of Nat, adding the Plus operation
-NatPlus:
-  - [Nat]              # Extends the Nat sort
-  - Zero:
+# NatPlus.oyaml — adds Plus operation to Nat
+- [NatData]              # Inherit the sort data definition
+- NatFactory:            # Extend the factory
+    Product:
       Plus:
-        addend: []
-        sum: [addend]  # 0 + m = m
+        sum: [Product]   # Abstract type declaration
+    Zero:
+      Plus:
+        addend: [Product]
+        sum: [addend]    # 0 + m = m
     Successor:
       Plus:
-        addend: []
-        sum: ...       # S(n) + m = S(n + m)
+        addend: [Product]
+        sum: ...         # S(n) + m = S(n + m)
 ```
 
-Examples: `NatPlus` (Nat × Nat → Nat), `BooleanNegation` (Boolean → Boolean), `BooleanAnd` (Boolean × Boolean → Boolean), `BooleanOr`, `BooleanEquality`, `BinNatPlus`, `BinNatIncrement`.
+Key points:
+- The file itself is a top-level list (no wrapping name like `NatPlus:`) — it is an anonymous category
+- Inherits `[NatData]` (the category that defines `NatFactory`), not `[Nat]` (the alias `[NatFactory, Product]`)
+- Parameters have type constraints: `addend: [Product]`, not `addend: []`
+
+Examples: `NatPlus` (Nat × Nat → Nat), `BooleanNegation` (Boolean → Boolean, exposes `not` field), `BooleanAnd` (Boolean × Boolean → Boolean), `BooleanOr`, `BooleanEquality`, `BinNatPlus`, `BinNatIncrement`, `NatDecrement`, `BinNatDecrement`.
 
 ### Category — cross-sort morphism (UpperCamelCase)
 
-A category encodes operations across different sorts (Sort₁ → Sort₂). Since multiple distinct sorts are involved, each sort is placed in a separate nested attribute so that qualified this can reference across sort boundaries:
+A category encodes operations across different sorts (Sort₁ → Sort₂). Categories are defined as `.oyaml` files that inherit all relevant sort data files and extend the factory:
 
 ```yaml
-# NatEquality encodes the morphism Nat × Nat → Boolean
-NatEquality:
-  Nat:                           # Input sort: nested attribute
-    - [NatVisitor]
-    - Zero:
+# NatEquality.oyaml — encodes the morphism Nat × Nat → Boolean
+- [NatVisitor]       # Inherit Nat visitor infrastructure
+- NatFactory:        # Extend the Nat factory with equality
+    - Product:
         Equal:
-          equal: [NatEquality, ~, Boolean, "True"]   # Qualified this crosses sort boundary
+          other: [Product]
+          equal: [NatEquality, ~, Boolean]   # Qualified this crosses sort boundary
+      Zero:
+        Equal:
+          other: [Product]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [NatEquality, ~, BooleanFactory, "True"]
+              VisitSuccessor:
+                equal: [NatEquality, ~, BooleanFactory, "False"]
+              Visit:
+                equal: [NatEquality, ~, Boolean]
+          equal: [_OtherVisitor, Visit, equal]
       Successor:
-        Equal:
-          equal: ...
-  Boolean:                       # Output sort: nested attribute
-    - [Builtin, Boolean]
+        ...
+- [BooleanData]      # Inherit Boolean sort data (output sort)
 ```
 
-An algebraic structure inherits its sort directly (since there is only one), while a category places each sort in a separate nested attribute (since there are multiple sorts that must remain distinct). This follows from the mathematical structure being encoded, not from any language-level distinction.
+Key points:
+- The file inherits all required input sort data (`[NatVisitor]`) and output sort data (`[BooleanData]`)
+- Operations are defined within the input sort's factory (`NatFactory:`)
+- Cross-sort references use qualified this: `[NatEquality, ~, Boolean]` navigates to the Boolean sort within the composed scope
 
-When instantiating a category, sort-specific behavior is injected into each nested attribute:
-
-```yaml
-# Instantiating a category: inherit NatEquality and inject sort implementations
-- [Builtin, NatEquality]
-- Nat:
-    - [Builtin, NatPlus]         # Inject algebraic structure into Nat sort
-    - [Builtin, NatToPython]     # Inject FFI into Nat sort
-  Boolean:
-    - [Builtin, BooleanToPython] # Inject FFI into Boolean sort
-```
-
-This is how the Overlay language natively solves the **expression problem**: namespaces can be freely composed. Composing `NatEquality` with `BooleanNegation` (injected into the Boolean sort) automatically gives the returned booleans a `not` operation — without modifying either namespace.
+Each `.oyaml` file is a **category** (multi-sorted algebra) that can be composed with other categories — a file may involve multiple sorts and multiple algebraic structures. This is how the Overlay language natively solves the **expression problem**: composing `NatEquality` with `BooleanNegation` (by inheriting both) automatically gives the returned booleans a `not` field — without modifying either category.
 
 ### Library overview
 
@@ -803,10 +858,16 @@ BinNat:            # Binary natural numbers: Zero, Even, Odd
 
 # Algebraic structures (endomorphisms, analogous to C# partial classes)
 NatPlus:           # Nat × Nat → Nat
-BooleanNegation:   # Boolean → Boolean
+NatDecrement:      # Nat → Nat
+NatIsZero:         # Nat → Boolean (category: Nat → Boolean)
+BooleanNegation:   # Boolean → Boolean, exposes `not` field
 BooleanAnd:        # Boolean × Boolean → Boolean
 BooleanOr:         # Boolean × Boolean → Boolean
 BooleanEquality:   # Boolean × Boolean → Boolean
+BinNatPlus:        # BinNat × BinNat → BinNat
+BinNatIncrement:   # BinNat → BinNat
+BinNatDecrement:   # BinNat → BinNat
+BinNatIsZero:      # BinNat → Boolean (category: BinNat → Boolean)
 
 # Categories (cross-sort morphisms Sort₁ → Sort₂)
 NatEquality:       # Nat × Nat → Boolean
@@ -818,30 +879,6 @@ BooleanVisitor:    # Dispatch mechanism for Boolean
 BinNatVisitor:     # Dispatch mechanism for BinNat
 ```
 
-### Entity (UpperCamelCase)
-
-Concrete data variants/constructors. The entity **name** is its identity — it persists across compositions. Each individual **definition** of that entity within a sort or algebraic structure is a component.
-
-When overlays are composed, components with the same entity name merge onto the same entity. For example, `Nat.Zero`, `NatVisitor.Zero`, and `NatPlus.Zero` are three separate components that all merge onto the entity `Zero`:
-
-```yaml
-# In Nat: Zero is defined as a data variant
-Nat:
-  Zero:
-  Successor:
-    predecessor: []
-
-# In NatPlus: Zero gets a Plus component overlaid (partial class)
-NatPlus:
-  - [Nat]
-  - Zero:
-      Plus:
-        addend: []
-        sum: [addend]   # 0 + m = m
-
-# When composed, the entity Zero has both its original structure
-# and the Plus behavior merged together
-```
 
 ### Nested Class / Method (UpperCamelCase)
 
@@ -850,6 +887,7 @@ Prefer **nouns and adjectives** over verbs to reflect the Overlay language's dec
 ```yaml
 # ✓ GOOD - nouns and adjectives (declarative)
 Visitor:
+Visit:      # OK in Visitor pattern: "Visit" is a well-known noun in this context
 Plus:
 Addition:
 Equal:
@@ -858,10 +896,39 @@ And:
 Or:
 
 # ✗ BAD - verbs (imperative)
-Visit:
 Add:
 Negate:
 Compare:
+```
+
+A nested class should expose its result as a **projection field** rather than directly inheriting a constructor. Callers read the result through the field; they should not need to know which constructor was used internally:
+
+```yaml
+# ✓ GOOD - Plus exposes result via projection field `sum: [Product]`
+# Callers use ANF style: bind a temporary variable to Plus, then read sum from it
+#   _addition:
+#     - [someNat, Plus]
+#     - addend: [otherNat]
+#   result: [_addition, sum]
+Product:
+  Plus:
+    sum: [Product]    # projection field: abstract result type
+Zero:
+  Plus:
+    addend: [Product]
+    sum: [addend]     # Zero + m = m, result is m directly
+Successor:
+  Plus:
+    addend: [Product]
+    sum: ...          # S(n) + m = S(n+m), result is a Successor
+
+# ✗ BAD - directly inheriting a constructor leaks implementation details
+# Callers would need to know the result is specifically a Successor
+Successor:
+  Plus:
+    - addend: [Product]
+    - [Successor]
+    - predecessor: ...  # caller must navigate .predecessor, not .sum
 ```
 
 ### Field (lowerCamelCase)
@@ -870,25 +937,25 @@ Fields hold values within a class. The compiler currently does not treat fields 
 
 ```yaml
 Successor:
-  predecessor: []       # field: lowerCamelCase
+  predecessor: [Product]    # field: lowerCamelCase
 
 Zero:
   Plus:
-    addend: []          # parameter: lowerCamelCase
-    sum: [addend]       # field: lowerCamelCase
+    addend: [Product]       # parameter: lowerCamelCase
+    sum: [addend]           # field: lowerCamelCase
 ```
 
 ### Parameter (lowerCamelCase)
 
-External inputs to operations, declared with an empty reference `[]` to indicate they must be provided at instantiation time:
+External inputs to operations, declared with a type reference to indicate they must be provided at instantiation time:
 
 ```yaml
 Plus:
-  addend: []            # parameter: must be provided
+  addend: [Product]     # parameter: must be provided, typed as Product
   sum: [addend]         # field: computed from parameter
 
 Equal:
-  other: []             # parameter: must be provided
+  other: [Product]      # parameter: must be provided, typed as Product
   equal: [other]        # field: computed from parameter
 ```
 
@@ -901,7 +968,7 @@ Underscore prefix denotes private implementation details — intermediate comput
 ```yaml
 Successor:
   Equal:
-    other: []
+    other: [Product]
 
     # ✓ GOOD - lowerCamelCase: inherits [Successor] but only provides
     # lowerCamelCase fields (no new scope definitions)
@@ -918,7 +985,7 @@ Successor:
           VisitSuccessor:
             equal: [_recursiveEquality, equal]
           Visit:
-            equal: []
+            equal: [NatEquality, ~, Boolean]
 
     # ✗ BAD - lowerCamelCase but defines new scopes
     _otherVisitor:
@@ -931,30 +998,6 @@ Successor:
 
 The distinction: `_increasedAddend` is lowerCamelCase because it only **contains** a Successor scope (via inheritance `- [Successor]`) and provides field values (`predecessor: [addend]`). `_OtherVisitor` is UpperCamelCase because it **defines** new nested scopes (`VisitZero`, `VisitSuccessor`, `Visit`).
 
-### Naming and Totality
-
-The UpperCamelCase/lowerCamelCase distinction directly determines how the compiler checks totality:
-
-- **UpperCamelCase** (scopes): Define the static symbol tree structure. Can be instantiated at runtime, creating new instantiation levels.
-- **lowerCamelCase** (resources): Lazily evaluated values. At each instantiation level, resource dependencies must form a DAG (Directed Acyclic Graph) — cycles at the same level are compile errors.
-
-This two-tier system enables automatic weak totality: every finite-depth access to any value terminates, even when runtime paths are conceptually infinite (via recursive instantiation). No manual termination proofs are required.
-
-```yaml
-# The compiler verifies this DAG at compile time:
-#   addend ← _increasedAddend ← _recursiveAddition ← sum
-# No cycles at the same level → guaranteed to terminate
-Successor:
-  Plus:
-    addend: []
-    _increasedAddend:
-      - [Successor]                          # cross-level: Level 0 → Level 1
-      - predecessor: [addend]
-    _recursiveAddition:
-      - [Successor, ~, predecessor, Plus]    # cross-level: structural recursion
-      - addend: [_increasedAddend]
-    sum: [_recursiveAddition, sum]
-```
 
 ## Nix Commands
 
