@@ -1109,13 +1109,28 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             ElectedMerger: Position of the elected MergerSymbol
             MergerElectionSentinel.PATCHER_ONLY: Has patchers but no merger
         """
+        import logging
+        logger = logging.getLogger(__name__)
 
         # Collect all (symbol, evaluator_getter_index, getter) tuples
         all_merger_symbols: list[tuple["MixinSymbol", int, "MergerSymbol"]] = []
         all_patcher_symbols: list[tuple["MixinSymbol", int, "PatcherSymbol"]] = []
 
+        logger.debug(
+            "elected_merger_index for symbol=%(key)s qualified_this_count=%(qt_count)d path=%(path)s",
+            {"key": self.key, "qt_count": len(self.qualified_this), "path": self.path}
+        )
+
         for symbol in self.qualified_this:
+            logger.debug(
+                "  checking symbol=%(sym_key)s path=%(sym_path)s evaluator_symbols_count=%(eval_count)d",
+                {"sym_key": symbol.key, "sym_path": symbol.path, "eval_count": len(symbol.evaluator_symbols)}
+            )
             for getter_index, getter in enumerate(symbol.evaluator_symbols):
+                logger.debug(
+                    "    evaluator[%(idx)d]: type=%(getter_type)s",
+                    {"idx": getter_index, "getter_type": type(getter).__name__}
+                )
                 if isinstance(getter, MergerSymbol):
                     all_merger_symbols.append((symbol, getter_index, getter))
                 if isinstance(getter, PatcherSymbol):
@@ -1148,20 +1163,33 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             if isinstance(getter, SemigroupSymbol)
         ]
 
+        logger.debug(
+            "  all_merger_symbols=%(merger_count)d all_patcher_symbols=%(patcher_count)d pure_mergers=%(pure_count)d semigroups=%(semi_count)d",
+            {
+                "merger_count": len(all_merger_symbols),
+                "patcher_count": len(all_patcher_symbols),
+                "pure_count": len(pure_mergers),
+                "semi_count": len(semigroups)
+            }
+        )
+
         match pure_mergers:
             case [(elected_symbol, getter_index, _)]:
+                logger.debug("  result: ElectedMerger from pure_merger")
                 return ElectedMerger(
                     symbol=elected_symbol, evaluator_getter_index=getter_index
                 )
             case []:
                 match semigroups:
                     case [(elected_symbol, getter_index, _), *_]:
+                        logger.debug("  result: ElectedMerger from semigroup")
                         return ElectedMerger(
                             symbol=elected_symbol,
                             evaluator_getter_index=getter_index,
                         )
                     case []:
                         if all_patcher_symbols:
+                            logger.debug("  result: PATCHER_ONLY")
                             return MergerElectionSentinel.PATCHER_ONLY
                         # Note: has_scope_symbol case is no longer needed because
                         # Scope doesn't have evaluated property, so this code path

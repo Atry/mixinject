@@ -1,11 +1,13 @@
+NumberFactory: []
 BinNatFactory:
-  Product: []
-  Zero:
-    - [Product]
-  Even:
-    - [Product]
-    - half: [Product]
-  Odd:
-    - [Product]
-    - half: [Product]
+  - [NumberFactory]
+  - Product: []
+    Zero:
+      - [Product]
+    Even:
+      - [Product]
+      - half: [Product]
+    Odd:
+      - [Product]
+      - half: [Product]
 BinNat: [BinNatFactory, Product]

@@ -277,9 +277,9 @@ class _CachingBase(HasDict, ABC):
 **Summary table:**
 
 | Dataclass type | `@final` | `slots=True, weakref_slot=True` | Can instantiate? |
-|----------------|----------|--------------------------------|------------------|
-| Concrete leaf  | Yes      | Required                       | Yes              |
-| Abstract base  | No       | Forbidden                      | No               |
+| -------------- | -------- | ------------------------------- | ---------------- |
+| Concrete leaf  | Yes      | Required                        | Yes              |
+| Abstract base  | No       | Forbidden                       | No               |
 
 
 ### Avoid `__all__` and Re-exports
@@ -701,17 +701,17 @@ The Overlay language adopts C#-like naming conventions. The UpperCamelCase/lower
 
 ### Naming Convention Summary
 
-| Element | Casing | Examples | C# Analogy | Math Analogy |
-|---------|--------|----------|------------|--------------|
-| namespace | UpperCamelCase | `Builtin` | namespace | category / multi-sorted algebra |
-| sort (class) | UpperCamelCase | `Nat`, `Boolean`, `BinNat` | class | sort (carrier set) |
-| algebraic structure (partial class) | UpperCamelCase | `NatPlus`, `BooleanAnd` | partial class | endomorphism (Sort → Sort) |
-| category | UpperCamelCase | `NatEquality`, `BinNatEquality` | — | morphism (Sort₁ → Sort₂) |
-| entity | UpperCamelCase | `Zero`, `Successor`, `True`, `False` | — | element of a sort |
-| nested class/method | UpperCamelCase | `Visitor`, `Plus`, `Equal`, `And`, `Or` | method/nested class | — |
-| field | lowerCamelCase | `predecessor`, `addend`, `sum` | field | — |
-| parameter | lowerCamelCase | `addend`, `other`, `operand0` | parameter | — |
-| private member | `_` prefix | `_increasedAddend`, `_recursiveAddition` | `private` | — |
+| Element                             | Casing         | Examples                                 | C# Analogy          | Math Analogy                    |
+| ----------------------------------- | -------------- | ---------------------------------------- | ------------------- | ------------------------------- |
+| namespace                           | UpperCamelCase | `Builtin`                                | namespace           | category / multi-sorted algebra |
+| sort (class)                        | UpperCamelCase | `Nat`, `Boolean`, `BinNat`               | class               | sort (carrier set)              |
+| algebraic structure (partial class) | UpperCamelCase | `NatPlus`, `BooleanAnd`                  | partial class       | endomorphism (Sort → Sort)      |
+| category                            | UpperCamelCase | `NatEquality`, `BinNatEquality`          | —                   | morphism (Sort₁ → Sort₂)        |
+| entity                              | UpperCamelCase | `Zero`, `Successor`, `True`, `False`     | —                   | element of a sort               |
+| nested class/method                 | UpperCamelCase | `Visitor`, `Plus`, `Equal`, `And`, `Or`  | method/nested class | —                               |
+| field                               | lowerCamelCase | `predecessor`, `addend`, `sum`           | field               | —                               |
+| parameter                           | lowerCamelCase | `addend`, `other`, `operand0`            | parameter           | —                               |
+| private member                      | `_` prefix     | `_increasedAddend`, `_recursiveAddition` | `private`           | —                               |
 
 ### Namespace (UpperCamelCase)
 
@@ -848,37 +848,107 @@ Key points:
 
 Each `.oyaml` file is a **category** (multi-sorted algebra) that can be composed with other categories — a file may involve multiple sorts and multiple algebraic structures. This is how the Overlay language natively solves the **expression problem**: composing `NatEquality` with `BooleanNegation` (by inheriting both) automatically gives the returned booleans a `not` field — without modifying either category.
 
-### Library overview
+### Abstract Factory Pattern with Declarations
+
+The Overlay language supports **abstract factories** through declarations. This pattern enables writing polymorphic code that works across multiple concrete factory types.
+
+#### Declaring Abstract Projections (Slots)
+
+A declaration declares an abstract slot with a type constraint, without providing a concrete implementation:
 
 ```yaml
-# Sorts (carrier sets, analogous to C# classes)
-Nat:               # Natural numbers: Zero, Successor
-Boolean:           # Booleans: True, False
-BinNat:            # Binary natural numbers: Zero, Even, Odd
-
-# Algebraic structures (endomorphisms, analogous to C# partial classes)
-NatPlus:           # Nat × Nat → Nat
-NatDecrement:      # Nat → Nat
-NatIsZero:         # Nat → Boolean (category: Nat → Boolean)
-BooleanNegation:   # Boolean → Boolean, exposes `not` field
-BooleanAnd:        # Boolean × Boolean → Boolean
-BooleanOr:         # Boolean × Boolean → Boolean
-BooleanEquality:   # Boolean × Boolean → Boolean
-BinNatPlus:        # BinNat × BinNat → BinNat
-BinNatIncrement:   # BinNat → BinNat
-BinNatDecrement:   # BinNat → BinNat
-BinNatIsZero:      # BinNat → Boolean (category: BinNat → Boolean)
-
-# Categories (cross-sort morphisms Sort₁ → Sort₂)
-NatEquality:       # Nat × Nat → Boolean
-BinNatEquality:    # BinNat × BinNat → Boolean
-
-# Infrastructure
-NatVisitor:        # Dispatch mechanism for Nat
-BooleanVisitor:    # Dispatch mechanism for Boolean
-BinNatVisitor:     # Dispatch mechanism for BinNat
+# FibonacciFactory declares abstract Zero and One projections
+FibonacciFactory:
+  Zero: [Product]    # Abstract projection: expects a Product-typed value
+  One: [Product]     # Abstract projection: expects a Product-typed value
+  Product:
+    Fibonacci:
+      n: [Product]
+      fibonacci: ...  # Uses Zero and One through lexical references
 ```
 
+**Key insight:** `Zero: [Product]` is **NOT** a reference to a constructor. It is a **type-constrained slot** that concrete factories must satisfy.
+
+#### Creating Abstract Base Classes
+
+To make an abstract factory work with multiple concrete factories, use inheritance:
+
+```yaml
+# Step 1: Define abstract base in each concrete factory's data file
+# In NatData.oyaml:
+NumberFactory: []          # Abstract base factory
+NatFactory:
+  - [NumberFactory]        # NatFactory inherits from NumberFactory
+  - Product: []
+    Zero: [Product]
+    Successor: [Product]
+
+# In BinNatData.oyaml:
+NumberFactory: []          # Same abstract base
+BinNatFactory:
+  - [NumberFactory]        # BinNatFactory inherits from NumberFactory
+  - Product: []
+    Zero: [Product]
+    Even: [Product]
+    Odd: [Product]
+```
+
+Now `NumberFactory` is a common base class that both `NatFactory` and `BinNatFactory` inherit from. This enables polymorphic composition.
+
+#### Implementing Polymorphic Operations
+
+Once the abstract base exists, you can write operations that work for **any** factory inheriting from `NumberFactory`:
+
+```yaml
+# NumberIsZero.oyaml — works for both Nat and BinNat
+- NumberFactory:
+    Zero: [Product]        # Declare abstract Zero projection (satisfied by concrete factories)
+    Product:
+      Equal:
+        other: [Product]   # Declare abstract Equal operation (provided by NatEquality/BinNatEquality)
+        equal: [NumberIsZero, ~, Boolean]  # equal is inherited from composed categories
+      IsZero:
+        _equalZero:
+          - [Equal]        # Use abstract Equal operation
+          - other: [Zero]  # Use abstract Zero projection (lexical reference)
+        isZero: [_equalZero, equal]
+- [Builtin, BooleanData]
+```
+
+**How this works:**
+- `NumberFactory.Zero` is a declaration for lexical references within `NumberIsZero.oyaml`
+- When composed with `NatFactory`, `[Zero]` resolves to `NatFactory.Zero` (the Nat constructor)
+- When composed with `BinNatFactory`, `[Zero]` resolves to `BinNatFactory.Zero` (the BinNat constructor)
+- `Equal` is an abstract operation that concrete factories must provide (via NatEquality/BinNatEquality)
+
+#### Pattern Summary
+
+1. **Define abstract base class** in each concrete factory's data file:
+   ```yaml
+   AbstractFactory: []
+   ConcreteFactory:
+     - [AbstractFactory]
+   ```
+
+2. **Declare abstract projections** with type constraints:
+   ```yaml
+   AbstractFactory:
+     Zero: [Product]   # Abstract projection (slot)
+   ```
+
+3. **Implement polymorphic operations** using lexical references to abstract projections:
+   ```yaml
+   - AbstractFactory:
+       Product:
+         Operation:
+           result: [Zero]  # Lexical reference resolves polymorphically
+   ```
+
+4. **Compose with concrete factories** through inheritance:
+   ```yaml
+   - [Builtin, NumberIsZero]   # Polymorphic operation
+   - [Builtin, NatEquality]    # Concrete factory: works with Nat
+   ```
 
 ### Nested Class / Method (UpperCamelCase)
 
@@ -997,6 +1067,128 @@ Successor:
 ```
 
 The distinction: `_increasedAddend` is lowerCamelCase because it only **contains** a Successor scope (via inheritance `- [Successor]`) and provides field values (`predecessor: [addend]`). `_OtherVisitor` is UpperCamelCase because it **defines** new nested scopes (`VisitZero`, `VisitSuccessor`, `Visit`).
+
+### References: Lexical vs Qualified This
+
+Overlay Language provides two kinds of references for navigating the scope hierarchy:
+
+#### 1. Lexical Reference `[Symbol]`
+
+A **lexical reference** searches for a symbol in the current lexical scope (the file's static structure).
+
+**Critical constraint:** Lexical references can **only** access **own properties** — symbols defined in the current file. Lexical references **cannot** access inherited properties (symbols introduced through composition/inheritance from other files).
+
+```yaml
+# ✓ GOOD - lexical reference to own property
+NumberFactory:
+  Zero: [Product]          # Own property: defined in this file
+  Product:
+    IsZero:
+      _equalZero:
+        - [Equal]           # Own property: defined in this file
+        - other: [Zero]     # Own property: defined in this file
+      isZero: [_equalZero, equal]
+```
+
+**When lexical references work:**
+- Referencing symbols defined in the same file
+- Accessing sibling entities or nested scopes defined locally
+- Simple, direct lookups within the file's own definitions
+
+#### 2. Qualified This Reference `[ScopeName, ~, path...]`
+
+A **qualified this reference** (essentially "qualified super") navigates through the runtime composition graph to access **inherited properties** — symbols not defined in the current file but available through composition.
+
+**Two key motivations for qualified this:**
+
+1. **Bypass variable shadowing** (lexical scope issue)
+2. **Access non-own properties** (properties inherited through composition)
+
+```yaml
+# Example: Accessing inherited Boolean from composed BooleanData
+- NumberFactory:
+    Product:
+      Equal:
+        equal: [NumberIsZero, ~, Boolean]  # Qualified this: Boolean is inherited, not own
+- [Builtin, BooleanData]  # BooleanData provides the Boolean definition
+```
+
+**Variable shadowing example (from NatEquality.oyaml):**
+
+```yaml
+Equal:
+  other:                   # Parameter 'other' in outer scope
+    - [Product]
+    - predecessor: [Product]
+  _recursiveEquality:
+    - [Successor, ~, predecessor, Equal]
+    - other: [Equal, ~, other, predecessor]  # Defining field 'other'
+    #         ^^^^^^^^^^^^^^^^^^
+    #         Qualified this to access outer 'other' parameter,
+    #         not the 'other:' field being defined here
+```
+
+Without qualified this, `[other]` in a lexical reference would be ambiguous:
+- Does it refer to the outer `other` parameter?
+- Or the `other:` field being defined on this line?
+
+Using `[Equal, ~, other, predecessor]` explicitly navigates from `Equal` scope to the `other` parameter (bypassing the local `other:` being defined), then accesses its `predecessor` field.
+
+**Common patterns:**
+
+```yaml
+# Accessing inherited property from composed category
+NatFactory:
+  Product:
+    Equal:
+      equal: [NatEquality, ~, Boolean]  # Boolean comes from composed BooleanData
+      #       ^^^^^^^^^^^^ scope name in composed result
+      #                     ^^^^^^^ inherited property
+
+# Cross-file constructor reference
+NatFactory:
+  Zero:
+    Equal:
+      _OtherVisitor:
+        VisitZero:
+          equal: [NatEquality, ~, BooleanFactory, "True"]  # BooleanFactory.True is inherited
+          #       ^^^^^^^^^^^^ scope name
+          #                     ^^^^^^^^^^^^^^^ ^^^^^^ path to inherited entity
+```
+
+**When to use qualified this:**
+- Accessing properties inherited through composition (non-own properties)
+- Bypassing variable shadowing in lexical scope
+- Cross-file references where the target is not defined in the current file
+
+**Common mistakes:**
+
+```yaml
+# ✗ BAD - using file name instead of factory name
+IsZero:
+  _equalZero:
+    - [Equal]
+    - other: [NumberIsZero, ~, Zero]  # WRONG: NumberIsZero is file name, not a factory
+    #        ^^^^^^^^^^^^^ File name, not a runtime scope instance
+
+# ✓ GOOD - using lexical reference for own property (simplest)
+IsZero:
+  _equalZero:
+    - [Equal]
+    - other: [Zero]  # BEST: lexical reference to own property (defined in this file)
+
+# ✓ GOOD - qualified this for inherited property
+IsZero:
+  equal: [NumberIsZero, ~, Boolean]  # Boolean is inherited from BooleanData, not own
+```
+
+#### Rule: Lexical for Own, Qualified This for Inherited
+
+**Use lexical references `[Symbol]` for own properties (defined in current file).**
+
+**Use qualified this `[Scope, ~, Symbol]` for inherited properties (from composed files).**
+
+Lexical references are simpler but limited to own properties. Qualified this is required when accessing inherited properties or bypassing variable shadowing
 
 
 ## Nix Commands
@@ -1117,13 +1309,13 @@ Use `assert` for internal invariants about trusted code paths; use `ValueError` 
 
 Some Python exceptions have **special meanings** tied to specific dunder methods or protocols. These exceptions MUST NOT propagate through unrelated methods—they must be caught and converted to appropriate exceptions.
 
-| Exception | Semantic Owner | Why It's Special |
-|-----------|---------------|------------------|
-| `KeyError` | `__getitem__`, `__delitem__` | Caught by `__contains__`, signals "key not found" |
-| `IndexError` | `__getitem__` (sequences) | Terminates `for` loops, signals "index out of range" |
-| `StopIteration` | `__next__` | Terminates `for` loops, signals iterator exhaustion |
-| `AttributeError` | `__getattr__`, `__getattribute__`, descriptors | Caught by `hasattr()`, `getattr()` with default |
-| `GeneratorExit` | Generators | Special generator lifecycle, should not escape |
+| Exception        | Semantic Owner                                 | Why It's Special                                     |
+| ---------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| `KeyError`       | `__getitem__`, `__delitem__`                   | Caught by `__contains__`, signals "key not found"    |
+| `IndexError`     | `__getitem__` (sequences)                      | Terminates `for` loops, signals "index out of range" |
+| `StopIteration`  | `__next__`                                     | Terminates `for` loops, signals iterator exhaustion  |
+| `AttributeError` | `__getattr__`, `__getattribute__`, descriptors | Caught by `hasattr()`, `getattr()` with default      |
+| `GeneratorExit`  | Generators                                     | Special generator lifecycle, should not escape       |
 
 **Why this matters:**
 

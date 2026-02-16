@@ -1,0 +1,12 @@
+- NumberFactory:
+    Zero: [Product]
+    Product:
+      Equal:
+        other: [Product]
+        equal: [NumberIsZero, ~, Boolean]
+      IsZero:
+        _equalZero:
+          - [Equal]
+          - other: [Zero]
+        isZero: [_equalZero, equal]
+- [Builtin, BooleanData]
