@@ -1,51 +1,47 @@
 - [Builtin, NatEquality]
-  # Algebraic structure: NatPlus (endomorphism Nat → Nat)
-- Nat:
-    - [Builtin, NatPlus]
-    - [Builtin, NatToPython]
-
-  Boolean:
-    - [Builtin, BooleanToPython]
+- [Builtin, NatPlus]
+- [Builtin, NatToPython]
+- [Builtin, BooleanToPython]
 
   # =============================================================================
   # Concrete Church numerals
   # =============================================================================
 
-  Zero:
-    - [Nat, Zero]
+- Zero:
+    - [ArithmeticTest, ~, NatFactory, Zero]
 
   One:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [Zero]
 
   Two:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [One]
 
   Three:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [Two]
 
   Four:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [Three]
 
   Five:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [Four]
 
   Six:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [Five]
 
   Seven:
-    - [Nat, Successor]
+    - [ArithmeticTest, ~, NatFactory, Successor]
     - predecessor:
         - [Six]
 

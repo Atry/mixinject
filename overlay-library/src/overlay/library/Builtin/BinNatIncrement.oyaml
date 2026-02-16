@@ -1,0 +1,21 @@
+- [BinNatData]
+- BinNatFactory:
+    Product:
+      increment: [Product]
+    Zero:
+      increment:
+        - [Odd]
+        - half:
+            - [Zero]
+    Even:
+      half:
+        increment: [Product]
+      increment:
+        - [Odd]
+        - half: [Even, ~, half]
+    Odd:
+      half:
+        increment: [Product]
+      increment:
+        - [Even]
+        - half: [Odd, ~, half, increment]

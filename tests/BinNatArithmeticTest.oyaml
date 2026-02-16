@@ -1,59 +1,55 @@
 - [Builtin, BinNatEquality]
-  # Algebraic structure: BinNatPlus (endomorphism BinNat → BinNat)
-- BinNat:
-    - [Builtin, BinNatPlus]
-    - [Builtin, BinNatToPython]
-
-  Boolean:
-    - [Builtin, BooleanToPython]
+- [Builtin, BinNatPlus]
+- [Builtin, BinNatToPython]
+- [Builtin, BooleanToPython]
 
   # =============================================================================
   # Concrete binary natural numbers
   # =============================================================================
 
   # 0
-  Zero:
-    - [BinNat, Zero]
+- Zero:
+    - [BinNatArithmeticTest, ~, BinNatFactory, Zero]
 
   # 1 = Odd(0)
   One:
-    - [BinNat, Odd]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
     - half:
         - [Zero]
 
   # 2 = Even(1)
   Two:
-    - [BinNat, Even]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Even]
     - half:
         - [One]
 
   # 3 = Odd(1)
   Three:
-    - [BinNat, Odd]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
     - half:
         - [One]
 
   # 4 = Even(2)
   Four:
-    - [BinNat, Even]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Even]
     - half:
         - [Two]
 
   # 5 = Odd(2)
   Five:
-    - [BinNat, Odd]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
     - half:
         - [Two]
 
   # 6 = Even(3)
   Six:
-    - [BinNat, Even]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Even]
     - half:
         - [Three]
 
   # 7 = Odd(3)
   Seven:
-    - [BinNat, Odd]
+    - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
     - half:
         - [Three]
 

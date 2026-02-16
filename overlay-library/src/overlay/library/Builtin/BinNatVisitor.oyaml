@@ -1,0 +1,19 @@
+- [BinNatData]
+- BinNatFactory:
+    Product:
+      Visitor:
+        Visit: []
+    Zero:
+      Visitor:
+        - VisitZero: []
+          Visit: [VisitZero]
+    Even:
+      half: [Product]
+      Visitor:
+        - VisitEven: []
+          Visit: [VisitEven]
+    Odd:
+      half: [Product]
+      Visitor:
+        - VisitOdd: []
+          Visit: [VisitOdd]

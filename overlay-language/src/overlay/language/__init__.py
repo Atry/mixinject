@@ -1721,13 +1721,48 @@ class PackageScopeDefinition(ObjectScopeDefinition):
         assert isinstance(key, str)
         mixin_file = self._mixin_files.get(key)
         if mixin_file is not None:
-            definitions.append(
-                _MixinFileScopeDefinition(
-                    bases=(),
-                    is_public=self.is_public,
-                    underlying=mixin_file,
-                )
+            from overlay.language.mixin_parser import (
+                FileMixinDefinition,
+                load_overlay_file,
+                parse_mixin_value,
             )
+
+            data = load_overlay_file(mixin_file)
+            if isinstance(data, dict):
+                definitions.append(
+                    _MixinFileScopeDefinition(
+                        bases=(),
+                        is_public=self.is_public,
+                        underlying=mixin_file,
+                    )
+                )
+            else:
+                parsed = parse_mixin_value(data, source_file=mixin_file)
+                if parsed.property_definitions:
+                    definitions.extend(
+                        FileMixinDefinition(
+                            bases=parsed.inheritances if index == 0 else (),
+                            is_public=self.is_public,
+                            underlying=properties,
+                            scalar_values=(
+                                parsed.scalar_values if index == 0 else ()
+                            ),
+                            source_file=mixin_file,
+                        )
+                        for index, properties in enumerate(
+                            parsed.property_definitions
+                        )
+                    )
+                else:
+                    definitions.append(
+                        FileMixinDefinition(
+                            bases=parsed.inheritances,
+                            is_public=self.is_public,
+                            underlying={},
+                            scalar_values=parsed.scalar_values,
+                            source_file=mixin_file,
+                        )
+                    )
 
         if not definitions:
             raise KeyError(key)

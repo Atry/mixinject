@@ -1,0 +1,16 @@
+- [NatData]
+- NatFactory:
+    Product:
+      Visitor:
+        Visit: []
+    Zero:
+      Visitor:
+        - VisitZero: []
+          Visit: [VisitZero]
+
+    Successor:
+      predecessor: [Product]
+
+      Visitor:
+        - VisitSuccessor: []
+          Visit: [VisitSuccessor]

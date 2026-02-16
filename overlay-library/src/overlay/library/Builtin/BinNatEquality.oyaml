@@ -1,0 +1,65 @@
+- [BinNatVisitor]
+- [BooleanData]
+- BinNatFactory:
+    - Product:
+        Equal:
+          other: [Product]
+          equal: [BinNatEquality, ~, Boolean]
+      Zero:
+        Equal:
+          other: [Product]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [BinNatEquality, ~, BooleanFactory, "True"]
+              VisitEven:
+                equal: [BinNatEquality, ~, BooleanFactory, "False"]
+              VisitOdd:
+                equal: [BinNatEquality, ~, BooleanFactory, "False"]
+              Visit:
+                equal: [BinNatEquality, ~, Boolean]
+          equal: [_OtherVisitor, Visit, equal]
+      Even:
+        half:
+          Equal:
+            equal: [BinNatEquality, ~, Boolean]
+        Equal:
+          other:
+            - [Product]
+            - half: [Product]
+          _recursiveEquality:
+            - [Even, ~, half, Equal]
+            - other: [Equal, ~, other, half]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [BinNatEquality, ~, BooleanFactory, "False"]
+              VisitEven:
+                equal: [_recursiveEquality, equal]
+              VisitOdd:
+                equal: [BinNatEquality, ~, BooleanFactory, "False"]
+              Visit:
+                equal: [BinNatEquality, ~, Boolean]
+          equal: [_OtherVisitor, Visit, equal]
+      Odd:
+        half:
+          Equal:
+            equal: [BinNatEquality, ~, Boolean]
+        Equal:
+          other:
+            - [Product]
+            - half: [Product]
+          _recursiveEquality:
+            - [Odd, ~, half, Equal]
+            - other: [Equal, ~, other, half]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [BinNatEquality, ~, BooleanFactory, "False"]
+              VisitEven:
+                equal: [BinNatEquality, ~, BooleanFactory, "False"]
+              VisitOdd:
+                equal: [_recursiveEquality, equal]
+              Visit:
+                equal: [BinNatEquality, ~, Boolean]
+          equal: [_OtherVisitor, Visit, equal]

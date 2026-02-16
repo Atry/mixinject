@@ -1,0 +1,39 @@
+- [NatVisitor]
+- NatFactory:
+    - Product:
+        Equal:
+          other: [Product]
+          equal: [NatEquality, ~, Boolean]
+      Zero:
+        Equal:
+          other: [Product]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [NatEquality, ~, BooleanFactory, "True"]
+              VisitSuccessor:
+                equal: [NatEquality, ~, BooleanFactory, "False"]
+              Visit:
+                equal: [NatEquality, ~, Boolean]
+          equal: [_OtherVisitor, Visit, equal]
+      Successor:
+        predecessor:
+          Equal:
+            equal: [NatEquality, ~, Boolean]
+        Equal:
+          other:
+            - [Product]
+            - predecessor: [Product]
+          _recursiveEquality:
+            - [Successor, ~, predecessor, Equal]
+            - other: [Equal, ~, other, predecessor]
+          _OtherVisitor:
+            - [other, Visitor]
+            - VisitZero:
+                equal: [NatEquality, ~, BooleanFactory, "False"]
+              VisitSuccessor:
+                equal: [_recursiveEquality, equal]
+              Visit:
+                equal: [NatEquality, ~, Boolean]
+          equal: [_OtherVisitor, Visit, equal]
+- [BooleanData]

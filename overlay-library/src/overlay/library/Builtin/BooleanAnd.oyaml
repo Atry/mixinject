@@ -1,0 +1,15 @@
+- [BooleanData]
+- BooleanFactory:
+    Product:
+      And:
+        other: [Product]
+        and: [Product]
+    "True":
+      And:
+        other: [Product]
+        and: [other]
+
+    "False":
+      And:
+        other: [Product]
+        and: ["False"]

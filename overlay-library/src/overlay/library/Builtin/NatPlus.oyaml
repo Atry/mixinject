@@ -1,0 +1,22 @@
+- [NatData]
+- NatFactory:
+    Product:
+      Plus:
+        sum: [Product]
+    Zero:
+      Plus:
+        addend: [Product]
+        sum: [addend]
+    Successor:
+      predecessor:
+        Plus:
+          sum: [Product]
+      Plus:
+        addend: [Product]
+        _increasedAddend:
+          - [Successor]
+          - predecessor: [addend]
+        _recursiveAddition:
+          - [Successor, ~, predecessor, Plus]
+          - addend: [_increasedAddend]
+        sum: [_recursiveAddition, sum]

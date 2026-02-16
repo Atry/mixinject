@@ -1,0 +1,8 @@
+NatFactory:
+  Product: []
+  Zero:
+    - [Product]
+  Successor:
+    - [Product]
+    - predecessor: [Product]
+Nat: [NatFactory, Product]

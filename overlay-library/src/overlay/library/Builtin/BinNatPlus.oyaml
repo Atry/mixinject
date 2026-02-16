@@ -1,0 +1,63 @@
+- [BinNatVisitor]
+- [BinNatIncrement]
+- BinNatFactory:
+    Product:
+      Plus:
+        sum: [Product]
+    Zero:
+      Plus:
+        addend: [Product]
+        sum: [addend]
+    Even:
+      half:
+        Plus:
+          sum: [Product]
+      Plus:
+        addend:
+          - [Product]
+          - half: [Product]
+        _recursiveAddition:
+          - [Even, ~, half, Plus]
+          - addend: [Plus, ~, addend, half]
+        _AddendVisitor:
+          - [addend, Visitor]
+          - VisitZero:
+              sum: [Even, ~]
+            VisitEven:
+              sum:
+                - [Even]
+                - half: [_recursiveAddition, sum]
+            VisitOdd:
+              sum:
+                - [Odd]
+                - half: [_recursiveAddition, sum]
+            Visit:
+              sum: [Product]
+        sum: [_AddendVisitor, Visit, sum]
+    Odd:
+      half:
+        Plus:
+          sum: [Product]
+        increment: [Product]
+      Plus:
+        addend:
+          - [Product]
+          - half: [Product]
+        _recursiveAddition:
+          - [Odd, ~, half, Plus]
+          - addend: [Plus, ~, addend, half]
+        _AddendVisitor:
+          - [addend, Visitor]
+          - VisitZero:
+              sum: [Odd, ~]
+            VisitEven:
+              sum:
+                - [Odd]
+                - half: [_recursiveAddition, sum]
+            VisitOdd:
+              sum:
+                - [Even]
+                - half: [_recursiveAddition, sum, increment]
+            Visit:
+              sum: [Product]
+        sum: [_AddendVisitor, Visit, sum]

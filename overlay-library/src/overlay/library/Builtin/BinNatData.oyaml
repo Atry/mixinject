@@ -1,0 +1,11 @@
+BinNatFactory:
+  Product: []
+  Zero:
+    - [Product]
+  Even:
+    - [Product]
+    - half: [Product]
+  Odd:
+    - [Product]
+    - half: [Product]
+BinNat: [BinNatFactory, Product]

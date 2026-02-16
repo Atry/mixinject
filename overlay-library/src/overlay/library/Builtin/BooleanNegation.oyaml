@@ -1,0 +1,8 @@
+- [BooleanData]
+- BooleanFactory:
+    Product:
+      not: [Product]
+    "True":
+      not: ["False"]
+    "False":
+      not: ["True"]
