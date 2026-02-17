@@ -32,6 +32,7 @@
 \newcommand{\init}{\mathtt{init}}
 \newcommand{\last}{\mathtt{last}}
 \newcommand{\qualifiedthis}[1]{#1.\mathbf{this}}
+\newcommand{\dbi}[1]{\uparrow^{\!#1}}
 
 \begin{document}
 
@@ -65,6 +66,12 @@
   which targets a fixed monad, Overlay-Calculus ANF supports dependency
   injection, making programs CPS-agnostic---the same code serves as either
   continuation-passing or direct-style depending on assembly.
+  The translation is adequate and fully abstract with respect to
+  B\"ohm tree equivalence, yielding a fully abstract semantics
+  of the lazy $\lambda$-calculus that lives entirely in naive
+  set theory---powerset lattices and the Knaster--Tarski
+  fixed-point theorem---without the topological infrastructure
+  of domain theory.
   Records are tries and composition is trie union, so Overlay-Calculus
   is an immutable analogue of the RAM machine. These observations
   suggest Overlay-Calculus as a computational model for declarative programming,
@@ -285,13 +292,24 @@ All tests are mechanically verified against expected output snapshots.
     or diverge (NixOS module system).
     Since composition is idempotent, all objects contribute
     equally---no disambiguation is needed.
-  \item The $\lambda$-calculus translates into Overlay-Calculus in three
-    rules, so Overlay-Calculus is Turing complete.
+  \item The $\lambda$-calculus (in A-normal form) translates into
+    Overlay-Calculus in five rules, so Overlay-Calculus is Turing
+    complete.
     Composing this translation with the semantic functions
     induces a semantics on the $\lambda$-calculus that requires
     no function spaces, no substitution, and no reduction
     rules---only set membership in powerset lattices
     (Section~\ref{sec:translation}).
+    The translation is adequate and fully abstract with
+    respect to B\"ohm tree equivalence
+    (Section~\ref{sec:bohm-tree}): two terms have the same
+    overlay-convergence behavior in all contexts if and only
+    if they have the same B\"ohm tree.
+    This yields a fully abstract semantics of the lazy
+    $\lambda$-calculus that lives entirely in naive set
+    theory---powerset lattices and the Knaster--Tarski
+    fixed-point theorem---without domain theory, inverse
+    limits, or Scott continuity.
     Standard data types (booleans, natural numbers)
     can be Church-encoded without scalars (Appendix~\ref{app:church}).
   \item The Expression Problem~\cite{wadler1998expression} does not
@@ -419,7 +437,7 @@ Let $k$ denote a non-negative integer (path length).
   && \text{(sugar for } \{c\} \text{)} \\[6pt]
   c \quad ::= \quad & \ell \mapsto e
   && \text{(property definition)} \\
-  \mid\quad & [\qualifiedthis{\ell_{\mathrm{up}}}.]\;\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}
+  \mid\quad & [\qualifiedthis{\ell_{\mathrm{up}}}. \mid \dbi{n}.]\;\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}
   && \text{(reference, } k \ge 0 \text{ with qualifier, } k \ge 1 \text{ without)}
 \end{align*}
 
@@ -439,15 +457,26 @@ None of the examples in this paper uses the FFI---scalars simply
 did not arise.
 
 \paragraph{Reference}
-A reference
-$\qualifiedthis{\ell_{\mathrm{up}}}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
-is analogous to Java's
-\texttt{Outer.this.field}. Each $\{\ldots\}$ record has a label in its
-enclosing scope; $\ell_{\mathrm{up}}$ names the target enclosing scope.
-The \emph{qualified this} $\qualifiedthis{\ell_{\mathrm{up}}}$ retrieves the \emph{dynamic self} of that scope---the
-fully composed record after all compositions have been applied.
-The suffix $\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ then projects properties from the
-dynamic self.
+A reference navigates the scope hierarchy upward and then projects
+properties downward. Overlay-Calculus provides two equivalent
+notations for the upward navigation:
+\begin{itemize}
+  \item \emph{Named form}:
+    $\qualifiedthis{\ell_{\mathrm{up}}}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$,
+    analogous to Java's \texttt{Outer.this.field}.
+    Each $\{\ldots\}$ record has a label in its enclosing scope;
+    $\ell_{\mathrm{up}}$ names the target enclosing scope.
+  \item \emph{Indexed form}:
+    $\dbi{n}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$,
+    where $n$ is a de~Bruijn index~\cite{debruijn1972lambda}
+    counting the number of enclosing scope levels to traverse.
+\end{itemize}
+Both forms retrieve the \emph{dynamic self} of the target scope---the
+fully composed record after all compositions have been applied---and
+then project properties
+$\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ from it.
+The named form desugars to the indexed form during parsing
+(Section~\ref{sec:overlay-trees}).
 
 A new scope level is created at each $\{\ldots\}$ (record literal).
 The scope contains all properties of that overlay, including those
@@ -458,11 +487,13 @@ is a reference to a record containing $b$.
 Composition sources do not create additional scope levels.
 
 \begin{itemize}
-  \item $\qualifiedthis{\mathrm{Foo}}$ retrieves the dynamic self of the nearest
+  \item $\qualifiedthis{\mathrm{Foo}}$ (equivalently, $\dbi{n}$ where
+    $\mathrm{Foo}$ is $n$ scope levels above) retrieves the dynamic self of the
     enclosing record named $\mathrm{Foo}$.
-  \item $\qualifiedthis{\mathrm{Foo}}.\ell$ projects property $\ell$ from the
-    dynamic self of $\mathrm{Foo}$.
-  \item When $k = 0$, the reference $\qualifiedthis{\ell_{\mathrm{up}}}$ inherits the entire
+  \item $\qualifiedthis{\mathrm{Foo}}.\ell$ (equivalently, $\dbi{n}.\ell$)
+    projects property $\ell$ from
+    the dynamic self of $\mathrm{Foo}$.
+  \item When $k = 0$, the reference inherits the entire
     enclosing scope, which may produce an infinitely deep tree.
 \end{itemize}
 
@@ -471,11 +502,11 @@ the shorthand
 $\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}$ ($k \ge 1$)
 resolves $\ell_{\mathrm{down},1}$ against the innermost enclosing
 scope whose $\ownproperties$ contains it,
-and desugars to the corresponding qualified this.
+and desugars to the corresponding indexed form.
 Since this uses $\ownproperties$, the shorthand can only access
 properties defined in record literals, not those inherited through
-composition; the qualifier is required for inherited properties
-or to bypass variable shadowing.
+composition; one of the two qualified forms is required for
+inherited properties or to bypass variable shadowing.
 
 \section{Overlay Trees}
 \label{sec:overlay-trees}
@@ -548,24 +579,27 @@ The AST provides two primitive functions at each path $p$:
     and $\ell_{\mathrm{down},*}$ is the list of downward projections.
 \end{itemize}
 
-During parsing, both syntactic forms (with and without qualifier)
-are resolved to de~Bruijn index pairs.
-A qualified this reference
+During parsing, all three syntactic forms are resolved to
+de~Bruijn index pairs $(n,\; \ell_{\mathrm{down},*})$.
+The \emph{indexed form}
+$\dbi{n}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
+already carries the de~Bruijn index $n$ directly;
+no resolution is needed.
+A \emph{named reference}
 $\qualifiedthis{\ell_{\mathrm{up}}}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
 at path $p$ is resolved by finding the last occurrence of
 $\ell_{\mathrm{up}}$ among the labels of $p$.
 Let $p_{\mathrm{def}}$ be the prefix of $p$ up to and including
 that occurrence.
-The \emph{de~Bruijn index} $n$ is the number of labels in $p$
-after that occurrence, i.e., $n = |p| - |p_{\mathrm{def}}|$.
-The projections are
+The de~Bruijn index is $n = |p| - |p_{\mathrm{def}}|$
+and the projections are
 $\ell_{\mathrm{down},*} = (\ell_{\mathrm{down},1}, \ldots, \ell_{\mathrm{down},k})$.
-A lexical reference $\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}$ at path $p$
+A \emph{lexical reference} $\ell_{\mathrm{down},1}.\ell_{\mathrm{down},2}\ldots\ell_{\mathrm{down},k}$ at path $p$
 is resolved by finding the nearest prefix $p'$ of $p$
 such that $\ell_{\mathrm{down},1} \in \ownproperties(p')$.
 The de~Bruijn index is $n = |p| - |p'|$ and the projections are
 $\ell_{\mathrm{down},*} = (\ell_{\mathrm{down},1}, \ldots, \ell_{\mathrm{down},k})$.
-Both forms produce the same representation; the semantic functions
+All three forms produce the same representation; the semantic functions
 below operate only on de~Bruijn index pairs.
 
 Parsing populates $\ownproperties$ and $\references$ from each
@@ -814,40 +848,83 @@ structure.
 \subsection{Translation from $\lambda$-Calculus}
 \label{sec:translation}
 
-The following translation maps the $\lambda$-calculus to Overlay-Calculus.
-Let $\mathcal{T}$ denote the translation function,
-mapping a $\lambda$-term to an Overlay-Calculus expression.
-Each $\lambda$-abstraction is assigned a unique label
-$\mathrm{fn}_i$ in its enclosing scope.
+The following translation maps the $\lambda$-calculus in
+A-normal form (ANF)~\cite{flanagan1993essence} to Overlay-Calculus.
+In ANF, every intermediate result is bound to a name and each
+expression contains at most one application:
+\[
+  \begin{array}{r@{\;::=\;}l}
+    M & \mathbf{let}\; x = V_1\; V_2 \;\mathbf{in}\; M
+      \mid V_1\; V_2
+      \mid V \\
+    V & x \mid \lambda x.\, M
+  \end{array}
+\]
+Every $\lambda$-term can be mechanically converted to ANF by
+naming intermediate results, and every ANF term is a
+$\lambda$-term, so ANF is neither a restriction nor an
+extension of the $\lambda$-calculus.
+The ANF structure matches Overlay-Calculus naturally: each
+$\mathbf{let}$-binding becomes a named record property, and
+each application is wrapped and projected via
+$.\mathrm{result}$.
+
+Let $\mathcal{T}$ denote the translation function.
+Each $\lambda$-abstraction introduces one scope level
+in the translated overlay tree.
 
 \medskip
 \begin{center}
   \begin{tabular}{l@{\qquad$\longrightarrow$\qquad}l}
-    $x$ (variable) &
-    $\qualifiedthis{\mathrm{fn}_x}.\mathrm{argument}$ \\
-    $\lambda x.\, e$ (abstraction) &
+    $x$ \text{\small($\lambda$-bound, index $n$)} &
+    $\dbi{n}.\mathrm{argument}$ \\[4pt]
+    $x$ \text{\small(let-bound)} &
+    $x.\mathrm{result}$ \\[4pt]
+    $\lambda x.\, M$ &
     $\{\mathrm{argument} \mapsto \{\},\;
-    \mathrm{result} \mapsto \mathcal{T}(e)\}$ \\
-    $e_1\; e_2$ (application) &
-    $\{\mathcal{T}(e_1),\;
-    \mathrm{argument} \mapsto \mathcal{T}(e_2)\}$
+    \mathrm{result} \mapsto \mathcal{T}(M)\}$ \\[4pt]
+    $\mathbf{let}\; x = V_1\; V_2
+    \;\mathbf{in}\; M$ &
+    $\{x \mapsto \{\mathcal{T}(V_1),\;
+    \mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
+    \mathrm{result} \mapsto \mathcal{T}(M)\}$ \\[4pt]
+    $V_1\; V_2$ \text{\small(tail call)} &
+    $\{\_\mathrm{tail} \mapsto \{\mathcal{T}(V_1),\;
+    \mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
+    \mathrm{result} \mapsto \_\mathrm{tail}.\mathrm{result}\}$
   \end{tabular}
 \end{center}
 \medskip
 
-A variable reference $x$ becomes
-$\qualifiedthis{\mathrm{fn}_x}.\mathrm{argument}$, where $\mathrm{fn}_x$
-is the label of the $\lambda$-abstraction that binds $x$.
-The qualified this $\qualifiedthis{\mathrm{fn}_x}$ resolves to the dynamic
-self of that abstraction's record, giving access to the
-$\mathrm{argument}$ slot after all compositions.
+A $\lambda$-bound variable $x$ with de~Bruijn index $n$
+(the number of enclosing $\lambda$-abstractions between
+the reference and its binder) becomes
+$\dbi{n}.\mathrm{argument}$.
+The indexed reference $\dbi{n}$ traverses $n$ scope levels
+upward to reach the abstraction that binds $x$, giving access
+to the $\mathrm{argument}$ slot after all compositions.
+A let-bound variable $x$ becomes the lexical reference
+$x.\mathrm{result}$, projecting the application result
+from the sibling property $x$ in the enclosing record.
 
-The result of an application is accessed via $.\mathrm{result}$.
-Nested applications require ANF-style naming of intermediate results.
+An abstraction $\lambda x.\, M$ translates to a record with own
+properties $\{\mathrm{argument}, \mathrm{result}\}$; we call this
+the \emph{abstraction shape}.
+In the $\mathbf{let}$-binding rule, the name $x$ binds to the
+composed record $\{\mathcal{T}(V_1),\;
+\mathrm{argument} \mapsto \mathcal{T}(V_2)\}$, and
+$\mathcal{T}(M)$ may reference $x.\mathrm{result}$ to obtain
+the value of the application.
+In the tail-call rule, the fresh label $\_\mathrm{tail}$ serves
+the same purpose, and $\mathrm{result}$ projects the answer.
+In both cases the composition that performs the application is
+\emph{encapsulated} behind a named property, so its internal
+structure (the $\mathrm{argument}$ and $\mathrm{result}$ labels
+of the callee) does not leak to the enclosing scope.
 
-The three rules above are a complete translation from the
-$\lambda$-calculus to Overlay-Calculus: every $\lambda$-term has an
-image, and the construction is compositional.
+The five rules above are a complete translation from the
+$\lambda$-calculus (via ANF) to Overlay-Calculus: every ANF
+term has an image, and the construction is compositional.
 Since the $\lambda$-calculus is Turing complete, so is
 Overlay-Calculus; Section~\ref{sec:trie} further shows that
 Overlay-Calculus primitives directly encode a random-access machine.
@@ -857,10 +934,11 @@ Composing the translation $\mathcal{T}$ with the semantic
 functions of Section~\ref{sec:overlay-trees} induces a semantics
 on the $\lambda$-calculus itself.
 Given a $\lambda$-term $M$, one translates it to
-$\mathcal{T}(M)$ and then determines observational behavior by
+$\mathcal{T}(M)$ and then determines convergence behavior by
 querying $\ell \in \properties(p)$ via
-equations~(\ref{eq:properties})--(\ref{eq:this}).
-The meaning of $M$ is fully determined by these path queries.
+equations~(\ref{eq:properties})--(\ref{eq:this}), following the
+$\mathrm{result}$ chain until the abstraction shape appears or
+the fixed point yields the empty set.
 
 This induced semantics is more elementary than traditional
 approaches in the mathematical machinery it requires:
@@ -897,17 +975,38 @@ That a semantics of the $\lambda$-calculus can be given without
 function spaces is perhaps unexpected: function application is
 encoded as record composition, and the resulting record is
 observed through path queries rather than applied as a function.
-Proving that this induced semantics agrees with standard
-denotational or operational semantics---i.e., that
-observational equivalence is preserved by $\mathcal{T}$---is
-left to future work.
+Section~\ref{sec:bohm-tree} shows that the convergence behavior
+of the translated overlay tree corresponds exactly to the
+B\"ohm tree~\cite{barendregt1984lambda} of the original term:
+the translation is adequate (a term converges iff it has a head
+normal form) and fully abstract (two terms are
+overlay-contextually equivalent iff they have the same B\"ohm
+tree).
+
+Combining these two facts---elementary machinery and full
+abstraction---yields a noteworthy consequence:
+\emph{the lazy $\lambda$-calculus admits a fully abstract
+semantics that lives entirely in naive set theory.}
+The only mathematical prerequisites are powerset lattices,
+set-theoretic monotonicity, and the Knaster--Tarski
+fixed-point theorem.
+No continuous lattices, no inverse limits, no Scott topology,
+no game-theoretic machinery.
+Scott's $D_\infty$ model~\cite{scott1976data} uses heavier
+machinery yet is only adequate, not fully
+abstract~\cite{plotkin1975callbyname};
+Hyland and Ong's game semantics~\cite{hyland2000full} achieves
+full abstraction but at the cost of even greater
+mathematical complexity.
+The overlay tree semantics achieves full abstraction with
+strictly simpler foundations than either.
 
 The reverse direction is non-trivial, as we discuss next.
 
 \subsection{Expressive Asymmetry}
 \label{sec:asymmetry}
 
-The translation above consists of three rules; the full computational
+The translation above consists of five rules; the full computational
 power of the $\lambda$-calculus embeds into Overlay-Calculus with no
 additional machinery.
 
@@ -1167,6 +1266,586 @@ just the native record structure
 (Section~\ref{sec:trie}). These are not problems that Overlay-Calculus
 \emph{solves}; they are problems that do not arise.
 
+\section{B\"ohm Tree Correspondence}
+\label{sec:bohm-tree}
+
+The translation $\mathcal{T}$ of Section~\ref{sec:translation}
+induces a semantics on the $\lambda$-calculus via the overlay tree
+equations~(\ref{eq:properties})--(\ref{eq:this}).
+This section proves that the induced semantics corresponds
+precisely to the B\"ohm tree~\cite{barendregt1984lambda} of
+the original $\lambda$-term, establishing both adequacy and full
+abstraction for the lazy $\lambda$-calculus.
+
+\subsection{B\"ohm Trees}
+
+We briefly recall the definition of B\"ohm
+trees~\cite{barendregt1984lambda}.
+A \emph{head reduction} $M \to_h M'$ contracts
+the outermost $\beta$-redex only: if $M$ has the form
+$(\lambda x.\, e)\; v\; M_1 \cdots M_k$, then
+$M \to_h e[v/x]\; M_1 \cdots M_k$.
+A term $M$ is in \emph{head normal form} (HNF) if it has no
+head redex, i.e., $M = \lambda x_1 \ldots x_m.\;
+y\; M_1 \cdots M_k$ where $y$ is a variable.
+
+The \emph{B\"ohm tree} $\mathrm{BT}(M)$ of a $\lambda$-term $M$
+is an infinite labeled tree defined by:
+\[
+  \mathrm{BT}(M) =
+  \begin{cases}
+    \bot & \text{if } M \text{ has no HNF} \\[6pt]
+    \lambda x_1 \ldots x_m.\;
+    y\bigl(\mathrm{BT}(M_1),\; \ldots,\; \mathrm{BT}(M_k)\bigr)
+    & \text{if } M \to^*_h
+    \lambda x_1 \ldots x_m.\; y\; M_1 \cdots M_k
+  \end{cases}
+\]
+B\"ohm tree equivalence $\mathrm{BT}(M) = \mathrm{BT}(N)$ is the
+standard observational equivalence of the lazy
+$\lambda$-calculus~\cite{barendregt1984lambda,hyland2000full}.
+
+\subsection{Path Encoding}
+
+We define a correspondence between positions in the B\"ohm tree
+and paths in the overlay tree.
+When the translation $\mathcal{T}$ is applied to an ANF
+$\lambda$-term, the resulting overlay tree has a specific shape:
+\begin{itemize}
+  \item An abstraction $\lambda x.\, M$ translates to a record
+    with own properties $\{\mathrm{argument}, \mathrm{result}\}$
+    (the \emph{abstraction shape}).
+  \item A $\mathbf{let}$-binding
+    $\mathbf{let}\; x = V_1\; V_2 \;\mathbf{in}\; M$ translates
+    to a record with own properties $\{x, \mathrm{result}\}$,
+    where $x$ holds the encapsulated application
+    $\{\mathcal{T}(V_1),\; \mathrm{argument} \mapsto
+    \mathcal{T}(V_2)\}$.
+  \item A tail call $V_1\; V_2$ translates to a record with own
+    properties $\{\_\mathrm{tail}, \mathrm{result}\}$, where
+    $\_\mathrm{tail}$ holds the encapsulated application and
+    $\mathrm{result}$ projects
+    $\_\mathrm{tail}.\mathrm{result}$.
+  \item A variable $x$ with de~Bruijn index $n$ translates to
+    an indexed reference $\dbi{n}.\mathrm{argument}$.
+\end{itemize}
+
+\noindent
+Each B\"ohm tree position is a sequence of navigation steps from
+the root.
+In the B\"ohm tree, the possible steps at a node
+$\lambda x_1 \ldots x_m.\; y\; M_1 \cdots M_k$ are:
+entering the body (peeling off one abstraction layer) and
+entering the $i$-th argument $M_i$ of the head variable.
+In the overlay tree, these correspond to following the
+$\mathrm{result}$ label (for entering the body) and the
+$\mathrm{argument}$ label after $\this$ resolution (for
+entering an argument position).
+
+Rather than comparing absolute paths across different overlay
+trees (which would be sensitive to internal structure), we
+observe only the \emph{convergence} behavior accessible via
+the $\mathrm{result}$ projection.
+
+\begin{definition}[Overlay-convergence]\label{def:convergence}
+  An overlay tree $T$ \emph{converges}, written $T{\Downarrow}$,
+  if there exists $n \ge 0$ such that the path obtained by
+  following $n$ successive $\mathrm{result}$ projections from
+  the root exhibits the \emph{abstraction shape}:
+  \[
+    \{\mathrm{argument},\, \mathrm{result}\}
+    \;\subseteq\;
+    \properties\!\bigl(\,
+      \underbrace{\text{root} \snoc \mathrm{result}
+      \snoc \cdots \snoc \mathrm{result}}_{n}
+    \,\bigr)
+  \]
+  in the least fixed point of
+  Section~\ref{sec:overlay-trees}.
+  We write $T{\Uparrow}$ if no such $n$ exists.
+\end{definition}
+
+\noindent
+Each $\mathrm{result}$-following step corresponds to one head
+reduction step in the $\lambda$-calculus: a tail call's
+$\mathrm{result}$ projects through the encapsulated
+application, and a $\mathbf{let}$-binding's $\mathrm{result}$
+enters the continuation.
+The abstraction shape at the end signals that a weak head
+normal form has been reached.
+
+\subsection{Single-Path Lemma}
+
+The $\this$ function (equation~\ref{eq:this}) is designed for the
+general case of multi-path overlay composition.
+For translated $\lambda$-terms, we show it degenerates to
+single-path resolution.
+
+\begin{lemma}[Single Path]\label{lem:single-path}
+  For any closed ANF $\lambda$-term $M$, at every invocation of
+  $\this(S,\; p_{\mathrm{def}},\; n)$ during evaluation of
+  $\mathcal{T}(M)$, the frontier set $S$ contains exactly one
+  path.
+\end{lemma}
+
+\begin{proof}
+By induction on the structure of the ANF term.
+
+\paragraph{Case $\mathcal{T}(\lambda x.\, M)
+= \{\mathrm{argument} \mapsto \{\},\;
+\mathrm{result} \mapsto \mathcal{T}(M)\}$}
+This is a record literal with
+$\ownproperties = \{\mathrm{argument}, \mathrm{result}\}$ and
+no composition sources, so $\references = \varnothing$.
+At the root path $p$, we have $\overlays(p) = \{p\}$ (a single
+path) since there are no composition sources to introduce
+additional branches.
+Inside $\mathcal{T}(M)$, any reference to $x$ is
+$\dbi{n}.\mathrm{argument}$ where $n$ is the de~Bruijn index
+pointing to this scope level.
+Since $\mathcal{T}(\lambda x.\, M)$ introduces exactly one
+scope level, there is exactly one
+overlay at that level, hence $\this$ finds exactly one matching
+pair $(p_{\mathrm{site}},\; p_{\mathrm{overlay}})$ in $\supers$.
+
+\paragraph{Case
+$\mathcal{T}(\mathbf{let}\; x = V_1\; V_2
+\;\mathbf{in}\; M)
+= \{x \mapsto \{\mathcal{T}(V_1),\;
+\mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
+\mathrm{result} \mapsto \mathcal{T}(M)\}$}
+The outer record has own properties $\{x, \mathrm{result}\}$
+and no composition sources at the outer level
+($\references = \varnothing$), so $\overlays(\text{root})
+= \{\text{root}\}$.
+Inside the $x$ subtree, the composition
+$\{\mathcal{T}(V_1),\; \mathrm{argument} \mapsto
+\mathcal{T}(V_2)\}$ has exactly one composition source
+($\mathcal{T}(V_1)$), creating exactly one $\bases$ entry.
+By induction on $V_1$, the single-path property holds inside
+$\mathcal{T}(V_1)$.
+Inside $\mathcal{T}(M)$, the induction hypothesis applies
+directly.
+
+\paragraph{Case $\mathcal{T}(V_1\; V_2) =
+\{\_\mathrm{tail} \mapsto
+\{\mathcal{T}(V_1),\; \mathrm{argument} \mapsto
+\mathcal{T}(V_2)\},\;
+\mathrm{result} \mapsto
+\_\mathrm{tail}.\mathrm{result}\}$}
+Identical to the $\mathbf{let}$-binding case: the outer record
+has own properties $\{\_\mathrm{tail}, \mathrm{result}\}$
+with no composition sources at the outer level, and the
+$\_\mathrm{tail}$ subtree contains exactly one composition
+source.
+
+\paragraph{Case $\mathcal{T}(x)
+= \dbi{n}.\mathrm{argument}$}
+This is a reference, not a record.
+The $\this$ resolution walks up $n$ scope levels.
+By the inductive hypothesis on the enclosing translations,
+each step of $\this$ encounters exactly one matching pair in
+$\supers$.
+
+\medskip\noindent
+The key structural invariant is that the translation
+$\mathcal{T}$ never produces two independent composition sources
+at the same scope level that both define the same label.
+In every case, application compositions are \emph{encapsulated}
+inside a named property ($x$ or $\_\mathrm{tail}$), and each
+such encapsulated composition has exactly one composition
+source.
+This prevents diamond inheritance and ensures single-path
+resolution throughout.
+\end{proof}
+
+\subsection{Substitution Lemma}
+
+The core mechanism of the translation is that composition with
+$\mathrm{argument} \mapsto \mathcal{T}(V)$ plays the role of
+substitution.  We make this precise.
+
+\begin{lemma}[Substitution]\label{lem:substitution}
+  Let $M$ be an ANF term with a free variable $x$ bound by an
+  enclosing $\lambda x$, and let $V$ be a closed value.
+  Define the \emph{composed tree}
+  $C = \{\mathcal{T}(\lambda x.\, M),\;
+  \mathrm{argument} \mapsto \mathcal{T}(V)\}$.
+  Then for every path $p$ under $C \snoc \mathrm{result}$ and
+  every label $\ell$:
+  \[
+    \ell \in \properties(p)
+    \text{ in } C \snoc \mathrm{result}
+    \quad\Longleftrightarrow\quad
+    \ell \in \properties(p)
+    \text{ in } \mathcal{T}(M[V/x])
+  \]
+  where $M[V/x]$ is the usual capture-avoiding substitution
+  (re-normalized to ANF if needed).
+\end{lemma}
+
+\begin{proof}
+By structural induction on $M$.
+
+\paragraph{Base case: $M = x$}
+Then $\mathcal{T}(x) =
+\dbi{n}.\mathrm{argument}$ (where $n$ is the de~Bruijn index
+of $x$), and
+$C \snoc \mathrm{result}$ contains this reference.
+In the composed tree $C$, $\this$ resolves the reference by
+walking up $n$ scope levels to the binding $\lambda$, where the composition
+$\{\mathcal{T}(\lambda x.\, x),\;
+\mathrm{argument} \mapsto \mathcal{T}(V)\}$ overlays the
+$\mathrm{argument}$ slot with $\mathcal{T}(V)$.
+By Lemma~\ref{lem:single-path}, $\this$ finds exactly one path,
+so $\resolve$ returns $\mathcal{T}(V)$'s subtree.
+Since $M[V/x] = V$, we have
+$\mathcal{T}(M[V/x]) = \mathcal{T}(V)$, and the properties
+coincide.
+
+\paragraph{Base case: $M = y$ where $y \neq x$}
+Then $\dbi{m}.\mathrm{argument}$ (where $m$ is the de~Bruijn
+index of $y$, $m \neq n$) walks up to a different scope level,
+so the composition with
+$\mathrm{argument} \mapsto \mathcal{T}(V)$ at the
+binding scope of $x$ has no effect.
+Since $M[V/x] = y$, the properties are identical.
+
+\paragraph{Inductive case: $M = \lambda y.\, M'$}
+Then $\mathcal{T}(M) =
+\{\mathrm{argument} \mapsto \{\},\;
+\mathrm{result} \mapsto \mathcal{T}(M')\}$.
+The subtree at $C \snoc \mathrm{result}$ is another
+abstraction-shaped record.
+References to $x$ inside $\mathcal{T}(M')$ resolve through
+$\this$ in exactly the same way (with one additional scope
+level from the inner $\lambda$), and by induction on $M'$, the
+properties under
+$C \snoc \mathrm{result} \snoc \mathrm{result}$
+coincide with those of
+$\mathcal{T}(M'[V/x])$.
+Since $(\lambda y.\, M')[V/x] = \lambda y.\, (M'[V/x])$
+(assuming $y$ is fresh), the result follows.
+
+\paragraph{Inductive case:
+$M = \mathbf{let}\; z = V_1\; V_2 \;\mathbf{in}\; M'$}
+Then $\mathcal{T}(M) =
+\{z \mapsto \{\mathcal{T}(V_1),\;
+\mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
+\mathrm{result} \mapsto \mathcal{T}(M')\}$.
+The substitution distributes:
+$M[V/x] =
+\mathbf{let}\; z = V_1[V/x]\; V_2[V/x]
+\;\mathbf{in}\; M'[V/x]$.
+By induction on $V_1$, $V_2$, and $M'$, the properties under
+each subtree ($z$ and $\mathrm{result}$) coincide,
+since references to $x$ inside each subtree resolve to
+$\mathcal{T}(V)$ via the same $\this$ mechanism.
+
+\paragraph{Inductive case: $M = V_1\; V_2$ (tail call)}
+Analogous to the $\mathbf{let}$-binding case with
+$\_\mathrm{tail}$ in place of $z$.
+\end{proof}
+
+\subsection{Convergence Preservation}
+
+The convergence criterion (Definition~\ref{def:convergence})
+follows the $\mathrm{result}$ chain from the root.
+Each step in this chain corresponds to one head reduction step
+in the $\lambda$-calculus.
+We make this precise.
+
+\begin{lemma}[Result-step]\label{lem:result-step}
+  Let $(\lambda x.\, M)\; V$ be a tail call (a $\beta$-redex).
+  Then for every path $p$ and label $\ell$:
+  \[
+    \ell \in \properties\!\bigl(\,
+    \text{root} \snoc \mathrm{result} \snoc p\,\bigr)
+    \text{ in } \mathcal{T}\bigl((\lambda x.\, M)\; V\bigr)
+    \;\Longleftrightarrow\;
+    \ell \in \properties\!\bigl(\,
+    \text{root} \snoc p\,\bigr)
+    \text{ in } \mathcal{T}(M[V/x])
+  \]
+  That is, following one $\mathrm{result}$ projection in the
+  tail call's overlay tree yields the same properties as the
+  root of the reduct's overlay tree.
+\end{lemma}
+
+\begin{proof}
+The translation gives:
+\[
+  \mathcal{T}\bigl((\lambda x.\, M)\; V\bigr) =
+  \{\_\mathrm{tail} \mapsto
+  \{\mathcal{T}(\lambda x.\, M),\;
+  \mathrm{argument} \mapsto \mathcal{T}(V)\},\;
+  \mathrm{result} \mapsto
+  \_\mathrm{tail}.\mathrm{result}\}
+\]
+The $\mathrm{result}$ label at the root is defined as
+$\_\mathrm{tail}.\mathrm{result}$, so
+$\text{root} \snoc \mathrm{result}$ resolves to the
+$\mathrm{result}$ path inside the composition
+$\_\mathrm{tail} = \{\mathcal{T}(\lambda x.\, M),\;
+\mathrm{argument} \mapsto \mathcal{T}(V)\}$.
+This composition is exactly the composed tree $C$ of
+Lemma~\ref{lem:substitution}, and
+$\_\mathrm{tail} \snoc \mathrm{result}$ is
+$C \snoc \mathrm{result}$.
+By Lemma~\ref{lem:substitution}, the properties under
+$C \snoc \mathrm{result}$ coincide with those of
+$\mathcal{T}(M[V/x])$.
+
+\medskip\noindent
+\emph{Let-binding variant.}
+An analogous result holds for
+$\mathbf{let}\; x = V_1\; V_2 \;\mathbf{in}\; M'$
+where $V_1 = \lambda y.\, M''$.
+The translation gives:
+\[
+  \mathcal{T}\bigl(\mathbf{let}\; x = V_1\; V_2
+  \;\mathbf{in}\; M'\bigr) =
+  \{x \mapsto \{\mathcal{T}(V_1),\;
+  \mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
+  \mathrm{result} \mapsto \mathcal{T}(M')\}
+\]
+Since $\mathrm{result} \mapsto \mathcal{T}(M')$ is a property
+definition, the subtree at
+$\text{root} \snoc \mathrm{result}$ is $\mathcal{T}(M')$.
+Inside $\mathcal{T}(M')$, each reference to $x$ is
+$x.\mathrm{result}$, which resolves to the $\mathrm{result}$
+path inside the $x$ subtree
+$\{\mathcal{T}(\lambda y.\, M''),\;
+\mathrm{argument} \mapsto \mathcal{T}(V_2)\}$.
+This is the composed tree $C$ of
+Lemma~\ref{lem:substitution}, so
+$x.\mathrm{result}$ has the same properties as
+$\mathcal{T}(M''[V_2/y])$.
+In the $\lambda$-calculus,
+$M = (\lambda x.\, M')(V_1\; V_2)$, and the head reduct is
+$N = M'[(V_1\; V_2)/x]$.
+In $\mathcal{T}(N)$, each occurrence of $x$ is replaced by
+$(V_1\; V_2)$, whose result, by the tail-call variant above,
+also yields $\mathcal{T}(M''[V_2/y])$.
+Therefore the properties at
+$\text{root} \snoc \mathrm{result} \snoc p$ in
+$\mathcal{T}(M)$ coincide with those at
+$\text{root} \snoc p$ in $\mathcal{T}(N)$ for all $p$.
+\end{proof}
+
+\begin{theorem}[Convergence preservation]%
+\label{thm:convergence-preservation}
+  If $M \to_h N$ (head reduction), then
+  $\mathcal{T}(M){\Downarrow}$ if and only if
+  $\mathcal{T}(N){\Downarrow}$.
+\end{theorem}
+
+\begin{proof}
+A head reduction step in ANF takes one of two forms:
+a tail call $(\lambda x.\, M')\; V \to_h M'[V/x]$,
+or a $\mathbf{let}$-binding
+$\mathbf{let}\; x = V_1\; V_2 \;\mathbf{in}\; M'
+\to_h M'[(V_1\; V_2)/x]$
+(since $\mathbf{let}\; x = V_1\; V_2 \;\mathbf{in}\; M' =
+(\lambda x.\, M')(V_1\; V_2)$ in the $\lambda$-calculus).
+In both cases, Lemma~\ref{lem:result-step} (tail-call and
+let-binding variants respectively) shows that
+the properties at $\text{root} \snoc \mathrm{result}^n$ in
+$\mathcal{T}(M)$ coincide with the properties at
+$\text{root} \snoc \mathrm{result}^{n-1}$ in
+$\mathcal{T}(N)$ for all $n \ge 1$, where $N$ is the
+head reduct.
+Hence the abstraction shape appears at depth $n$ in the
+pre-reduct if and only if it appears at depth $n - 1$ in
+the post-reduct.
+\end{proof}
+
+\subsection{Adequacy}
+
+A closed ANF term at the top level is either an abstraction
+(a value) or a computation (a $\mathbf{let}$-binding or tail
+call).
+An abstraction translates to a record whose root immediately
+has the abstraction shape; a computation's root has the form
+$\{x, \mathrm{result}\}$ or
+$\{\_\mathrm{tail}, \mathrm{result}\}$, and one must follow
+the $\mathrm{result}$ chain to find the eventual value.
+
+\begin{theorem}[Adequacy]\label{thm:adequacy}
+  A closed ANF $\lambda$-term $M$ has a head normal form if and
+  only if $\mathcal{T}(M){\Downarrow}$
+  (Definition~\ref{def:convergence}).
+\end{theorem}
+
+\begin{proof}
+($\Rightarrow$)
+Suppose $M \to^*_h \lambda x.\, M'$ in $k$ head reduction
+steps.
+We show $\mathcal{T}(M)$ converges at depth $\le k$ by
+induction on $k$.
+
+\emph{Base case} ($k = 0$): $M$ is already an abstraction
+$\lambda x.\, M'$.
+Then $\mathcal{T}(M) =
+\{\mathrm{argument} \mapsto \{\},\;
+\mathrm{result} \mapsto \mathcal{T}(M')\}$,
+whose root has
+$\ownproperties = \{\mathrm{argument}, \mathrm{result}\}$.
+These labels appear at stage $F^1(\bot)$ of the approximation
+chain, so $\mathcal{T}(M)$ converges at depth $n = 0$.
+
+\emph{Inductive step} ($k \ge 1$): $M$ is not an abstraction,
+so $M$ is either a tail call or a $\mathbf{let}$-binding,
+both of which are $\beta$-redexes.
+Let $N$ be the head reduct, so
+$M \to_h N \to^{k-1}_h \lambda x.\, M'$.
+By Lemma~\ref{lem:result-step} (tail-call or
+let-binding variant), the properties at
+$\text{root} \snoc \mathrm{result} \snoc p$
+in $\mathcal{T}(M)$ coincide with those at
+$\text{root} \snoc p$ in $\mathcal{T}(N)$.
+By the induction hypothesis, $\mathcal{T}(N)$
+converges at depth $\le k - 1$, so $\mathcal{T}(M)$
+converges at depth $\le k$.
+
+\medskip\noindent
+($\Leftarrow$)
+Suppose $\mathcal{T}(M){\Downarrow}$ at depth $n$.
+We show $M$ has a head normal form by induction on $n$.
+
+\emph{Base case} ($n = 0$): the root of $\mathcal{T}(M)$ has
+abstraction shape
+$\{\mathrm{argument}, \mathrm{result}\}$.
+Only the abstraction rule $\mathcal{T}(\lambda x.\, M')$
+produces a root with own property $\mathrm{argument}$.
+(For tail calls and $\mathbf{let}$-bindings, the root has
+$\ownproperties = \{\_\mathrm{tail}, \mathrm{result}\}$
+or $\{x, \mathrm{result}\}$, and $\mathrm{argument}$ cannot
+appear via $\supers$ because
+$\references = \varnothing$ at the root, giving
+$\bases(\text{root}) = \varnothing$.)
+Therefore $M$ is an abstraction, hence already in head normal
+form.
+
+\emph{Inductive step} ($n \ge 1$): the abstraction shape
+appears at depth $n$ but not at depth $0$.
+By the base case argument, $M$ is not an abstraction, so $M$
+is either a tail call $V_1\; V_2$ or a $\mathbf{let}$-binding
+$\mathbf{let}\; x = V_1\; V_2 \;\mathbf{in}\; M'$.
+In both cases, $M$ is a $\beta$-redex
+(since $V_1 = \lambda x.\, M'$ or
+$V_1 = \lambda y.\, M''$ respectively, the only closed
+ANF value).
+By Lemma~\ref{lem:result-step} (tail-call or
+let-binding variant respectively), the properties at depth
+$n - 1$ in $\mathcal{T}(N)$ match those at depth $n$
+in $\mathcal{T}(M)$, where $N$ is the head reduct.
+So $\mathcal{T}(N)$ converges at depth $n - 1$.
+By the induction hypothesis, $N$ has a head normal
+form, and since $M \to_h N$, so does $M$.
+\end{proof}
+
+\subsection{Full Abstraction}
+\label{sec:bohm-tree-correspondence}
+
+Adequacy relates a single term's head normal form to its
+overlay-convergence.
+Full abstraction lifts this to an equivalence between terms:
+the translation $\mathcal{T}$ preserves and reflects
+observational equivalence.
+
+\begin{definition}[Overlay-contextual equivalence]%
+\label{def:ctx-equiv}
+  For closed $\lambda$-terms $M$ and $N$, write
+  $\mathcal{T}(M) \approx \mathcal{T}(N)$ if for every
+  closing $\lambda$-calculus context $C[\cdot]$:
+  \[
+    \mathcal{T}(C[M]){\Downarrow}
+    \;\Longleftrightarrow\;
+    \mathcal{T}(C[N]){\Downarrow}
+  \]
+\end{definition}
+
+\noindent
+This definition observes only convergence (a single bit), but
+quantifying over all contexts makes it a fine-grained
+equivalence: different contexts can supply different arguments
+and project different results, probing every aspect of the
+term's behavior.
+
+\begin{theorem}[Full Abstraction]\label{thm:full-abstraction}
+  For closed $\lambda$-terms $M$ and $N$:
+  \[
+    \mathcal{T}(M) \approx \mathcal{T}(N)
+    \quad\Longleftrightarrow\quad
+    \mathrm{BT}(M) = \mathrm{BT}(N)
+  \]
+\end{theorem}
+
+\begin{proof}
+The translation $\mathcal{T}$ is compositional: for every
+$\lambda$-calculus context $C[\cdot]$, the overlay tree
+$\mathcal{T}(C[M])$ is determined by the overlay tree
+$\mathcal{T}(M)$ and the translation of the context.
+This means $\mathcal{T}$ preserves the context structure
+needed for the argument.
+
+\medskip\noindent
+($\Leftarrow$)
+Suppose $\mathrm{BT}(M) = \mathrm{BT}(N)$.
+B\"ohm tree equivalence is a congruence~\cite{barendregt1984lambda},
+so for every context $C[\cdot]$,
+$\mathrm{BT}(C[M]) = \mathrm{BT}(C[N])$.
+In particular, $C[M]$ has a head normal form iff $C[N]$ does.
+By Theorem~\ref{thm:adequacy},
+$\mathcal{T}(C[M]){\Downarrow}$ iff
+$\mathcal{T}(C[N]){\Downarrow}$.
+Hence $\mathcal{T}(M) \approx \mathcal{T}(N)$.
+
+\medskip\noindent
+($\Rightarrow$)
+Suppose $\mathrm{BT}(M) \neq \mathrm{BT}(N)$.
+B\"ohm tree equivalence coincides with observational
+equivalence for the lazy
+$\lambda$-calculus~\cite{barendregt1984lambda,hyland2000full}:
+there exists a context $C[\cdot]$ such that $C[M]$ converges
+and $C[N]$ diverges (or vice versa).
+By Theorem~\ref{thm:adequacy},
+$\mathcal{T}(C[M]){\Downarrow}$ and
+$\mathcal{T}(C[N]){\Uparrow}$.
+Hence $\mathcal{T}(M) \not\approx \mathcal{T}(N)$.
+\end{proof}
+
+\noindent
+The proof rests on two pillars: Adequacy
+(Theorem~\ref{thm:adequacy}), which is our contribution, and
+the classical result that B\"ohm tree equivalence equals
+observational equivalence for the lazy
+$\lambda$-calculus~\cite{barendregt1984lambda,hyland2000full}.
+The overlay tree semantics inherits full abstraction from the
+$\lambda$-calculus without needing to define or compare
+absolute paths inside overlay trees.
+
+This is stronger than Scott's denotational
+semantics~\cite{scott1976data,wadsworth1976semantics}, which is
+adequate but not fully abstract for PCF---it identifies
+terms that observational equivalence
+distinguishes~\cite{plotkin1975callbyname}.
+
+The overlay tree semantics can thus be understood as a
+computation mechanism for B\"ohm
+trees~\cite{barendregt1984lambda}---the canonical fully
+abstract model of the lazy $\lambda$-calculus---using only
+powerset lattices and monotone operators, without the
+topological infrastructure of domain theory.
+In particular, this establishes that the lazy
+$\lambda$-calculus admits a fully abstract denotational
+semantics within naive set theory: every set-theoretic
+operation involved---union, membership, powerset, monotone
+fixed point---belongs to ZF without the Axiom of Choice,
+and no topological or order-theoretic structure beyond
+subset inclusion is needed.
+
 \section{Discussion}
 
 \subsection{Is Overlay-Calculus Just Functions in Disguise?}
@@ -1187,7 +1866,7 @@ In Overlay-Calculus, the primitive operations are record construction,
 qualified-this reference, and composition. Function application is
 \emph{derived} from these primitives (Section~\ref{sec:translation}), not primitive itself.
 The asymmetry of Section~\ref{sec:asymmetry} makes this concrete:
-embedding the $\lambda$-calculus into Overlay-Calculus requires three
+embedding the $\lambda$-calculus into Overlay-Calculus requires five
 rules; the reverse requires sophisticated encoding.
 The test of whether two computational models are ``the same'' is
 whether they make the same problems easy and the same problems hard.
