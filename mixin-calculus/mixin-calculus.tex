@@ -1,5 +1,5 @@
 %%
-%% Onward! submission using ACM SIGPLAN acmart format
+%% OOPSLA submission using ACM SIGPLAN acmart format
 %%
 \documentclass[manuscript,anonymous,review,10pt]{acmart}
 
@@ -56,17 +56,17 @@
   mutable state, Overlay-Calculus is purely declarative and function-free,
   yet Turing complete. Composition ($\sqcup$) is commutative, idempotent,
   and associative---the linearization problem familiar from traditional
-  mixin and trait systems simply does not arise. We demonstrate Turing
-  completeness by giving a straightforward translation from the
-  $\lambda$-calculus into Overlay-Calculus, showing that function application
-  is derivable from symmetric overlay composition.
+  mixin and trait systems simply does not arise. A straightforward
+  translation maps the $\lambda$-calculus into Overlay-Calculus: function
+  application is just symmetric overlay composition.
   Programs are inherently in A-normal form; unlike compiler-internal ANF
   which targets a fixed monad, Overlay-Calculus ANF supports dependency
   injection, making programs CPS-agnostic---the same code serves as either
   continuation-passing or direct-style depending on assembly.
-  Records serve as tries, making Overlay-Calculus an immutable analogue of
-  the RAM machine. These observations suggest Overlay-Calculus as a computational model
-  for declarative programming, with applications to configuration languages,
+  Records are tries and composition is trie union, so Overlay-Calculus
+  is an immutable analogue of the RAM machine. These observations
+  suggest Overlay-Calculus as a computational model for declarative programming,
+  with applications to configuration languages,
   mixin-based object systems, composable effect systems, and modular software
   architectures.
 \end{abstract}
@@ -126,19 +126,18 @@
 Declarative and configuration languages are ubiquitous in modern software
 engineering. Systems such as NixOS modules~\cite{dolstra2008nixos,nixosmodules},
 Jsonnet~\cite{jsonnet}, Hydra~\cite{hydra2023}, CUE~\cite{cue2019}, Dhall~\cite{dhall2017},
-Kustomize, and JSON Patch (RFC~6902) all provide mechanisms for composing
+Kustomize~\cite{kustomize}, and JSON Patch~\cite{rfc6902} all provide mechanisms for composing
 structured data through inheritance or overlay. Among these, the NixOS
 module system stands out: its recursive attribute set merging with
 fixed-point semantics and deferred modules~\cite{nixosmodules} achieves
-remarkable expressiveness in practice, and the mechanism has been adopted
-well beyond NixOS itself---Home Manager~\cite{homemanager} manages user
-environments across platforms, nix-darwin~\cite{nixdarwin} brings
-declarative configuration to macOS, disko~\cite{disko} handles disk
-partitioning, flake-parts~\cite{flakeparts} structures Nix flakes,
-dream2nix~\cite{dream2nix} automates multi-language packaging,
-devenv~\cite{devenv} composes developer environments, and
-KubeNix~\cite{kubenix} and nixidy~\cite{nixidy} manage Kubernetes
-clusters---all built on the same module system. Yet no computational
+remarkable expressiveness in practice, and the mechanism has been adopted well beyond NixOS itself---Home
+Manager~\cite{homemanager}, nix-darwin~\cite{nixdarwin},
+disko~\cite{disko}, flake-parts~\cite{flakeparts},
+dream2nix~\cite{dream2nix}, devenv~\cite{devenv},
+KubeNix~\cite{kubenix}, and nixidy~\cite{nixidy} use it to manage
+user environments, macOS configuration, disk partitioning, flake
+structure, multi-language packaging, developer environments, and
+Kubernetes clusters respectively. Yet no computational
 theory explains \emph{why} this mechanism is so powerful.
 
 The $\lambda$-calculus serves as the foundational computational model for
@@ -163,9 +162,9 @@ violate at least one of them:
 \noindent
 The Turing Machine and RAM Machine require mutable state;
 the $\lambda$-calculus requires first-class functions.
-There was no known computational model that is simultaneously
-Turing complete, immutable, and function-free. Yet the NixOS module
-system already demonstrates that this gap can be bridged in practice:
+A computational model that is Turing complete, immutable, and
+function-free would sit in the empty cell of this table.
+The NixOS module system already suggests that such a model exists:
 its inheritance-based composition over recursive records, without
 explicit functions, is expressive enough to configure entire operating
 systems.
@@ -174,26 +173,49 @@ Conventionally, the value domain of configuration languages is assumed
 to consist of finite, well-founded structures---initial algebras in the
 sense of universal algebra. We challenge this assumption: configuration
 values are better understood as lazily observable, possibly infinite
-structures---formally, F-coalgebras~\cite{rutten2000universal}---where
+structures---in the spirit of F-coalgebras~\cite{rutten2000universal}---where
 semantics is determined by the observer and a finite prefix suffices
 for any finite observation. This is not merely a theoretical
 distinction: the \texttt{nixpkgs} package
 collection~\cite{dolstra2006purely}---over 100{,}000
-packages---is a lazy-evaluated F-coalgebra in practice, allowing any
+packages---behaves as a lazily observed structure in practice, allowing any
 single package to be evaluated without materializing the entire set.
+Guided by this observation and by the NixOS module system's
+recursive merging mechanism, we built the Overlay
+language\selfcite{~\cite{mixin2025}}{~(included as supplementary
+material)}---a declarative programming language with only three
+constructs (record literals, references, and composition) and no
+functions or let-bindings.
 
-This paper provides the missing theoretical foundation. We present
-\textbf{Overlay-Calculus}, a minimal calculus that distills the essence of
-this mechanism into three constructs---record literals, references,
-and composition ($\sqcup$)---without functions or let-bindings.
-A key observation is that
-\emph{function application admits a straightforward translation into inheritance}:
+In developing real programs in the Overlay language---Church-encoded
+data types (Appendix~\ref{app:church}), an Expression Problem solution
+(Section~\ref{sec:expression-problem}), trie-based random-access memory
+(Appendix~\ref{app:trie}), and continuation patterns
+(Section~\ref{sec:cps-agnostic})---we discovered that several
+long-standing problems in programming language theory do not arise.
+The linearization problem that has plagued mixin-based
+systems~\cite{bracha1990mixin,c3linearization} does not exist---not
+because it is resolved, but because the three primitives make it
+structurally impossible (Section~\ref{sec:overlay-trees}).
+Self-reference naturally resolves to \emph{multiple objects} rather than
+one; prior systems assume single-object resolution and either reject it
+(Scala) or diverge (NixOS module system).
+Self-referential records require no fixed-point combinator---the
+composition tree \emph{is} the call stack, and qualified this resolution
+is a first-order set-theoretic query, not a fixed-point construction.
+These are not properties we engineered; they are phenomena we observed
+in working programs.
+
+This paper distills these observations into \textbf{Overlay-Calculus},
+a minimal computational model for declarative programming.
+It turns out that
+\emph{function application has a straightforward translation into inheritance}:
 a $\lambda$-abstraction corresponds to a record with an
 $\mathrm{argument}$ slot and a $\mathrm{result}$ slot, and function
 application corresponds to composing the function record with a record
-that supplies the argument. This translation demonstrates that Overlay-Calculus
-subsumes the $\lambda$-calculus and is therefore Turing complete.
-This translation reveals an \emph{asymmetry}:
+that supplies the argument. Since the $\lambda$-calculus embeds into
+Overlay-Calculus, Overlay-Calculus is Turing complete.
+The translation reveals an \emph{asymmetry}:
 while embedding the $\lambda$-calculus into Overlay-Calculus is trivial,
 the reverse is non-trivial because Overlay-Calculus provides primitive
 operations---self-referential records, open recursion, symmetric
@@ -206,39 +228,17 @@ This asymmetry suggests that Overlay-Calculus is not merely a
 syntactic variant of the $\lambda$-calculus but captures
 different computational patterns.
 
-A further observation concerns the relationship between Overlay-Calculus and
-continuation-passing style (CPS). Because every intermediate result in
+Because every intermediate result in
 Overlay-Calculus has a name, programs are inherently in A-normal
-form~\cite{flanagan1993essence}. However, unlike ANF in functional
-language compilers---which targets a fixed monad (typically the identity
-monad~\cite{moggi1991notions}) and cannot express CPS
-transformations---Overlay-Calculus ANF supports dependency injection through
-empty record slots. This makes programs \emph{CPS-agnostic}: the same
-code can be interpreted as continuation-passing (when slots are filled by
-an external orchestrator) or as direct-style (when slots are composed
-locally). From a category-theoretic perspective, this means abstract
-interfaces and concrete implementations are syntactically
-identical---only the assembly strategy differs. The $\lambda$-calculus
-lacks this flexibility: converting between CPS and direct style requires
-an explicit program transformation~\cite{plotkin1975callbyname,sabry1993reasoning}.
+form~\cite{flanagan1993essence} with built-in dependency
+injection---a property we call \emph{CPS-agnostic}
+(Section~\ref{sec:cps-agnostic}).
 
-As a demonstration of this expressiveness, we port the Expression
-Problem~\cite{wadler1998expression} solution of Wang and
-Oliveira~\cite{wang2016trivially} from Scala (whose type system rests
-on the DOT calculus~\cite{amin2016dot}) to Overlay-Calculus. The resulting
-solution is even more concise than the original, despite Overlay-Calculus
-having only three primitives whereas DOT is a substantially larger
-system.
-
-Another observation concerns the linearization problem that has long plagued
-mixin-based systems~\cite{bracha1990mixin,c3linearization}. In traditional
-mixin or trait calculi~\cite{scharli2003traits,ducasse2006traits}, composing
-mixins that define the same property raises conflicts that must be resolved by
-a linearization order. In Overlay-Calculus, because there are no scalar values,
-the observable behavior at every node is solely \emph{property presence}---a set
-of labels. Composition ($\sqcup$) is therefore commutative, idempotent, and
-associative. The linearization problem does not arise---not because it is
-resolved, but because it does not exist.
+The Expression Problem~\cite{wadler1998expression} solution of Wang and
+Oliveira~\cite{wang2016trivially} ports from Scala (whose type system
+rests on the DOT calculus~\cite{amin2016dot}) to Overlay-Calculus
+in more concise form, despite Overlay-Calculus having only three
+primitives whereas DOT is a substantially larger system.
 
 Just as the $\lambda$-calculus uses three primitives (abstraction,
 application, variable) to serve as the foundation of functional
@@ -246,34 +246,57 @@ programming, Overlay-Calculus uses three primitives (record, reference,
 composition) to serve as the foundation of declarative programming.
 
 All constructions in this paper have been implemented and tested in
-the Overlay language, an executable implementation of Overlay-Calculus using YAML syntax,
-\selfcite{available as open source~\cite{mixin2025}}{included as supplementary material}. The implementation comprises a core
-evaluator, a standard library of Church-encoded data types, and a test
-suite covering every example in this paper: the Expression Problem
-solution (Section~\ref{sec:expression-problem}), escape and multi-exit
-continuations (Section~5.3), the Selector and Rebuilder combinators for
-dynamic trie operations (Appendix~\ref{app:trie}), and Church-encoded
-booleans and natural numbers (Appendix~\ref{app:church}). All tests are
-mechanically verified against expected output snapshots.
+the Overlay language,
+\selfcite{available as open source~\cite{mixin2025}}{included as supplementary material},
+with a test suite covering every example.
+All tests are mechanically verified against expected output snapshots.
 
 \paragraph{Contributions.}
 \begin{itemize}
   \item We present Overlay-Calculus, a minimal computational model for
     declarative programming that contains only overlay constructs (record,
     reference, composition) and no functions or scalar types.
-  \item We observe that composition ($\sqcup$) is commutative, idempotent,
-    and associative, and provide an intuitive explanation for why this
-    holds. The linearization problem inherent in prior mixin and trait
+  \item Composition ($\sqcup$) operates at the \emph{tree level}:
+    composing two overlays that share a label recursively merges their
+    subtrees (union mount semantics), rather than overriding at the
+    method level as in mixin and trait calculi.
+    This, combined with the absence of scalars, makes $\sqcup$
+    commutative, idempotent, and associative.
+    The linearization problem inherent in prior mixin and trait
     calculi simply does not arise.
-  \item We give a translation from the $\lambda$-calculus to Overlay-Calculus,
-    demonstrating that Overlay-Calculus subsumes the $\lambda$-calculus
-    and is Turing complete.
-    As a corollary, standard data types (booleans, natural numbers)
+  \item The semantics is purely \emph{observational}: there are no
+    reduction rules, no evaluation order, and no notion of a result
+    that a term reduces to.  The observer drives computation by
+    querying paths in a lazily constructed tree.
+  \item Self-referential records require no fixed-point combinator.
+    The $\lambda$-calculus translation maps each application to a
+    composition; the resulting composition tree \emph{is} the call stack.
+    The $\this$ function of Section~\ref{sec:overlay-trees} resolves
+    self-references by walking this tree---a first-order set-theoretic
+    query, not a fixed-point construction.
+  \item Self-reference resolves to \emph{multiple objects}, not one.
+    Path-dependent types with composition naturally produce this
+    situation; prior systems assume single-object resolution and
+    either reject it (Scala) or diverge (NixOS module system).
+    Since $\sqcup$ is idempotent, all objects contribute
+    equally---no disambiguation is needed.
+  \item The $\lambda$-calculus translates into Overlay-Calculus in three
+    rules, so Overlay-Calculus is Turing complete.
+    Standard data types (booleans, natural numbers)
     can be Church-encoded without scalars (Appendix~\ref{app:church}).
-  \item We show that Overlay-Calculus programs are CPS-agnostic: the same code
-    can be interpreted as either continuation-passing or direct-style depending
-    on assembly strategy, in contrast to the $\lambda$-calculus where CPS
-    conversion is an explicit program transformation.
+  \item The Expression Problem~\cite{wadler1998expression} does not
+    arise. Data definitions and operations are independent overlays;
+    composing them makes new operations available wherever the data
+    type appears, including in return types of independently
+    defined operations. No design pattern is needed---this is
+    simply what composition does.
+  \item The distinction between CPS and direct style does not arise:
+    programs are \emph{CPS-agnostic}.
+    Every intermediate result has a name (A-normal form), and empty
+    record slots serve as dependency injection points.
+    Whether a slot is filled by an external orchestrator or composed
+    locally is an assembly-time choice; the calculus defines no
+    continuation primitive and draws no distinction between the two.
 \end{itemize}
 
 \paragraph{Informal example.}\label{sec:expression-problem}
@@ -367,6 +390,7 @@ the evaluator works as long as the required properties appear somewhere in
 the composition chain, regardless of any schema declarations.
 
 \section{Syntax}
+\label{sec:syntax}
 
 Let $e$ denote an expression.
 Let $\ell$ denote a label (property name).
@@ -383,14 +407,11 @@ Let $k$ denote a non-negative integer (path length).
 
 The $\mapsto$ in $\{\ell \mapsto e\}$ defines a property, not a let-binding.
 There is no variable binding in Overlay-Calculus.
-In pursuit of a minimal computational model, Overlay-Calculus contains no
-scalar types. This does not limit computational power: just as the
-$\lambda$-calculus can encode booleans and natural numbers via Church
-encoding, so can Overlay-Calculus (Appendix~\ref{app:church}). Practical
-implementations built on Overlay-Calculus may include scalars and a
-foreign-function interface; this does not affect the analysis in this
-paper, as scalars can be treated as opaque sets whose composition
-remains commutative and idempotent.
+The Overlay language also provides scalar types through a
+foreign-function interface (FFI); Overlay-Calculus is what remains
+after removing the FFI.
+None of the examples in this paper uses the FFI---scalars simply
+did not arise.
 
 \paragraph{Qualified this.}
 The reference $\ell_{\mathrm{up}}.\self.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$
@@ -418,10 +439,24 @@ The operator $\sqcup$ does not create additional scope levels.
 \end{itemize}
 
 \section{Overlay Trees}
+\label{sec:overlay-trees}
 
 Given an AST, what are the \emph{properties} visible at
 each position in the tree? This section answers the question by
 defining a collection of mutually recursive functions over paths.
+
+Unlike the $\lambda$-calculus, which requires reduction rules
+($\beta$-reduction) to specify how terms compute, Overlay-Calculus has
+\emph{no reduction steps}. There is no rewriting of terms, no
+evaluation order, and no notion of a ``result'' that a term reduces to.
+Instead, the semantics is purely \emph{observational}: one queries
+whether a label $\ell$ is a property at a path $p$ in the composed
+tree. The mutually recursive functions defined below---$\properties$,
+$\supers$, $\overlays$, $\bases$, $\resolve$, $\this$---constitute the
+\emph{entire} semantics. This is the observational perspective
+introduced in Section~1: like an
+F-coalgebra~\cite{rutten2000universal}, an overlay tree's behavior is
+determined by observation (property presence), not by reduction.
 
 Most of these functions have direct analogues in object-oriented languages:
 $\Path$ identifies a position in the tree,
@@ -463,7 +498,7 @@ With paths in hand, we can state what the AST provides
 at each path.
 
 \paragraph{AST.}
-An expression $e$ (Section~2) is parsed into an AST.
+An expression $e$ (Section~\ref{sec:syntax}) is parsed into an AST.
 The AST provides two primitive functions at each path $p$:
 \begin{itemize}
   \item $\ownproperties(p)$: the set of labels
@@ -506,13 +541,13 @@ posed at the beginning of this section.
 \paragraph{Properties.}
 The properties of a path are its own properties together with
 those inherited from all supers:
-\[
+\begin{equation}\label{eq:properties}
   \properties(p) =
   \bigl\{\; \ell \;\big|\;
   (\_,\; p_{\mathrm{overlay}}) \in \supers(p),\;
   \ell \in \ownproperties(p_{\mathrm{overlay}})
   \;\bigr\}
-\]
+\end{equation}
 The remainder of this section defines $\supers$,
 the transitive inheritance closure,
 and its dependencies.
@@ -527,13 +562,13 @@ $\init(p_{\mathrm{base}})$ through which it is reached.
 This provenance is needed by qualified this resolution, i.e.\ the $\this$ function defined below,
 to map a definition-site overlay back to
 the composition-site paths that incorporate it:
-\[
+\begin{equation}\label{eq:supers}
   \supers(p) =
   \bigl\{\; (\init(p_{\mathrm{base}}),\; p_{\mathrm{overlay}}) \;\big|\;
   p_{\mathrm{base}} \in \bases^*(p),\;
   p_{\mathrm{overlay}} \in \overlays(p_{\mathrm{base}})
   \;\bigr\}
-\]
+\end{equation}
 The $\supers$ formula depends on two functions:
 the identity-sharing paths $\overlays$ and the one-hop reference targets $\bases$.
 We define $\overlays$ first.
@@ -546,7 +581,7 @@ $\overlays(p)$ collects all such paths that share the
 Concretely, the overlays of $p$ include $p$ itself
 and $p_{\mathrm{branch}} \snoc \last(p)$ for every
 branch $p_{\mathrm{branch}}$ of $\init(p)$ that also defines $\last(p)$:
-\[
+\begin{equation}\label{eq:overlays}
   \overlays(p) =
   \begin{cases}
     \{p\} & \text{if } p = ()  \\[6pt]
@@ -560,7 +595,7 @@ branch $p_{\mathrm{branch}}$ of $\init(p)$ that also defines $\last(p)$:
     \right.\right\}
     & \text{if } p \neq ()
   \end{cases}
-\]
+\end{equation}
 It remains to define $\bases$, the other dependency of $\supers$.
 
 \paragraph{Bases.}
@@ -569,7 +604,7 @@ inherits from via references---analogous to the direct base
 classes in object-oriented languages.
 Concretely, $\bases$ resolves every reference in
 $p$'s $\overlays$ one step:
-\[
+\begin{equation}\label{eq:bases}
   \bases(p) =
   \left\{\; p_{\mathrm{target}} \;\left|\;
   \begin{aligned}
@@ -578,7 +613,7 @@ $p$'s $\overlays$ one step:
     &p_{\mathrm{target}} \in \resolve(\init(p),\; p_{\mathrm{overlay}},\; n,\; \ell_{\mathrm{down},*})
   \end{aligned}
   \right.\right\}
-\]
+\end{equation}
 The $\bases$ formula calls the reference resolution function $\resolve$, which we define next.
 
 \paragraph{Reference resolution.}
@@ -592,7 +627,7 @@ Resolution proceeds in two phases: first, the qualified this resolution function
 starting from the enclosing scope $\init(p_{\mathrm{def}})$,
 mapping the definition-site path to composition-site paths;
 then the downward projections $\ell_{\mathrm{down},*}$ are appended:
-\[
+\begin{equation}\label{eq:resolve}
   \resolve(p_{\mathrm{site}},\; p_{\mathrm{def}},\; n,\; \ell_{\mathrm{down},*})
   =
   \bigl\{\;
@@ -601,7 +636,7 @@ then the downward projections $\ell_{\mathrm{down},*}$ are appended:
   p_{\mathrm{current}} \in
   \this(\{p_{\mathrm{site}}\},\; \init(p_{\mathrm{def}}),\; n)
   \;\bigr\}
-\]
+\end{equation}
 When multiple routes exist (due to multi-path inheritance from $\sqcup$),
 they may yield different target paths; all are collected.
 We now define $\this$.
@@ -646,7 +681,7 @@ frontier $S$, those whose overlay component matches
 $p_{\mathrm{def}}$, and collects the corresponding
 composition-site paths as the new frontier.
 After $n$ steps the frontier contains the answer:
-\[
+\begin{equation}\label{eq:this}
   \this(S,\; p_{\mathrm{def}},\; n) =
   \begin{cases}
     S & \text{if } n = 0 \\[6pt]
@@ -664,7 +699,7 @@ After $n$ steps the frontier contains the answer:
     \right)
     & \text{if } n > 0
   \end{cases}
-\]
+\end{equation}
 At each step $\init$ shortens $p_{\mathrm{def}}$ by one label
 and $n$ decreases by one.
 Since $n$ is a non-negative integer, the recursion terminates.
@@ -675,28 +710,51 @@ We conclude this section with the algebraic properties of $\sqcup$.
 \paragraph{Properties of $\sqcup$.}
 Composition is commutative, idempotent, and associative.
 The identity element is the empty record $\{\}$.
-
-\medskip\noindent\textit{Intuition.}\quad
-Evaluation merges $\references$ and $\ownproperties$ for each label recursively.
-At every leaf the only observable is property presence---a set of labels.
-Since there are no scalars, the only observable at any node is which properties exist.
-Set union is commutative and idempotent:
-$\{a,b\} \cup \{b,c\} = \{b,c\} \cup \{a,b\}$ and
-$\mathrm{Labels} \cup \mathrm{Labels} = \mathrm{Labels}$.
-The observable tree is therefore invariant under reordering or
-duplication of references.
-
-Since duplicate references produce the same observable result,
-implementations may deduplicate references (e.g., by path)
-to avoid the exponential blowup from diamond inheritance.
-
-The only externally observable fact is property presence:
+These properties are immediate from the definitions above
+because $\sqcup$ is a \emph{syntactic} construct, not a semantic
+operator: as described in the AST paragraph, parsing eliminates
+$\sqcup$ by merging $\ownproperties$ and $\references$ from both
+operands via set union into a single AST node.
+The operator does not appear in the semantic domain at all.
+The semantic functions $\properties$, $\supers$, $\overlays$,
+$\bases$, $\resolve$, and $\this$ are defined entirely over
+sets---there is no binary operation in the semantics whose
+operand order could matter.
+Since sets are extensional---determined solely by their
+elements, not by construction history---the AST is identical
+regardless of the syntactic order or duplication of $\sqcup$
+operands, and therefore so is every observable property
 $\ell \in \properties(p)$.
 
+\paragraph{Observational semantics without reduction.}
+The definitions above constitute the complete semantics of
+Overlay-Calculus. There are no reduction rules, no evaluation contexts,
+and no small-step or big-step judgments. This is a deliberate design
+choice, not an omission. In the $\lambda$-calculus, a term such as
+$(\lambda x.\, x)\; y$ must be \emph{reduced} to $y$ before its
+meaning is apparent; the operational semantics specifies how and in what
+order reductions occur. In Overlay-Calculus, a composed tree such as
+$\{a \mapsto \{\}\} \sqcup \{b \mapsto \{\}\}$ does not reduce to
+anything---it \emph{is} the value. The functions $\properties$,
+$\supers$, etc.\ determine what is observable at each path, and that is
+all. Computation arises not from rewriting terms but from querying an
+inductively deeper path in a lazily constructed tree: the observer
+drives the computation by choosing which path to inspect, and the
+mutually recursive definitions unfold on demand. This observation model
+is inspired by F-coalgebras~\cite{rutten2000universal}, where
+identity is determined by observable behavior rather than by internal
+structure.
+Since Overlay-Calculus is Turing complete, the mutual recursion among
+$\properties$, $\supers$, $\bases$, and $\resolve$ may not terminate
+for all paths---this non-termination is the coalgebraic analogue of
+divergence in the $\lambda$-calculus and is inherent to any
+Turing-complete model.
 
 \section{Relationship to Other Computational Models}
+\label{sec:relationship}
 
 \subsection{Translation from $\lambda$-Calculus}
+\label{sec:translation}
 
 The following translation maps the $\lambda$-calculus to Overlay-Calculus.
 Let $\mathcal{T}$ denote the translation function,
@@ -729,14 +787,20 @@ $\mathrm{argument}$ slot after all compositions.
 The result of an application is accessed via $.\mathrm{result}$.
 Nested applications require ANF-style naming of intermediate results.
 
-The translation from $\lambda$-calculus to Overlay-Calculus is straightforward.
+The three rules above are a complete translation from the
+$\lambda$-calculus to Overlay-Calculus: every $\lambda$-term has an
+image, and the construction is compositional.
+Since the $\lambda$-calculus is Turing complete, so is
+Overlay-Calculus; Section~\ref{sec:trie} further shows that
+Overlay-Calculus primitives directly encode a random-access machine.
 The reverse direction is non-trivial, as we discuss next.
 
 \subsection{Expressive Asymmetry}
+\label{sec:asymmetry}
 
-The translation above consists of three simple rules. This simplicity
-is significant: the full computational power of the $\lambda$-calculus
-embeds into Overlay-Calculus with minimal overhead.
+The translation above consists of three rules; the full computational
+power of the $\lambda$-calculus embeds into Overlay-Calculus with no
+additional machinery.
 
 The reverse direction---encoding Overlay-Calculus in pure
 $\lambda$-calculus---is non-trivial.
@@ -772,20 +836,19 @@ This sophistication is not accidental---it reflects three features:
 \end{enumerate}
 
 \noindent
-This asymmetry reveals that Overlay-Calculus is not simply the
-$\lambda$-calculus in disguise. Rather, Overlay-Calculus provides
-primitive operations for computational patterns that are
+Overlay-Calculus is not the $\lambda$-calculus in disguise:
+it provides primitive operations for computational patterns that are
 \emph{derivable but complex} in the $\lambda$-calculus.
 
 \subsection{CPS-Agnostic Programs}
+\label{sec:cps-agnostic}
 
 In the $\lambda$-calculus, a program is either in continuation-passing
 style (CPS) or direct style. Converting between these representations
 requires explicit transformation---the CPS
 conversion~\cite{plotkin1975callbyname,sabry1993reasoning}.
-Overlay-Calculus exhibits a different property: the same program text can
-be interpreted as either CPS or direct-style depending on how
-dependencies are assembled.
+In Overlay-Calculus, the distinction does not exist: the same program text
+is CPS or direct-style depending on how dependencies are assembled.
 
 Consider a generic computation step:
 \begin{align*}
@@ -895,8 +958,8 @@ filled externally (CPS interpretation) or composed locally (direct
 interpretation).
 
 \paragraph{Practical implications.}
-This design enables flexible library interfaces. A library component with
-empty API slots can be used in multiple contexts without modification:
+A library component with empty API slots can be used in multiple
+contexts without modification:
 \begin{itemize}
   \item In synchronous code, fill slots with direct implementations
   \item In asynchronous code, fill slots with continuation handlers
@@ -915,6 +978,12 @@ patterns described above: escape continuations analogous to
 handling, and protected computations with multiple symmetric exit points.
 Each example includes test cases verifying that the correct continuation
 path is taken.
+
+CPS-agnosticism is not a designed feature of Overlay-Calculus; it is
+an emergent property of records and composition. The calculus
+defines no notion of continuation---the three syntax constructs and
+six semantic functions of Section~\ref{sec:overlay-trees} are the
+entire language.
 
 \subsection{Records as Tries: The RAM Machine Connection}
 \label{sec:trie}
@@ -950,6 +1019,8 @@ are given in Appendix~\ref{app:trie}.
 \selfcite{The implementation~\cite{mixin2025} includes}{The supplementary material includes} executable implementations of all
 trie operations---static and dynamic lookup, deletion, update, and trie
 union---with test cases covering keys of varying bit structure.
+Together, these operations constitute an immutable random-access machine
+with random-access time complexity.
 
 \subsection{Contrast with SKI Combinator Calculus}
 
@@ -967,19 +1038,15 @@ $\lambda$-calculus---such as the Expression
 Problem~(Section~\ref{sec:expression-problem})---remain equally hard
 in SKI.
 
-Overlay-Calculus, by contrast, exhibits a genuine shift in problem
-difficulty. The Expression Problem, which requires sophisticated
-encodings in $\lambda$-calculus-based systems---object
+In Overlay-Calculus, the Expression Problem---which requires object
 algebras~\cite{oliveira2012extensibility}, finally tagless
 interpreters~\cite{carette2009finally}, or multi-parameter type
-classes---becomes direct and natural in Overlay-Calculus via $\sqcup$.
-Similarly, random-access memory via immutable tries, which requires
-explicit data structure engineering in the $\lambda$-calculus, is
-simply the native record structure of Overlay-Calculus
-(Section~\ref{sec:trie}). This difference in problem difficulty
-demonstrates that Overlay-Calculus captures computational patterns that
-are \emph{different} from those of the $\lambda$-calculus,
-not merely syntactic variants.
+classes in $\lambda$-calculus-based systems---is just $\sqcup$.
+Random-access memory via immutable tries---which requires
+explicit data structure engineering in the $\lambda$-calculus---is
+just the native record structure
+(Section~\ref{sec:trie}). These are not problems that Overlay-Calculus
+\emph{solves}; they are problems that do not arise.
 
 \section{Discussion}
 
@@ -988,7 +1055,7 @@ not merely syntactic variants.
 A skeptical reader might ask whether Overlay-Calculus is simply
 the $\lambda$-calculus with different syntax.
 
-The semantic domain of Overlay-Calculus (Section~3) is entirely
+The semantic domain of Overlay-Calculus (Section~\ref{sec:overlay-trees}) is entirely
 first-order: paths are label sequences, overlays are the record trees
 produced by evaluation, AST nodes are pure data,
 and the resolution functions ($\overlays$, $\supers$, $\resolve$, etc.)
@@ -999,13 +1066,13 @@ computational patterns are \emph{primitive} in the language itself.
 
 In Overlay-Calculus, the primitive operations are record construction,
 qualified-this reference, and composition. Function application is
-\emph{derived} from these primitives (Section~5.1), not primitive itself.
-Indeed, the asymmetry demonstrated in Section~5.2 makes this concrete:
-embedding the $\lambda$-calculus into Overlay-Calculus requires only three
-simple rules, while the reverse direction requires sophisticated
-encoding. The real test of whether two computational
-models are ``the same'' is whether they make the same problems easy
-and the same problems hard. As shown in Section~5, they do not:
+\emph{derived} from these primitives (Section~\ref{sec:translation}), not primitive itself.
+The asymmetry of Section~\ref{sec:asymmetry} makes this concrete:
+embedding the $\lambda$-calculus into Overlay-Calculus requires three
+rules; the reverse requires sophisticated encoding.
+The test of whether two computational models are ``the same'' is
+whether they make the same problems easy and the same problems hard.
+They do not:
 
 \begin{center}
   \begin{tabular}{lll}
@@ -1025,11 +1092,9 @@ and the same problems hard. As shown in Section~5, they do not:
 \end{center}
 
 \noindent
-The fact that Overlay-Calculus requires no additional machinery for either
-problem class---while the $\lambda$-calculus requires elaborate
-encodings for both---demonstrates that Overlay-Calculus captures
-different computational primitives, not merely a
-syntactic reshuffling.
+Overlay-Calculus requires no additional machinery for either
+problem class; the $\lambda$-calculus requires elaborate
+encodings for both.
 
 \subsection{Properties of Composition}
 
@@ -1039,51 +1104,34 @@ Deduplication of inherited overlays is purely an optimization.
 
 \subsection{Relationship to Practical Systems}
 
-Overlay-Calculus provides a theoretical foundation for understanding several
-classes of declarative systems that have emerged independently in practice.
+Several classes of declarative systems that have emerged independently
+in practice turn out to be instances of Overlay-Calculus.
 
-\paragraph{Configuration languages.}
+\paragraph{Configuration and object-oriented languages.}
 The NixOS module system~\cite{dolstra2008nixos,nixosmodules}---whose
 recursive attribute merging motivated this work---can be understood as an
 implementation of Overlay-Calculus with additional features (type checking,
-error reporting, FFI to the Nix language). The module system's
-expressiveness stems from the properties described in Section~3: composition
-is commutative, idempotent, and associative, so the linearization
-problem does not arise. Other configuration languages exhibit similar patterns:
-Jsonnet~\cite{jsonnet} provides inheritance-based composition over JSON;
-CUE~\cite{cue2019} unifies types and values through lattice-based merging;
-Dhall~\cite{dhall2017} combines functional programming with configuration.
-All share Overlay-Calculus's core pattern: composition over recursive
-structures without explicit functions.
-
-\paragraph{Mixin-based object systems.}
-Scala traits~\cite{odersky2004overview}, Ruby mixins~\cite{flanagan2008ruby},
-and similar object-oriented mechanisms use symmetric composition to extend
-classes. Traditional mixin calculi~\cite{bracha1990mixin,scharli2003traits}
-face the linearization problem when composing mixins with conflicting
-properties. In Overlay-Calculus, this problem does not arise (Section~3) by eliminating
-scalar values: only property presence is observable, making composition
-naturally commutative. This explains why trait systems with
-conflict-resolution strategies (e.g., Scala's linearization) require
-additional machinery that Overlay-Calculus does not.
+error reporting, FFI to the Nix language).
+Detailed comparisons with CUE, Jsonnet, Dhall, with mixin and
+trait calculi, and with the NixOS module system's lazy evaluation
+limitations under multiple inheritance routes are given in
+Section~\ref{sec:related-work}.
 
 \paragraph{Effect systems.}
 Algebraic effects with handlers~\cite{plotkin2003algebraic,pretnar2015introduction}
 and monad transformers structure computational effects through composition.
-The CPS-agnostic property (Section~5.3) shows how Overlay-Calculus naturally
+The CPS-agnostic property (Section~\ref{sec:cps-agnostic}) shows how Overlay-Calculus naturally
 supports effect handler composition: empty API slots can be filled with
 effect handlers (CPS interpretation) or direct implementations (direct-style
-interpretation). This correspondence suggests that Overlay-Calculus may provide
-a foundation for understanding effect systems without requiring explicit
-monad machinery.
+interpretation). The same pattern appears in algebraic effect systems, without
+explicit monad machinery.
 
 \paragraph{Modular software architectures.}
 Plugin systems, component frameworks, and dependency injection frameworks
 enable software extensibility through declarative composition. The
-symmetric, associative nature of $\sqcup$ (Section~3) explains why such
+symmetric, associative nature of $\sqcup$ (Section~\ref{sec:overlay-trees}) explains why such
 systems work: components can be composed in any order without changing
-behavior. Overlay-Calculus formalizes the composition patterns that these
-systems implement ad hoc.
+behavior. These systems implement Overlay-Calculus patterns ad hoc.
 
 \paragraph{Union file systems.}
 Union file systems (UnionFS, OverlayFS, AUFS) layer multiple directory
@@ -1097,7 +1145,196 @@ demonstrates that Overlay-Calculus
 patterns emerge naturally in union mount composition through late-binding
 semantics and dynamic dispatch for file lookups across layers.
 
+\section{Related Work}
+\label{sec:related-work}
+
+\paragraph{Denotational semantics of inheritance.}
+Cook~\cite{cook1989denotational} gave the first denotational
+semantics of inheritance, modeling objects as recursive records and
+inheritance as composition of \emph{generators} (functions from self
+to complete object) and \emph{wrappers} (functions that modify
+generators), solved by a fixed-point construction.
+Cook's key insight---that inheritance is a general mechanism
+applicable to any form of recursive definition, not only
+object-oriented methods---is one of the starting points of the
+present work.
+The model has four primitives (records, functions, generators,
+wrappers) and requires a fixed-point combinator; composition is
+asymmetric (a wrapper modifies a generator, not vice versa).
+Whether the same insight can be captured with fewer primitives and
+symmetric composition was a natural question.
+
+\paragraph{Mixin-based inheritance.}
+Bracha and Cook~\cite{bracha1990mixin} formalized mixins as
+abstract subclasses---functions from a superclass parameter to a
+subclass---unifying the inheritance mechanisms of Smalltalk, Beta,
+and CLOS under a single model.
+Because mixin application is function composition, it is
+\emph{neither commutative nor idempotent}: applying the same
+mixin twice may produce different results, and applying two
+mixins in different orders may yield different linearizations.
+The C3 linearization algorithm~\cite{c3linearization} was later
+developed to impose a deterministic order;
+whether linearization is inherent to inheritance or an artifact of
+non-commutativity was worth examining.
+Mixin composition operates at the \emph{method level}: applying a
+mixin replaces or extends individual methods in a flat namespace.
+There is no recursive merging of nested structure---composing two
+mixins that define the same method name results in an override, not
+a union mount.
+Finally, mixins presuppose the $\lambda$-calculus as their
+computational foundation: method bodies are functions, and mixin
+application is function composition.
+Mixins organize and compose functions but cannot replace
+them---without the underlying $\lambda$-calculus, there is nothing
+to compose.  The mixin mechanism itself is not Turing complete.
+
+\paragraph{Traits.}
+Sch\"arli et al.~\cite{scharli2003traits} introduced traits as
+composable units of behavior. Trait composition is symmetric and
+commutative: the sum of two traits is order-independent, which is
+a significant improvement over mixins.
+However, when two traits provide methods with the
+same name, a \emph{conflict} arises and must be explicitly resolved
+by the programmer through exclusion or aliasing.
+Ducasse et al.~\cite{ducasse2006traits} extended the model with a
+\emph{flattening property}: the semantics of a class is independent
+of whether its methods originate from traits or are defined directly.
+Like mixins, trait composition is \emph{flat}: it operates on
+individual method names, not on nested structures, so same-name
+definitions are conflicts rather than opportunities for deeper
+merging.
+And like mixins, traits presuppose the $\lambda$-calculus: trait
+methods are functions, and the computational power resides in those
+functions, not in the trait mechanism itself.
+
+\paragraph{Family polymorphism and virtual classes.}
+Ernst~\cite{ernst2001family} introduced family polymorphism, where
+families of mutually dependent classes can be refined together in
+subclasses. Ernst, Ostermann, and Cook~\cite{ernst2006virtual}
+formalized this in the virtual class calculus, where classes are
+class-valued attributes of objects, accessed via path expressions of
+the form \texttt{this.out.C}.
+The path \texttt{this.out} navigates to an enclosing scope, analogous
+to qualified this ($\ell_{\mathrm{up}}.\self$) in this paper.
+A notable restriction is that each such path resolves to a
+\emph{single} class in a \emph{single} enclosing object.
+When multiple inheritance routes lead to the same scope---a common
+situation under composition---single-valued resolution must choose
+one route and discard the others, losing information.
+Whether qualified this can resolve to a \emph{set} of paths,
+letting all routes contribute equally, had not been
+explored.
+
+\paragraph{Object calculi.}
+Abadi and Cardelli~\cite{abadi1996theory} developed a comprehensive
+theory of objects, treating objects---rather than classes---as the
+primitive notion. Their calculi include method update and
+self-referential objects, but methods are fundamentally functions
+(taking self as a parameter), and object extension is asymmetric
+(method override replaces the previous definition).
+Boudol~\cite{boudol2004recursive} studied the recursive record
+semantics of objects in a call-by-value setting, showing that
+self-referential records require an unsafe fixed-point operator.
+Whether self-reference can be handled without a fixed-point operator
+in the object language---for instance, through coalgebraic
+observation rather than reduction---was a question these calculi
+left open.
+
+\paragraph{Record calculi.}
+Harper and Pierce~\cite{harper1991record} presented a record
+calculus based on symmetric concatenation with a type system that
+tracks the absence of fields.
+When two records define the same label, concatenation
+is undefined (a type error); the calculus avoids same-label
+composition rather than giving it meaning.
+Cardelli~\cite{cardelli1992extensible}
+studied extensible records with subtyping;
+R\'emy~\cite{remy1989type} gave a type system for records and
+variants in ML.
+These calculi operate on \emph{flat} records (no nesting) and
+treat records as \emph{data} (initial algebras): a record is a
+finite map from labels to values, fully determined at construction
+time.  Nested records, self-reference, and lazy observation---the
+properties needed for records to serve as a computational
+substrate---are outside their scope.
+
+\paragraph{DOT calculus.}
+Amin et al.~\cite{amin2016dot} formalized path-dependent types in
+the DOT calculus, the theoretical foundation of Scala's type system.
+DOT paths navigate through objects to reach nested type members,
+providing a rich dependent type structure.
+DOT includes the $\lambda$-calculus as a sub-language; removing it
+while retaining path-dependent types would yield a calculus closer
+to pure composition-based inheritance
+(see Section~\ref{sec:future-work}).
+
+\paragraph{Configuration languages.}
+CUE~\cite{cue2019} unifies types and values in a single lattice
+where unification (\texttt{\&}) is commutative, associative, and
+idempotent.
+CUE's design was motivated by Google's Borg Configuration
+Language (GCL), which used graph unification.
+CUE's lattice includes scalar types with a conflict
+semantics (unifying incompatible scalars yields $\bot$); whether
+scalars are necessary for a configuration language, or whether
+tree structure alone suffices, is an interesting design question.
+Jsonnet~\cite{jsonnet} provides object inheritance via the
+\texttt{+} operator with mixin semantics: composition is
+\emph{not} commutative (the right-hand side wins on scalar
+conflicts), and deep merging requires explicit opt-in (\texttt{+:}
+syntax) on a per-field basis---so union mount semantics is
+available but not the default.
+Dhall~\cite{dhall2017} takes a functional approach: it is a typed
+$\lambda$-calculus with records, where composition is a record merge
+operator, not an inheritance mechanism.
+
+\paragraph{Module systems and union mount semantics.}
+The NixOS module system~\cite{dolstra2008nixos,nixosmodules}
+composes modules by \emph{recursively merging nested attribute sets},
+not by linearization or method-level override---the same union mount
+semantics that distinguishes tree-level composition from mixin and
+trait composition.
+When two modules define the same nested path, their subtrees are
+merged rather than overridden.
+The NixOS module system got nearly all of the high-level design
+right: union mount composition, recursive self-reference, deferred
+evaluation of modules, and a rich type-checking layer on top.
+Its practical success is remarkable---the same mechanism powers
+NixOS system configuration, Home
+Manager~\cite{homemanager}, nix-darwin~\cite{nixdarwin},
+flake-parts~\cite{flakeparts}, and dozens of other ecosystems,
+collectively managing configurations of arbitrary complexity.
+The one aspect that appears not to have been fully addressed is the
+semantics of self-reference under multiple inheritance.
+We attempted to implement Overlay-Calculus's qualified this
+semantics within the NixOS module system but found that it
+consistently diverged into infinite recursion.
+This suggested that the module system's fixed-point evaluation,
+while sufficient for its intended use cases, does not generalize
+to the multi-path self-reference that recursive merging
+naturally gives rise to---and motivated the coalgebraic
+semantics of Section~\ref{sec:overlay-trees}.
+
+\paragraph{SKI combinator calculus.}
+Sch\"onfinkel~\cite{schonfinkel1924} and
+Curry~\cite{curry1958combinatory} showed that the $\lambda$-calculus
+can be reformulated without bound variables using three
+combinators (S, K, I).
+SKI is function-free at the object level and Turing complete.
+However, bracket abstraction translates between SKI and the
+$\lambda$-calculus preserving computational structure, so the two
+systems are isomorphic in terms of problem difficulty
+(Section~\ref{sec:relationship}): what is hard in one remains hard
+in the other.
+Whether a function-free calculus can exhibit a genuine \emph{shift}
+in problem difficulty---making some problems structurally easier than
+in the $\lambda$-calculus, rather than merely encoding them
+differently---is the question that motivates the comparison in
+Section~\ref{sec:relationship}.
+
 \section{Future Work}
+\label{sec:future-work}
 
 \selfcite{The Overlay language~\cite{mixin2025}}{The supplementary
 implementation} is an executable implementation of Overlay-Calculus
@@ -1147,7 +1384,7 @@ inhabit multiple constructors (e.g.,
 $\mathrm{Zero} \sqcup \mathrm{Odd}(\mathrm{Zero})$).
 This is not a defect---it is the natural trie semantics of the
 calculus, and the basis for solving the expression problem
-(Section~5.2).
+(Section~\ref{sec:asymmetry}).
 However, many operations (e.g., equality testing) assume that values
 are \emph{linear}---inhabiting exactly one constructor.
 The observer pattern (Appendix~\ref{app:church}) does not enforce
@@ -1182,7 +1419,7 @@ dispatch.
 
 The trie operations in Appendix~\ref{app:trie} are hardcoded for
 binary natural number keys.
-Since every overlay \emph{is} a trie (Section~5.4) and insertion is
+Since every overlay \emph{is} a trie (Section~\ref{sec:trie}) and insertion is
 simply $\sqcup$, only operations that cannot be expressed as
 composition need explicit implementation: \emph{deletion},
 \emph{dynamic lookup}, and \emph{prefix lookup}.
@@ -1256,7 +1493,7 @@ A Selector declares the trie shape and a result slot:
 \]
 Three observer callbacks build Selectors bottom-up. These callbacks
 ($\mathrm{on\_zero}$, $\mathrm{on\_odd}$, $\mathrm{on\_even}$) are
-interpretation points in the sense of Section~5.3: they can be filled
+interpretation points in the sense of Section~\ref{sec:cps-agnostic}: they can be filled
 externally by an orchestrator (CPS interpretation) or composed locally
 (direct interpretation), demonstrating the CPS-agnostic property.
 The $\mathrm{on\_zero}$ callback returns a Selector that reads
@@ -1267,7 +1504,7 @@ $.\mathrm{value}$ from the trie:
 \]
 The $\mathrm{on\_odd}$ callback takes a Selector
 (via the $\mathrm{argument}/\mathrm{result}$ encoding of
-Section~5.1) and returns a new Selector that navigates to
+Section~\ref{sec:translation}) and returns a new Selector that navigates to
 $.\mathrm{at\_odd}$, then delegates to the argument Selector:
 \begin{align*}
   \mathrm{lookup\_on\_odd} &\mapsto \{
