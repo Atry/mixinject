@@ -5,17 +5,17 @@
     Zero:
       increment:
         - [Odd]
-        - half:
+        - halfOfPredecessor:
             - [Zero]
     Even:
       half:
         increment: [Product]
       increment:
         - [Odd]
-        - half: [Even, ~, half]
+        - halfOfPredecessor: [Even, ~, half]
     Odd:
-      half:
+      halfOfPredecessor:
         increment: [Product]
       increment:
         - [Even]
-        - half: [Odd, ~, half, increment]
+        - half: [Odd, ~, halfOfPredecessor, increment]

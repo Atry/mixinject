@@ -14,7 +14,7 @@
   # 1 = Odd(0)
   One:
     - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [Zero]
 
   # 2 = Even(1)
@@ -26,7 +26,7 @@
   # 3 = Odd(1)
   Three:
     - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [One]
 
   # 4 = Even(2)
@@ -38,7 +38,7 @@
   # 5 = Odd(2)
   Five:
     - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [Two]
 
   # 6 = Even(3)
@@ -50,7 +50,7 @@
   # 7 = Odd(3)
   Seven:
     - [BinNatArithmeticTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [Three]
 
   # =============================================================================

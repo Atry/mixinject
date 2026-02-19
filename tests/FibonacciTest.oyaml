@@ -22,7 +22,7 @@
     - [FibonacciTest, ~, FibonacciFactory]
     - One:
         - [FibonacciTest, ~, BinNatFactory, Odd]
-        - half:
+        - halfOfPredecessor:
             - [FibonacciTest, ~, BinNatFactory, Zero]
 
   # ===========================================================================
@@ -110,7 +110,7 @@
     - [FibonacciTest, ~, BinNatFactory, Zero]
   binNatOne:
     - [FibonacciTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [binNatZero]
   binNatTwo:
     - [FibonacciTest, ~, BinNatFactory, Even]
@@ -118,7 +118,7 @@
         - [binNatOne]
   binNatThree:
     - [FibonacciTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [binNatOne]
   binNatFour:
     - [FibonacciTest, ~, BinNatFactory, Even]
@@ -126,7 +126,7 @@
         - [binNatTwo]
   binNatFive:
     - [FibonacciTest, ~, BinNatFactory, Odd]
-    - half:
+    - halfOfPredecessor:
         - [binNatTwo]
   binNatSix:
     - [FibonacciTest, ~, BinNatFactory, Even]

@@ -18,28 +18,28 @@
             VisitEven:
               decreased:
                 - [Odd]
-                - half: [Even, ~, half, Decrement, decreased]
+                - halfOfPredecessor: [Even, ~, half, Decrement, decreased]
             VisitOdd:
               decreased:
                 - [Odd]
-                - half: [Even, ~, half, Decrement, decreased]
+                - halfOfPredecessor: [Even, ~, half, Decrement, decreased]
             Visit:
               decreased: [Product]
         decreased: [_HalfVisitor, Visit, decreased]
     Odd:
       Decrement:
         _HalfVisitor:
-          - [Odd, ~, half, Visitor]
+          - [Odd, ~, halfOfPredecessor, Visitor]
           - VisitZero:
               decreased: [Zero]
             VisitEven:
               decreased:
                 - [Even]
-                - half: [Odd, ~, half]
+                - half: [Odd, ~, halfOfPredecessor]
             VisitOdd:
               decreased:
                 - [Even]
-                - half: [Odd, ~, half]
+                - half: [Odd, ~, halfOfPredecessor]
             Visit:
               decreased: [Product]
         decreased: [_HalfVisitor, Visit, decreased]

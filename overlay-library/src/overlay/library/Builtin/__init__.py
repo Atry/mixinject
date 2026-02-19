@@ -95,8 +95,8 @@ class BinNatToPython:
             @public
             @patch_many
             @staticmethod
-            def pythonValues(half: _BinNatScope):
-                return (value * 2 + 1 for value in half.pythonValues)
+            def pythonValues(halfOfPredecessor: _BinNatScope):
+                return (value * 2 + 1 for value in halfOfPredecessor.pythonValues)
 
 
 @public

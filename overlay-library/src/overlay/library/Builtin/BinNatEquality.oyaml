@@ -42,16 +42,16 @@
                 equal: [BinNatEquality, ~, Boolean]
           equal: [_OtherVisitor, Visit, equal]
       Odd:
-        half:
+        halfOfPredecessor:
           Equal:
             equal: [BinNatEquality, ~, Boolean]
         Equal:
           other:
             - [Product]
-            - half: [Product]
+            - halfOfPredecessor: [Product]
           _recursiveEquality:
-            - [Odd, ~, half, Equal]
-            - other: [Equal, ~, other, half]
+            - [Odd, ~, halfOfPredecessor, Equal]
+            - other: [Equal, ~, other, halfOfPredecessor]
           _OtherVisitor:
             - [other, Visitor]
             - VisitZero:

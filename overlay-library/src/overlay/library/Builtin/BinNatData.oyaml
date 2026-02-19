@@ -9,5 +9,5 @@ BinNatFactory:
       - half: [Product]
     Odd:
       - [Product]
-      - half: [Product]
+      - halfOfPredecessor: [Product]
 BinNat: [BinNatFactory, Product]

@@ -16,26 +16,30 @@
         addend:
           - [Product]
           - half: [Product]
-        _recursiveAddition:
-          - [Even, ~, half, Plus]
-          - addend: [Plus, ~, addend, half]
+          - halfOfPredecessor: [Product]
         _AddendVisitor:
           - [addend, Visitor]
           - VisitZero:
               sum: [Even, ~]
             VisitEven:
+              _recursiveAddition:
+                - [Even, ~, half, Plus]
+                - addend: [Plus, ~, addend, half]
               sum:
                 - [Even]
                 - half: [_recursiveAddition, sum]
             VisitOdd:
+              _recursiveAddition:
+                - [Even, ~, half, Plus]
+                - addend: [Plus, ~, addend, halfOfPredecessor]
               sum:
                 - [Odd]
-                - half: [_recursiveAddition, sum]
+                - halfOfPredecessor: [_recursiveAddition, sum]
             Visit:
               sum: [Product]
         sum: [_AddendVisitor, Visit, sum]
     Odd:
-      half:
+      halfOfPredecessor:
         Plus:
           sum: [Product]
         increment: [Product]
@@ -43,18 +47,22 @@
         addend:
           - [Product]
           - half: [Product]
-        _recursiveAddition:
-          - [Odd, ~, half, Plus]
-          - addend: [Plus, ~, addend, half]
+          - halfOfPredecessor: [Product]
         _AddendVisitor:
           - [addend, Visitor]
           - VisitZero:
               sum: [Odd, ~]
             VisitEven:
+              _recursiveAddition:
+                - [Odd, ~, halfOfPredecessor, Plus]
+                - addend: [Plus, ~, addend, half]
               sum:
                 - [Odd]
-                - half: [_recursiveAddition, sum]
+                - halfOfPredecessor: [_recursiveAddition, sum]
             VisitOdd:
+              _recursiveAddition:
+                - [Odd, ~, halfOfPredecessor, Plus]
+                - addend: [Plus, ~, addend, halfOfPredecessor]
               sum:
                 - [Even]
                 - half: [_recursiveAddition, sum, increment]
