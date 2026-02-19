@@ -359,8 +359,10 @@ test_app = evaluate(SQLiteDatabase, UserRepository, HttpHandlers, NetworkServer)
 
 ## Python modules as scopes
 
-Every `@scope`-decorated class in the examples above can be replaced by a plain
-Python module or package file. Pass a module directly to `evaluate()`:
+The `@scope` classes above are a teaching convenience — the real-world style is
+plain Python modules, just like pytest fixtures don't require a class. Every
+`@scope` class maps directly to a module file; pass it to `evaluate()` the same
+way:
 
 ```python
 import sqlite_database   # sqlite_database.py with @extern / @resource / @public
@@ -371,8 +373,7 @@ app = evaluate(sqlite_database, user_repository, modules_public=True)(
 )
 ```
 
-The same decorators (`@resource`, `@extern`, `@patch`, `@merge`, `@eager`,
-`@public`) work on module-level functions exactly as on class methods. A
+The same decorators work on module-level functions exactly as on class methods. A
 subpackage becomes a nested scope — `user_repository/request_scope/` is the
 module equivalent of a nested `@scope class RequestScope`.
 
@@ -387,10 +388,14 @@ using the fixture package at [tests/fixtures/app_di/](tests/fixtures/app_di/).
 
 ## Overlay language
 
-For large projects it can be more convenient to declare scopes in `.oyaml` files
-rather than Python classes. The Overlay language is a YAML-based configuration
-language with mixin composition, lazy evaluation, and lexical scoping — essentially
-the same dependency-injection semantics as the Python API, but expressed as data.
+When most of an application's scope bodies would be pure wiring — forwarding a
+value, combining two dependencies, defining a constant — the Python module
+boilerplate (`@resource`, `@public`, `@extern`) is overhead. The Overlay language
+lets you declare the same DI graph in `.oyaml` files: a YAML-based configuration
+language with mixin composition, lazy evaluation, and lexical scoping. Resource
+bodies that require Python (FFI calls, I/O, complex logic) stay in `.py` files and
+are referenced from `.oyaml` by name. The dependency-injection semantics are
+identical to the Python API; only the surface syntax differs.
 
 ```yaml
 # sqlite_database.oyaml
