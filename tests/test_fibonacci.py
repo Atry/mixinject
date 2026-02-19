@@ -45,7 +45,7 @@ class TestNatFibonacciDirect:
         self, fibonacci_scope: Scope, index: str, expected: int
     ) -> None:
         instance = getattr(fibonacci_scope, f"natFib{index}")
-        assert instance.fibonacci.ToPython.pythonValue == expected
+        assert instance.fibonacci.pythonValues == frozenset({expected})
 
 
 class TestNatFibonacciAccumulator:
@@ -59,7 +59,7 @@ class TestNatFibonacciAccumulator:
         self, fibonacci_scope: Scope, index: str, expected: int
     ) -> None:
         instance = getattr(fibonacci_scope, f"natFibAcc{index}")
-        assert instance.fibonacci.ToPython.pythonValue == expected
+        assert instance.fibonacci.pythonValues == frozenset({expected})
 
 
 class TestBinNatFibonacciDirect:
@@ -73,7 +73,7 @@ class TestBinNatFibonacciDirect:
         self, fibonacci_scope: Scope, index: str, expected: int
     ) -> None:
         instance = getattr(fibonacci_scope, f"binNatFib{index}")
-        assert instance.fibonacci.ToPython.pythonValue == expected
+        assert instance.fibonacci.pythonValues == frozenset({expected})
 
 
 class TestBinNatFibonacciAccumulator:
@@ -87,7 +87,7 @@ class TestBinNatFibonacciAccumulator:
         self, fibonacci_scope: Scope, index: str, expected: int
     ) -> None:
         instance = getattr(fibonacci_scope, f"binNatFibAcc{index}")
-        assert instance.fibonacci.ToPython.pythonValue == expected
+        assert instance.fibonacci.pythonValues == frozenset({expected})
 
 
 class TestFibonacciConsistency:
@@ -98,8 +98,8 @@ class TestFibonacciConsistency:
         direct = getattr(fibonacci_scope, f"natFib{index}")
         accumulator = getattr(fibonacci_scope, f"natFibAcc{index}")
         assert (
-            direct.fibonacci.ToPython.pythonValue
-            == accumulator.fibonacci.ToPython.pythonValue
+            direct.fibonacci.pythonValues
+            == accumulator.fibonacci.pythonValues
         )
 
     @pytest.mark.parametrize("index", NAMES)
@@ -109,6 +109,6 @@ class TestFibonacciConsistency:
         direct = getattr(fibonacci_scope, f"binNatFib{index}")
         accumulator = getattr(fibonacci_scope, f"binNatFibAcc{index}")
         assert (
-            direct.fibonacci.ToPython.pythonValue
-            == accumulator.fibonacci.ToPython.pythonValue
+            direct.fibonacci.pythonValues
+            == accumulator.fibonacci.pythonValues
         )

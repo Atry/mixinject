@@ -41,28 +41,28 @@ class TestChurchNumerals:
     """Test that Church numerals are constructed correctly."""
 
     def test_zero(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Zero.ToPython.pythonValue == 0
+        assert arithmetic_scope.Zero.pythonValues == frozenset({0})
 
     def test_one(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.One.ToPython.pythonValue == 1
+        assert arithmetic_scope.One.pythonValues == frozenset({1})
 
     def test_two(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Two.ToPython.pythonValue == 2
+        assert arithmetic_scope.Two.pythonValues == frozenset({2})
 
     def test_three(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Three.ToPython.pythonValue == 3
+        assert arithmetic_scope.Three.pythonValues == frozenset({3})
 
     def test_four(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Four.ToPython.pythonValue == 4
+        assert arithmetic_scope.Four.pythonValues == frozenset({4})
 
     def test_five(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Five.ToPython.pythonValue == 5
+        assert arithmetic_scope.Five.pythonValues == frozenset({5})
 
     def test_six(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Six.ToPython.pythonValue == 6
+        assert arithmetic_scope.Six.pythonValues == frozenset({6})
 
     def test_seven(self, arithmetic_scope: Scope) -> None:
-        assert arithmetic_scope.Seven.ToPython.pythonValue == 7
+        assert arithmetic_scope.Seven.pythonValues == frozenset({7})
 
 
 # =============================================================================
@@ -75,15 +75,15 @@ class TestAddition:
 
     def test_three_plus_four(self, arithmetic_scope: Scope) -> None:
         """3 + 4 = 7"""
-        assert arithmetic_scope.threePlusFour.sum.ToPython.pythonValue == 7
+        assert arithmetic_scope.threePlusFour.sum.pythonValues == frozenset({7})
 
     def test_five_plus_two(self, arithmetic_scope: Scope) -> None:
         """5 + 2 = 7"""
-        assert arithmetic_scope.fivePlusTwo.sum.ToPython.pythonValue == 7
+        assert arithmetic_scope.fivePlusTwo.sum.pythonValues == frozenset({7})
 
     def test_zero_plus_three(self, arithmetic_scope: Scope) -> None:
         """0 + 3 = 3"""
-        assert arithmetic_scope.zeroPlusThree.sum.ToPython.pythonValue == 3
+        assert arithmetic_scope.zeroPlusThree.sum.pythonValues == frozenset({3})
 
 
 # =============================================================================
@@ -96,15 +96,15 @@ class TestDirectEquality:
 
     def test_zero_equals_zero(self, arithmetic_scope: Scope) -> None:
         """0 == 0 is True"""
-        assert arithmetic_scope.zeroEqualsZero.equal.ToPython.pythonValue is True
+        assert arithmetic_scope.zeroEqualsZero.equal.pythonValues == frozenset({True})
 
     def test_three_equals_three(self, arithmetic_scope: Scope) -> None:
         """3 == 3 is True"""
-        assert arithmetic_scope.threeEqualsThree.equal.ToPython.pythonValue is True
+        assert arithmetic_scope.threeEqualsThree.equal.pythonValues == frozenset({True})
 
     def test_three_equals_four(self, arithmetic_scope: Scope) -> None:
         """3 == 4 is False"""
-        assert arithmetic_scope.threeEqualsFour.equal.ToPython.pythonValue is False
+        assert arithmetic_scope.threeEqualsFour.equal.pythonValues == frozenset({False})
 
 
 # =============================================================================
@@ -118,21 +118,24 @@ class TestEqualityWithAddition:
     def test_three_plus_four_equals_seven(self, arithmetic_scope: Scope) -> None:
         """(3 + 4) == 7 is True"""
         assert (
-            arithmetic_scope.threePlusFourEqualsSeven.equal.ToPython.pythonValue is True
+            arithmetic_scope.threePlusFourEqualsSeven.equal.pythonValues
+            == frozenset({True})
         )
 
     def test_five_plus_two_equals_seven(self, arithmetic_scope: Scope) -> None:
         """(5 + 2) == 7 is True"""
         assert (
-            arithmetic_scope.fivePlusTwoEqualsSeven.equal.ToPython.pythonValue is True
+            arithmetic_scope.fivePlusTwoEqualsSeven.equal.pythonValues
+            == frozenset({True})
         )
 
     def test_five_plus_two_equals_two(self, arithmetic_scope: Scope) -> None:
         """(5 + 2) == 2 is False"""
-        assert arithmetic_scope.fivePlusTwoEqualsTwo.equal.ToPython.pythonValue is False
+        assert arithmetic_scope.fivePlusTwoEqualsTwo.equal.pythonValues == frozenset({False})
 
     def test_zero_plus_three_equals_three(self, arithmetic_scope: Scope) -> None:
         """(0 + 3) == 3 is True"""
         assert (
-            arithmetic_scope.zeroPlusThreeEqualsThree.equal.ToPython.pythonValue is True
+            arithmetic_scope.zeroPlusThreeEqualsThree.equal.pythonValues
+            == frozenset({True})
         )
