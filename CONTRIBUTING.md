@@ -1188,7 +1188,46 @@ IsZero:
 
 **Use qualified this `[Scope, ~, Symbol]` for inherited properties (from composed files).**
 
-Lexical references are simpler but limited to own properties. Qualified this is required when accessing inherited properties or bypassing variable shadowing
+Lexical references are simpler but limited to own properties. Qualified this is required when accessing inherited properties or bypassing variable shadowing.
+
+**Important:** Do not use an empty declaration `symbol: []` as a workaround to access inherited properties via lexical reference `[symbol]`. An empty declaration silently creates a new empty scope if the inherited property does not exist (e.g., the base scope was not composed), masking composition mistakes. Qualified this fails with an error in the same situation, providing fail-fast behavior.
+
+```yaml
+# ✗ BAD - empty declaration masks missing inherited property
+RequestScope:
+  - [ffi, HttpSendResponse]
+  - written: []                    # Silently creates empty scope if HttpSendResponse is not composed
+    response: [written]
+
+# ✓ GOOD - qualified this fails loudly if inherited property is missing
+RequestScope:
+  - [ffi, HttpSendResponse]
+  - response: [RequestScope, ~, written]  # Error if HttpSendResponse does not provide 'written'
+```
+
+### Known Limitations
+
+#### oyaml files cannot be a bare scalar
+
+An `.oyaml` file whose entire content is a single scalar value (string, number, etc.) is **not currently supported**. The top-level structure of an `.oyaml` file must be a mapping (dict) or a list.
+
+```yaml
+# ✗ NOT SUPPORTED - entire file is a bare scalar
+"Hello World"
+
+# ✗ NOT SUPPORTED - entire file is a bare number
+42
+
+# ✓ SUPPORTED - top-level mapping
+greeting: "Hello World"
+count: 42
+
+# ✓ SUPPORTED - top-level list (anonymous category)
+- [SomeInheritance]
+- key: value
+```
+
+This is a known bug tracked for future fix. When you need to provide a scalar configuration value via oyaml, wrap it in a mapping instead of using a bare scalar file.
 
 
 ## Nix Commands
