@@ -23,8 +23,6 @@ FFI:
     sequence: []
     index: []
     element: []
-  HttpRequestExtern:
-    request: []
   ExtractUserId:
     request: []
     path_separator: []
@@ -95,7 +93,6 @@ UserRepository:
 HttpHandlers:
   user_count: []
   RequestScope:
-    - [FFI, HttpRequestExtern]
     - [FFI, ExtractUserId]
     - [FFI, HttpSendResponse]
     - request: []

@@ -662,7 +662,6 @@ HttpHandlers:
   user_count: []                            # extern: from UserRepository
 
   RequestScope:
-    - [FFI, HttpRequestExtern]              # provides: request (extern)
     - [FFI, ExtractUserId]                  # provides: user_id
     - [FFI, HttpSendResponse]              # provides: written
     - request: []                           # extern: injected per-request
@@ -682,11 +681,11 @@ HttpHandlers:
       response: [RequestScope, ~, written]
 ```
 
-**Flat inheritance:** `RequestScope` inherits *three* FFI adapters in its
-inheritance list (`- [FFI, HttpRequestExtern]`, `- [FFI, ExtractUserId]`,
-`- [FFI, HttpSendResponse]`). Their `@extern` and `@resource` fields all merge
-into `RequestScope`'s own field namespace. The last list item (the mapping
-starting with `request: []`) defines `RequestScope`'s own fields.
+**Flat inheritance:** `RequestScope` inherits *two* FFI adapters in its
+inheritance list (`- [FFI, ExtractUserId]`, `- [FFI, HttpSendResponse]`). Their
+`@extern` and `@resource` fields all merge into `RequestScope`'s own field
+namespace. The last list item (the mapping starting with `request: []`) defines
+`RequestScope`'s own fields.
 
 **Lexical scoping across scope boundaries:** `[user_count]` inside
 `RequestScope` searches outward and finds `HttpHandlers.user_count`. At this
