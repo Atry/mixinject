@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -35,9 +36,9 @@ jobs:
       #   run: uv run pyright
 
       - name: Build packages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         run: uv build --all-packages
 
       - name: Publish to PyPI
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         uses: pypa/gh-action-pypi-publish@release/v1
