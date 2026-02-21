@@ -1,71 +1,27 @@
+- [NatConstants]
 - [Builtin, NatEquality]
 - [Builtin, NatPlus]
 - [Builtin, NatToPython]
 - [Builtin, BooleanToPython]
 
   # =============================================================================
-  # Concrete Church numerals
-  # =============================================================================
-
-- Zero:
-    - [ArithmeticTest, ~, NatFactory, Zero]
-
-  One:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [Zero]
-
-  Two:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [One]
-
-  Three:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [Two]
-
-  Four:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [Three]
-
-  Five:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [Four]
-
-  Six:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [Five]
-
-  Seven:
-    - [ArithmeticTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [Six]
-
-  # =============================================================================
   # Addition tests
   # =============================================================================
 
   # 3 + 4
-  threePlusFour:
-    - [Three, Plus]
-    - addend:
-        - [Four]
+- threePlusFour:
+    - [ArithmeticTest, ~, Three, Plus]
+    - addend: [ArithmeticTest, ~, Four]
 
   # 5 + 2
   fivePlusTwo:
-    - [Five, Plus]
-    - addend:
-        - [Two]
+    - [ArithmeticTest, ~, Five, Plus]
+    - addend: [ArithmeticTest, ~, Two]
 
   # 0 + 3
   zeroPlusThree:
-    - [Zero, Plus]
-    - addend:
-        - [Three]
+    - [ArithmeticTest, ~, Zero, Plus]
+    - addend: [ArithmeticTest, ~, Three]
 
   # =============================================================================
   # Direct equality tests (without addition)
@@ -73,21 +29,18 @@
 
   # 0 == 0
   zeroEqualsZero:
-    - [Zero, Equal]
-    - other:
-        - [Zero]
+    - [ArithmeticTest, ~, Zero, Equal]
+    - other: [ArithmeticTest, ~, Zero]
 
   # 3 == 3
   threeEqualsThree:
-    - [Three, Equal]
-    - other:
-        - [Three]
+    - [ArithmeticTest, ~, Three, Equal]
+    - other: [ArithmeticTest, ~, Three]
 
   # 3 == 4
   threeEqualsFour:
-    - [Three, Equal]
-    - other:
-        - [Four]
+    - [ArithmeticTest, ~, Three, Equal]
+    - other: [ArithmeticTest, ~, Four]
 
   # =============================================================================
   # Equality tests with addition results
@@ -95,20 +48,20 @@
 
   # (3 + 4) == 7
   threePlusFourEqualsSeven:
-    - [Seven, Equal]
+    - [ArithmeticTest, ~, Seven, Equal]
     - other: [threePlusFour, sum]
 
   # (5 + 2) == 7
   fivePlusTwoEqualsSeven:
-    - [Seven, Equal]
+    - [ArithmeticTest, ~, Seven, Equal]
     - other: [fivePlusTwo, sum]
 
   # (5 + 2) == 2
   fivePlusTwoEqualsTwo:
-    - [Two, Equal]
+    - [ArithmeticTest, ~, Two, Equal]
     - other: [fivePlusTwo, sum]
 
   # (0 + 3) == 3
   zeroPlusThreeEqualsThree:
-    - [Three, Equal]
+    - [ArithmeticTest, ~, Three, Equal]
     - other: [zeroPlusThree, sum]

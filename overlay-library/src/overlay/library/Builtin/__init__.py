@@ -104,25 +104,25 @@ class BinNatToPython:
 @scope
 class BooleanToPython:
     BooleanFactory = MappingScopeDefinition(
-        bases=(),
+        inherits=(),
         is_public=True,
         underlying={
             "Product": MappingScopeDefinition(
-                bases=(),
+                inherits=(),
                 is_public=True,
                 underlying={
                     "pythonValues": public(merge(lambda: frozenset)),
                 },
             ),
             "True": MappingScopeDefinition(
-                bases=(),
+                inherits=(),
                 is_public=True,
                 underlying={
                     "pythonValues": public(patch(lambda: True)),
                 },
             ),
             "False": MappingScopeDefinition(
-                bases=(),
+                inherits=(),
                 is_public=True,
                 underlying={
                     "pythonValues": public(patch(lambda: False)),

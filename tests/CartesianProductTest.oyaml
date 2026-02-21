@@ -1,119 +1,89 @@
+- [NatConstants]
 - [Builtin, NatEquality]
 - [Builtin, NatPlus]
 - [Builtin, NatToPython]
+- [Builtin, BooleanToPython]
 - [Builtin, BinNatEquality]
 - [Builtin, BinNatPlus]
 - [Builtin, BinNatToPython]
 
   # =============================================================================
-  # Concrete Nat values
-  # =============================================================================
-
-- natZero:
-    - [CartesianProductTest, ~, NatFactory, Zero]
-
-  natOne:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natZero]
-
-  natTwo:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natOne]
-
-  natThree:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natTwo]
-
-  natFour:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natThree]
-
-  natFive:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natFour]
-
-  natSix:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natFive]
-
-  # =============================================================================
   # Nat trie values: scopes inheriting multiple constructors simultaneously
   # =============================================================================
 
-  # Zero ∪ Two:  Successor(predecessor=Successor(predecessor=Zero)) ∪ Zero
-  natZeroOrTwo:
-    - [CartesianProductTest, ~, NatFactory, Zero]
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [CartesianProductTest, ~, NatFactory, Successor]
-        - predecessor: [natZero]
+  # Zero ∪ Two:  {0, 2}
+- NatZeroOrTwo:
+    - [CartesianProductTest, ~, Zero]
+    - [CartesianProductTest, ~, Two]
 
-  # One ∪ Two:  Successor(predecessor=Zero) ∪ Successor(predecessor=Successor(predecessor=Zero))
-  natOneOrTwo:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natZero]
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor:
-        - [CartesianProductTest, ~, NatFactory, Successor]
-        - predecessor: [natZero]
+  # One ∪ Two:  {1, 2}
+  NatOneOrTwo:
+    - [CartesianProductTest, ~, One]
+    - [CartesianProductTest, ~, Two]
 
-  # Three ∪ Four
-  natThreeOrFour:
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natTwo]
-    - [CartesianProductTest, ~, NatFactory, Successor]
-    - predecessor: [natThree]
+  # Three ∪ Four:  {3, 4}
+  NatThreeOrFour:
+    - [CartesianProductTest, ~, Three]
+    - [CartesianProductTest, ~, Four]
 
   # =============================================================================
   # Nat: (Zero ∪ Two) + Three  →  {0+3, 2+3} = {3, 5}
   # =============================================================================
 
-  natZeroOrTwoPlusThree:
-    - [natZeroOrTwo, Plus]
-    - addend: [natThree]
+  NatZeroOrTwoPlusThree:
+    - [NatZeroOrTwo, Plus]
+    - addend: [CartesianProductTest, ~, Three]
 
   # =============================================================================
   # Nat: Three + (One ∪ Two)  →  {3+1, 3+2} = {4, 5}
   # =============================================================================
 
-  natThreePlusOneOrTwo:
-    - [natThree, Plus]
-    - addend: [natOneOrTwo]
+  NatThreePlusOneOrTwo:
+    - [CartesianProductTest, ~, Three, Plus]
+    - addend: [NatOneOrTwo]
 
   # =============================================================================
   # Nat: (One ∪ Two) + (Three ∪ Four)  →  {1+3, 1+4, 2+3, 2+4} = {4, 5, 6}
   # =============================================================================
 
-  natOneOrTwoPlusThreeOrFour:
-    - [natOneOrTwo, Plus]
-    - addend: [natThreeOrFour]
+  NatOneOrTwoPlusThreeOrFour:
+    - [NatOneOrTwo, Plus]
+    - addend: [NatThreeOrFour]
+
+  # =============================================================================
+  # Equality check: {4,5,6} == {4,5,6}  →  {True, False}  (Cartesian product)
+  # =============================================================================
+
+  NatResultEqualitySelf:
+    - [NatOneOrTwoPlusThreeOrFour, sum, Equal]
+    - other: [NatOneOrTwoPlusThreeOrFour, sum]
 
   # =============================================================================
   # Concrete BinNat values
   # =============================================================================
 
-  binNatZero:
+  BinNatZero:
     - [CartesianProductTest, ~, BinNatFactory, Zero]
 
-  binNatOne:
+  BinNatOne:
     - [CartesianProductTest, ~, BinNatFactory, Odd]
-    - halfOfPredecessor: [binNatZero]
+    - halfOfPredecessor: [BinNatZero]
 
-  binNatTwo:
+  BinNatTwo:
     - [CartesianProductTest, ~, BinNatFactory, Even]
-    - half: [binNatOne]
+    - half: [BinNatOne]
 
-  binNatThree:
+  BinNatThree:
     - [CartesianProductTest, ~, BinNatFactory, Odd]
-    - halfOfPredecessor: [binNatOne]
+    - halfOfPredecessor: [BinNatOne]
 
-  binNatFour:
+  BinNatFour:
     - [CartesianProductTest, ~, BinNatFactory, Even]
-    - half: [binNatTwo]
+    - half: [BinNatTwo]
 
-  binNatFive:
+  BinNatFive:
     - [CartesianProductTest, ~, BinNatFactory, Odd]
-    - halfOfPredecessor: [binNatTwo]
+    - halfOfPredecessor: [BinNatTwo]
 
   # =============================================================================
   # BinNat trie values
@@ -125,45 +95,40 @@
   # =============================================================================
 
   # Zero ∪ Two: Zero ∪ Even(One)  →  {0, 2}
-  binNatZeroOrTwo:
-    - [CartesianProductTest, ~, BinNatFactory, Zero]
-    - [CartesianProductTest, ~, BinNatFactory, Even]
-    - half: [binNatOne]
+  BinNatZeroOrTwo:
+    - [BinNatZero]
+    - [BinNatTwo]
 
   # Two ∪ Three: Even(One) ∪ Odd(One)  →  {2, 3}
-  binNatTwoOrThree:
-    - [CartesianProductTest, ~, BinNatFactory, Even]
-    - [CartesianProductTest, ~, BinNatFactory, Odd]
-    - half: [binNatOne]
-    - halfOfPredecessor: [binNatOne]
+  BinNatTwoOrThree:
+    - [BinNatTwo]
+    - [BinNatThree]
 
   # Four ∪ Five: Even(Two) ∪ Odd(Two)  →  {4, 5}
-  binNatFourOrFive:
-    - [CartesianProductTest, ~, BinNatFactory, Even]
-    - [CartesianProductTest, ~, BinNatFactory, Odd]
-    - half: [binNatTwo]
-    - halfOfPredecessor: [binNatTwo]
+  BinNatFourOrFive:
+    - [BinNatFour]
+    - [BinNatFive]
 
   # =============================================================================
   # BinNat: (Zero ∪ Two) + Three  →  {0+3, 2+3} = {3, 5}
   # =============================================================================
 
-  binNatZeroOrTwoPlusThree:
-    - [binNatZeroOrTwo, Plus]
-    - addend: [binNatThree]
+  BinNatZeroOrTwoPlusThree:
+    - [BinNatZeroOrTwo, Plus]
+    - addend: [BinNatThree]
 
   # =============================================================================
   # BinNat: Three + (Two ∪ Three)  →  {3+2, 3+3} = {5, 6}
   # =============================================================================
 
-  binNatThreePlusTwoOrThree:
-    - [binNatThree, Plus]
-    - addend: [binNatTwoOrThree]
+  BinNatThreePlusTwoOrThree:
+    - [BinNatThree, Plus]
+    - addend: [BinNatTwoOrThree]
 
   # =============================================================================
   # BinNat: (Two ∪ Three) + (Four ∪ Five)  →  {2+4, 2+5, 3+4, 3+5} = {6, 7, 8}
   # =============================================================================
 
-  binNatTwoOrThreePlusFourOrFive:
-    - [binNatTwoOrThree, Plus]
-    - addend: [binNatFourOrFive]
+  BinNatTwoOrThreePlusFourOrFive:
+    - [BinNatTwoOrThree, Plus]
+    - addend: [BinNatFourOrFive]

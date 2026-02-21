@@ -198,7 +198,7 @@ class TestFileMixinDefinition:
     def test_iter_yields_property_names(self) -> None:
         """__iter__ should yield property names."""
         definition = FileMixinDefinition(
-            bases=(),
+            inherits=(),
             is_public=True,
             underlying={"prop1": "value1", "prop2": "value2"},
             scalar_values=(),
@@ -212,7 +212,7 @@ class TestFileMixinDefinition:
     def test_getitem_returns_child_definition(self) -> None:
         """__getitem__ should return child FileMixinDefinition."""
         definition = FileMixinDefinition(
-            bases=(),
+            inherits=(),
             is_public=True,
             underlying={"child": {"nested": "value"}},
             scalar_values=(),
@@ -235,7 +235,7 @@ class TestDirectoryMixinDefinition:
         mixin_file.write_text("TestMixin:\n  value: 42\n")
 
         definition = DirectoryMixinDefinition(
-            bases=(),
+            inherits=(),
             is_public=True,
             underlying=tmp_path,
         )
@@ -249,7 +249,7 @@ class TestDirectoryMixinDefinition:
         subdir.mkdir()
 
         definition = DirectoryMixinDefinition(
-            bases=(),
+            inherits=(),
             is_public=True,
             underlying=tmp_path,
         )
@@ -264,7 +264,7 @@ class TestDirectoryMixinDefinition:
         (tmp_path / "toml_test.otoml").write_text("[C]\n")
 
         definition = DirectoryMixinDefinition(
-            bases=(),
+            inherits=(),
             is_public=True,
             underlying=tmp_path,
         )

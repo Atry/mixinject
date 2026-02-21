@@ -18,7 +18,7 @@ import pytest
 
 from syrupy.assertion import SnapshotAssertion
 
-from overlay.language import MixinSymbol
+from overlay.language import MixinSymbol, SymbolKind
 from overlay.language.mixin_directory import DirectoryMixinDefinition
 from overlay.language.runtime import Scope, evaluate
 
@@ -76,7 +76,7 @@ def _symbol_tree_snapshot(
     )
 
     children: dict[str, Any] = {}
-    if symbol.is_scope:
+    if symbol.symbol_kind is SymbolKind.SCOPE:
         child_ancestors = _ancestors | {symbol}
         seen_keys: set[Hashable] = set()
         for key in symbol:
@@ -104,7 +104,7 @@ def _collect_all_super_symbols(symbol: MixinSymbol) -> set[MixinSymbol]:
 def multi_module_scope() -> Scope:
     """Load and evaluate the multi-module composition fixture."""
     fixtures_definition = DirectoryMixinDefinition(
-        bases=(), is_public=True, underlying=FIXTURES_PATH
+        inherits=(), is_public=True, underlying=FIXTURES_PATH
     )
     root = evaluate(fixtures_definition, modules_public=True)
     result = root.MultiModuleComposition

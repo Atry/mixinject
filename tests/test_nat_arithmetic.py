@@ -25,7 +25,7 @@ TESTS_PATH = Path(__file__).parent
 def arithmetic_scope() -> Scope:
     """Load and evaluate the arithmetic test fixture with stdlib and FFI."""
     tests_definition = DirectoryMixinDefinition(
-        bases=(), is_public=True, underlying=TESTS_PATH
+        inherits=(), is_public=True, underlying=TESTS_PATH
     )
     root = evaluate(overlay.library, tests_definition, modules_public=True)
     result = root.ArithmeticTest

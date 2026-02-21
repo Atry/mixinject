@@ -100,7 +100,7 @@ class DirectoryMixinDefinition(ScopeDefinition):
         if subdir is not None:
             definitions.append(
                 DirectoryMixinDefinition(
-                    bases=(),
+                    inherits=(),
                     is_public=self.is_public,
                     underlying=subdir,
                 )
@@ -126,7 +126,7 @@ def evaluate_mixin_directory(directory: Path) -> "runtime.Scope":
     from overlay.language import runtime
 
     root_definition = DirectoryMixinDefinition(
-        bases=(),
+        inherits=(),
         is_public=True,
         underlying=directory,
     )

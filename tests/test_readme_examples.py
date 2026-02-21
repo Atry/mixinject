@@ -16,7 +16,10 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Callable, Iterator
 
-from overlay.language import eager, extern, merge, patch, public, resource, scope
+from types import ModuleType
+
+from overlay.language import RelativeReference as R
+from overlay.language import eager, extend, extern, merge, patch, public, resource, scope
 from overlay.language.runtime import evaluate
 
 
@@ -277,6 +280,9 @@ class TestStep4HttpServer:
 
         @scope
         class HttpHandlers:
+            @extern
+            def user_count() -> int: ...
+
             # RequestScope is nested because its lifetime is per-request,
             # not per-application.
             @public
@@ -284,6 +290,9 @@ class TestStep4HttpServer:
             class RequestScope:
                 @extern
                 def request() -> BaseHTTPRequestHandler: ...
+
+                @extern
+                def current_user() -> object: ...
 
                 # user_id is extracted from the request and injected into
                 # UserRepository.RequestScope.current_user automatically.
@@ -318,6 +327,10 @@ class TestStep4HttpServer:
             @extern
             def port() -> int: ...
 
+            @scope
+            class RequestScope:
+                pass
+
             # RequestScope is injected by name as a Callable (StaticScope).
             # Calling RequestScope(request=handler) returns a fresh InstanceScope.
             @public
@@ -332,14 +345,31 @@ class TestStep4HttpServer:
 
                 return HTTPServer((host, port), Handler)
 
-        # Each scope declares only its own config; all four are union-mounted flat.
-        app = evaluate(SQLiteDatabase, UserRepository, HttpHandlers, NetworkServer)(
+        @extend(
+            R(de_bruijn_index=0, path=("SQLiteDatabase",)),
+            R(de_bruijn_index=0, path=("UserRepository",)),
+            R(de_bruijn_index=0, path=("HttpHandlers",)),
+            R(de_bruijn_index=0, path=("NetworkServer",)),
+        )
+        @public
+        @scope
+        class app:
+            pass
+
+        module = ModuleType("step4_app_module")
+        module.SQLiteDatabase = SQLiteDatabase  # type: ignore[attr-defined]
+        module.UserRepository = UserRepository  # type: ignore[attr-defined]
+        module.HttpHandlers = HttpHandlers  # type: ignore[attr-defined]
+        module.NetworkServer = NetworkServer  # type: ignore[attr-defined]
+        module.app = app  # type: ignore[attr-defined]
+
+        app_instance = evaluate(module, modules_public=True).app(
             database_path=":memory:",
             host="127.0.0.1",
             port=0,  # OS assigns a free port
         )
 
-        server = app.server
+        server = app_instance.server
         server_thread = threading.Thread(target=server.handle_request, daemon=True)
         server_thread.start()
 
@@ -351,7 +381,7 @@ class TestStep4HttpServer:
 
         server_thread.join(timeout=2)
         server.server_close()
-        app.connection.close()
+        app_instance.connection.close()
 
     def test_request_scope_created_fresh_per_request(self) -> None:
         """Each call to RequestScope(...) produces an independent InstanceScope."""
@@ -434,17 +464,31 @@ class TestStep4HttpServer:
                         User(user_id=cursor.lastrowid, name="alice")
                     )
 
-        app = evaluate(SQLiteDatabase, UserRepository)(
+        @extend(
+            R(de_bruijn_index=0, path=("SQLiteDatabase",)),
+            R(de_bruijn_index=0, path=("UserRepository",)),
+        )
+        @public
+        @scope
+        class app:
+            pass
+
+        module = ModuleType("write_op_module")
+        module.SQLiteDatabase = SQLiteDatabase  # type: ignore[attr-defined]
+        module.UserRepository = UserRepository  # type: ignore[attr-defined]
+        module.app = app  # type: ignore[attr-defined]
+
+        app_instance = evaluate(module, modules_public=True).app(
             database_path=":memory:",
         )
 
         # Write: caller creates the Future, injects it, accesses the resource.
         future: Future[User] = Future()
-        request_scope = app.RequestScope(user_created_future=future)
+        request_scope = app_instance.RequestScope(user_created_future=future)
         request_scope.user_created  # triggers the insert and resolves the future
 
         new_user = future.result()
         assert new_user == User(user_id=1, name="alice")
-        assert app.user_count == 1  # app-scoped count is still cached from before insert
+        assert app_instance.user_count == 1  # app-scoped count is still cached from before insert
 
-        app.connection.close()
+        app_instance.connection.close()

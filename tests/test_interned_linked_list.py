@@ -11,7 +11,7 @@ from overlay.language import (
 
 def _empty_definition() -> ObjectScopeDefinition:
     """Create a minimal empty scope definition for testing."""
-    return ObjectScopeDefinition(bases=(), is_public=False, underlying=object())
+    return ObjectScopeDefinition(inherits=(), is_public=False, underlying=object())
 
 
 def _root_symbol(definition: ObjectScopeDefinition) -> MixinSymbol:

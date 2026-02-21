@@ -50,6 +50,7 @@ import yaml
 
 from overlay.language import (
     Definition,
+    EndofunctionMergerDefinition,
     LexicalReference,
     QualifiedThisReference,
     ResourceReference,
@@ -96,25 +97,8 @@ class FileMixinDefinition(ScopeDefinition):
 
         value = self.underlying[key]
         parsed = parse_mixin_value(value, source_file=self.source_file)
-        # Each property_definition becomes a separate origin
-        return tuple(
-            FileMixinDefinition(
-                bases=parsed.inheritances if i == 0 else (),
-                is_public=True,
-                underlying=props,
-                scalar_values=parsed.scalar_values if i == 0 else (),
-                source_file=self.source_file,
-            )
-            for i, props in enumerate(parsed.property_definitions)
-        ) or (
-            # No property definitions, just inheritances/scalars
-            FileMixinDefinition(
-                bases=parsed.inheritances,
-                is_public=True,
-                underlying={},
-                scalar_values=parsed.scalar_values,
-                source_file=self.source_file,
-            ),
+        return _definitions_from_parsed(
+            parsed=parsed, is_public=True, source_file=self.source_file
         )
 
 
@@ -227,6 +211,70 @@ def _parse_array_value(items: list[JsonValue]) -> ParsedMixinValue:
     )
 
 
+def _make_scalar_resource(
+    scalar_value: JsonScalar | tuple[JsonScalar, ...],
+    is_public: bool,
+) -> EndofunctionMergerDefinition[object]:
+    """Create an EndofunctionMergerDefinition that returns a scalar value.
+
+    This is the oyaml equivalent of ``@resource def field(): return scalar_value``.
+    """
+    return EndofunctionMergerDefinition(
+        inherits=(),
+        function=lambda: scalar_value,
+        is_eager=False,
+        is_public=is_public,
+    )
+
+
+def _definitions_from_parsed(
+    *,
+    parsed: ParsedMixinValue,
+    is_public: bool,
+    source_file: Path,
+) -> tuple[Definition, ...]:
+    """Convert a ParsedMixinValue into a tuple of Definitions.
+
+    When the parsed value contains only scalar values (no property definitions
+    and no inheritances), produces EndofunctionMergerDefinition resources so
+    the runtime evaluates them as resource values rather than empty scopes.
+
+    Otherwise, produces FileMixinDefinition scopes as before.
+    """
+    if parsed.property_definitions:
+        return tuple(
+            FileMixinDefinition(
+                inherits=parsed.inheritances if index == 0 else (),
+                is_public=is_public,
+                underlying=properties,
+                scalar_values=parsed.scalar_values if index == 0 else (),
+                source_file=source_file,
+            )
+            for index, properties in enumerate(parsed.property_definitions)
+        )
+
+    # No property definitions — could be pure scalar, pure inheritance, or both.
+    if parsed.scalar_values and not parsed.inheritances:
+        # Pure scalar: emit as @resource returning the value.
+        # Multiple scalars in a single field are combined into a tuple.
+        if len(parsed.scalar_values) == 1:
+            scalar_value, = parsed.scalar_values
+        else:
+            scalar_value = parsed.scalar_values
+        return (_make_scalar_resource(scalar_value, is_public=is_public),)
+
+    # Inheritance (with or without scalars): emit as ScopeDefinition.
+    return (
+        FileMixinDefinition(
+            inherits=parsed.inheritances,
+            is_public=is_public,
+            underlying={},
+            scalar_values=parsed.scalar_values,
+            source_file=source_file,
+        ),
+    )
+
+
 def parse_mixin_value(
     value: JsonValue,
     source_file: Path,  # noqa: ARG001 - reserved for future error messages
@@ -283,36 +331,18 @@ def _parse_top_level_mixin(
     mixin_name: str,
     mixin_value: JsonValue,
     file_path: Path,
-) -> tuple[str, Sequence[FileMixinDefinition]]:
+) -> tuple[str, Sequence[Definition]]:
     """Parse a single top-level mixin entry."""
     if not isinstance(mixin_name, str):
         raise ValueError(f"Mixin name must be a string, got {type(mixin_name).__name__}")
 
     parsed = parse_mixin_value(mixin_value, source_file=file_path)
-    # Each property_definition becomes a separate origin
-    if parsed.property_definitions:
-        definitions = tuple(
-            FileMixinDefinition(
-                bases=parsed.inheritances if i == 0 else (),
-                is_public=True,
-                underlying=props,
-                scalar_values=parsed.scalar_values if i == 0 else (),
-                source_file=file_path,
-            )
-            for i, props in enumerate(parsed.property_definitions)
-        )
-    else:
-        # No property definitions, just inheritances/scalars
-        definitions = (
-            FileMixinDefinition(
-                bases=parsed.inheritances,
-                is_public=True,
-                underlying={},
-                scalar_values=parsed.scalar_values,
-                source_file=file_path,
-            ),
-        )
-    return (mixin_name, definitions)
+    return (
+        mixin_name,
+        _definitions_from_parsed(
+            parsed=parsed, is_public=True, source_file=file_path
+        ),
+    )
 
 
 def load_overlay_file(file_path: Path) -> JsonValue:
@@ -339,7 +369,7 @@ def load_overlay_file(file_path: Path) -> JsonValue:
         )
 
 
-def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[FileMixinDefinition]]:
+def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[Definition]]:
     """
     Parse an Overlay file (YAML/JSON/TOML) containing named top-level mixins.
 
@@ -439,31 +469,13 @@ class OverlayFileScopeDefinition(ScopeDefinition):
                 continue
             value = properties[key]
             child_parsed = parse_mixin_value(value, source_file=self.source_file)
-            if child_parsed.property_definitions:
-                definitions.extend(
-                    FileMixinDefinition(
-                        bases=child_parsed.inheritances if index == 0 else (),
-                        is_public=True,
-                        underlying=child_properties,
-                        scalar_values=(
-                            child_parsed.scalar_values if index == 0 else ()
-                        ),
-                        source_file=self.source_file,
-                    )
-                    for index, child_properties in enumerate(
-                        child_parsed.property_definitions
-                    )
+            definitions.extend(
+                _definitions_from_parsed(
+                    parsed=child_parsed,
+                    is_public=True,
+                    source_file=self.source_file,
                 )
-            else:
-                definitions.append(
-                    FileMixinDefinition(
-                        bases=child_parsed.inheritances,
-                        is_public=True,
-                        underlying={},
-                        scalar_values=child_parsed.scalar_values,
-                        source_file=self.source_file,
-                    )
-                )
+            )
 
         if not definitions:
             raise KeyError(key)

@@ -9,6 +9,10 @@ from overlay.language import extern, public, resource
 def request() -> BaseHTTPRequestHandler: ...
 
 
+@extern
+def current_user() -> object: ...
+
+
 @public
 @resource
 def user_id(request: BaseHTTPRequestHandler) -> int:

@@ -203,6 +203,9 @@ instead of a coroutine, which cannot be safely awaited in multiple dependents.
 import threading
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from types import ModuleType
+
+from overlay.language import RelativeReference as R, extend
 
 @scope
 class SQLiteDatabase:
@@ -317,25 +320,44 @@ class NetworkServer:
 
         return HTTPServer((host, port), Handler)
 
-# Four scopes union-mounted flat; each declares only its own config.
-app = evaluate(SQLiteDatabase, UserRepository, HttpHandlers, NetworkServer)(
+# Declare composition via @extend — each scope only knows its own config.
+@extend(
+    R(de_bruijn_index=0, path=("SQLiteDatabase",)),
+    R(de_bruijn_index=0, path=("UserRepository",)),
+    R(de_bruijn_index=0, path=("HttpHandlers",)),
+    R(de_bruijn_index=0, path=("NetworkServer",)),
+)
+@public
+@scope
+class app:
+    pass
+
+# Assemble into a module and evaluate — composition is declared above, not here.
+myapp = ModuleType("myapp")
+myapp.SQLiteDatabase = SQLiteDatabase
+myapp.UserRepository = UserRepository
+myapp.HttpHandlers = HttpHandlers
+myapp.NetworkServer = NetworkServer
+myapp.app = app
+
+root = evaluate(myapp, modules_public=True).app(
     database_path="/var/lib/myapp/prod.db",
     host="127.0.0.1",
     port=8080,
 )
-server = app.server
+server = root.server
 ```
 
-Swapping to a test configuration is just different kwargs; no scope changes:
+Swapping to a test configuration is just different kwargs; no scope or composition changes:
 
 ```python
-test_app = evaluate(SQLiteDatabase, UserRepository, HttpHandlers, NetworkServer)(
+test_root = evaluate(myapp, modules_public=True).app(
     database_path=":memory:",  # fresh, isolated database for each test
     host="127.0.0.1",
     port=0,                    # OS assigns a free port
 )
-# test_app.connection  → sqlite3.Connection to :memory:
-# test_app.server      → HTTPServer on OS-assigned port
+# test_root.connection  → sqlite3.Connection to :memory:
+# test_root.server      → HTTPServer on OS-assigned port
 ```
 
 ---
@@ -367,18 +389,34 @@ way:
 ```python
 import sqlite_database   # sqlite_database.py with @extern / @resource / @public
 import user_repository   # user_repository/ package
-
-app = evaluate(sqlite_database, user_repository, modules_public=True)(
-    database_path=":memory:",
-)
 ```
 
 The same decorators work on module-level functions exactly as on class methods. A
 subpackage becomes a nested scope — `user_repository/request_scope/` is the
 module equivalent of a nested `@scope class RequestScope`.
 
-Use `@extend` in a package's `__init__.py` to pre-wire the union mount so
-callers pass just one argument to `evaluate()` instead of listing every module.
+Use `@extend` in a package's `__init__.py` to declare the composition, then
+`evaluate()` receives the single package:
+
+```python
+# myapp/__init__.py
+from overlay.language import RelativeReference as R, extend, public, scope
+
+@extend(
+    R(de_bruijn_index=0, path=("sqlite_database",)),
+    R(de_bruijn_index=0, path=("user_repository",)),
+)
+@public
+@scope
+class app:
+    pass
+```
+
+```python
+import myapp
+
+root = evaluate(myapp, modules_public=True).app(database_path=":memory:")
+```
 
 Runnable module-based equivalents of all README examples are in
 [tests/test_readme_package_examples.py](tests/test_readme_package_examples.py),
@@ -388,34 +426,388 @@ using the fixture package at [tests/fixtures/app_di/](tests/fixtures/app_di/).
 
 ## Overlay language
 
-When most of an application's scope bodies would be pure wiring — forwarding a
-value, combining two dependencies, defining a constant — the Python module
-boilerplate (`@resource`, `@public`, `@extern`) is overhead. The Overlay language
-lets you declare the same DI graph in `.oyaml` files: a YAML-based configuration
-language with mixin composition, lazy evaluation, and lexical scoping. Resource
-bodies that require Python (FFI calls, I/O, complex logic) stay in `.py` files and
-are referenced from `.oyaml` by name. The dependency-injection semantics are
-identical to the Python API; only the surface syntax differs.
+The Step 4 Python code works, but it has a structural problem: **business logic
+and I/O are tangled together**. Consider `user_id` in `HttpHandlers`:
+
+```python
+def user_id(request: BaseHTTPRequestHandler) -> int:
+    return int(request.path.split("/")[-1])
+```
+
+This one function mixes three concerns: reading `request.path` (I/O), splitting
+on `"/"` (a business decision about URL format), and parsing the last segment as
+an integer (another business decision). The path separator, SQL queries, and
+format templates are all hardcoded in Python — changing any of them means
+changing Python code.
+
+The Overlay language solves this by separating the application into three layers:
+
+- **Python FFI** wraps individual stdlib calls in `@scope` adapters — one class
+  per operation (`sqlite3.connect`, `str.split`, `wfile.write`). Each adapter
+  declares its inputs as `@extern` and exposes a single `@public @resource`
+  output. The adapter contains **zero business logic**.
+- **`.oyaml` files** contain all application logic. Overlay is not just a
+  configuration format — it is a complete language with lexical scoping, nested
+  scopes, deep-merge composition, and lazy evaluation. These features make it
+  more natural than Python for expressing business logic, which is inherently
+  declarative ("the user ID is the last URL segment", "the response format is
+  `total={total} current={current}`").
+- **Configuration values** (SQL queries, format strings, host/port) are pure
+  YAML scalars, gathered in one place.
+
+Business logic written in `.oyaml` is **portable**: it is decoupled from the
+Python FFI layer. Swap the FFI adapters and the same `.oyaml` logic runs against
+a different runtime — mock adapters for unit testing, a different language's
+stdlib for cross-platform deployment, or instrumented adapters for profiling.
+With Python `@scope` decorators, business logic is locked to the Python runtime
+and cannot be extracted or retargeted.
+
+Below is the same Step 4 web application rewritten in this style.
+
+### Python FFI adapters
+
+Each `@scope` class wraps exactly one stdlib operation. Below are three
+representative adapters; the full module
+([tests/fixtures/app_oyaml/ffi.py](tests/fixtures/app_oyaml/ffi.py)) contains
+10 more following the same pattern.
+
+```python
+# ffi.py — each @scope wraps ONE stdlib call
+import sqlite3
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from overlay.language import extern, public, resource, scope
+
+@public
+@scope
+class SqliteConnectAndExecuteScript:
+    """Multiple inputs → single output"""
+    @extern
+    def database_path() -> str: ...
+
+    @extern
+    def setup_sql() -> str: ...
+
+    @public
+    @resource
+    def connection(database_path: str, setup_sql: str) -> sqlite3.Connection:
+        conn = sqlite3.connect(database_path, check_same_thread=False)
+        conn.executescript(setup_sql)
+        return conn
+
+@public
+@scope
+class GetItem:
+    """Generic operation: sequence[index] → element"""
+    @extern
+    def sequence() -> object: ...
+
+    @extern
+    def index() -> int: ...
+
+    @public
+    @resource
+    def element(sequence: object, index: int) -> object:
+        return sequence[index]
+
+@public
+@scope
+class HttpSendResponse:
+    """Chained I/O: send status + headers + body → request handle"""
+    @extern
+    def request() -> BaseHTTPRequestHandler: ...
+
+    @extern
+    def status_code() -> int: ...
+
+    @extern
+    def body() -> bytes: ...
+
+    @public
+    @resource
+    def written(
+        request: BaseHTTPRequestHandler, status_code: int, body: bytes,
+    ) -> BaseHTTPRequestHandler:
+        request.send_response(status_code)
+        request.end_headers()
+        request.wfile.write(body)
+        return request
+```
+
+Notice what is *not* here: no SQL queries, no `"/"` separator, no format string,
+no `:memory:` path, no port number. Those are all business decisions that live
+in the `.oyaml`.
+
+### `.oyaml` composition
+
+An `.oyaml` file describes a **dependency graph**, not an execution sequence.
+There is no top-to-bottom control flow — the runtime evaluates resources lazily,
+on demand. Think spreadsheet cells, not shell scripts.
+
+The following sections walk through the same Step 4 application one scope at a
+time, introducing new language concepts as they appear.
+
+#### `SQLiteDatabase` — extern, inheritance, wiring, projection
 
 ```yaml
-# sqlite_database.oyaml
 SQLiteDatabase:
-  database_path: []        # abstract slot — value provided at compose time
-  connection:
-    database_path: [database_path]
-
-# app.oyaml — union-mounts SQLiteDatabase and UserRepository
-- [SQLiteDatabase]
-- UserRepository:
-    user_count:
-      connection: [connection]
+  database_path: []                         # extern: caller must provide this
+  setup_sql: []                             # extern: caller must provide this
+  _db:
+    - [ffi, SqliteConnectAndExecuteScript]  # inherit the FFI adapter
+    - database_path: [database_path]        # wire extern → adapter input
+      setup_sql: [setup_sql]
+  connection: [_db, connection]             # projection: expose _db.connection
 ```
+
+Four new concepts:
+
+- **`field: []`** — an **extern declaration**, the `.oyaml` equivalent of
+  `@extern`. The value must come from a parent scope or the caller.
+- **`- [ffi, SqliteConnectAndExecuteScript]`** — **inheritance**. `_db` inherits
+  the FFI adapter, gaining all of its resources (`connection`).
+- **`database_path: [database_path]`** — **wiring**. The reference `[database_path]`
+  is a lexical lookup: search outward through enclosing scopes until a field
+  named `database_path` is found.
+- **`connection: [_db, connection]`** — **path navigation**. Access the
+  `connection` resource on the child scope `_db`. The leading underscore on
+  `_db` makes it private; `connection` is the public-facing projection.
+
+#### `UserRepository` (app-scoped part) — nested scope, scope-as-dataclass
+
+```yaml
+UserRepository:
+  connection: []                            # extern: from SQLiteDatabase
+  user_count_sql: []                        # extern: provided by app
+
+  User:                                     # scope-as-dataclass
+    user_id: []
+    name: []
+
+  _count:
+    - [ffi, SqliteScalarQuery]
+    - connection: [connection]
+      sql: [user_count_sql]
+  user_count: [_count, scalar]
+```
+
+- **`User:`** is a **nested scope** with two extern fields — the `.oyaml`
+  equivalent of `@scope class User` with `@public @extern` fields. It acts as a
+  dataclass constructor: `current_user` (below) will supply values for
+  `user_id` and `name`.
+- **`connection: []`** declares that `UserRepository` expects a `connection`
+  from outside. When composed with `SQLiteDatabase` inside `app`, this extern
+  is satisfied by `SQLiteDatabase.connection` — resolved by name through
+  lexical scoping.
+
+#### `UserRepository.RequestScope` — ANF style, cross-scope references
+
+```yaml
+  RequestScope:
+    user_id: []                             # extern: from HttpHandlers
+    user_query_sql: []                      # extern: from app.RequestScope
+
+    _params:
+      - [ffi, TupleWrap]
+      - element: [user_id]
+
+    _row:
+      - [ffi, SqliteRowQuery]
+      - connection: [connection]            # lexical: finds UserRepository.connection
+        sql: [user_query_sql]
+        parameters: [_params, wrapped]
+
+    _identifier:
+      - [ffi, GetItem]
+      - sequence: [_row, row]
+        index: 0
+    _name:
+      - [ffi, GetItem]
+      - sequence: [_row, row]
+        index: 1
+
+    current_user:
+      user_id: [_identifier, element]
+      name: [_name, element]
+
+    current_user_name: [current_user, name]
+```
+
+This section demonstrates **A-Normal Form (ANF)**: every intermediate result
+must be bound to a named field. You cannot write
+`GetItem(sequence=SqliteRowQuery(...).row, index=0)` — instead, `_row` holds
+the query result, and `_identifier` extracts column 0 from `_row.row`. The
+cost is verbosity; the benefit is that every intermediate value is inspectable
+and independently composable.
+
+**Cross-scope lexical reference:** `connection: [connection]` inside
+`RequestScope` finds `UserRepository.connection` — the lexical scope chain
+searches outward through parent, grandparent, etc. No import statement is
+needed; the scope hierarchy *is* the namespace.
+
+**Constructing `current_user`:** Instead of calling `User(user_id=..., name=...)`,
+the `.oyaml` directly defines `current_user` as a scope with two fields. The
+`User` scope-as-dataclass above establishes the field names; here those same
+names are filled with concrete values.
+
+#### `HttpHandlers` — flat inheritance, qualified this
+
+```yaml
+HttpHandlers:
+  user_count: []                            # extern: from UserRepository
+
+  RequestScope:
+    - [ffi, HttpRequestExtern]              # provides: request (extern)
+    - [ffi, ExtractUserId]                  # provides: user_id
+    - [ffi, HttpSendResponse]              # provides: written
+    - request: []                           # extern: injected per-request
+      path_separator: []                    # extern: from app.RequestScope
+      response_template: []                 # extern: from app.RequestScope
+      status_code: 200                      # inline scalar
+      current_user_name: []                 # extern: from UserRepository.RequestScope
+
+      _format:
+        - [ffi, FormatResponse]
+        - response_template: [response_template]
+          user_count: [user_count]
+          current_user_name: [current_user_name]
+      response_body: [_format, response_body]
+      body: [response_body]
+
+      response: [RequestScope, ~, written]
+```
+
+**Flat inheritance:** `RequestScope` inherits *three* FFI adapters in its
+inheritance list (`- [ffi, HttpRequestExtern]`, `- [ffi, ExtractUserId]`,
+`- [ffi, HttpSendResponse]`). Their `@extern` and `@resource` fields all merge
+into `RequestScope`'s own field namespace. The last list item (the mapping
+starting with `request: []`) defines `RequestScope`'s own fields.
+
+**Lexical scoping across scope boundaries:** `[user_count]` inside
+`RequestScope` searches outward and finds `HttpHandlers.user_count`. At this
+point `user_count` is just an extern `[]` — its actual value comes from
+`UserRepository` after deep merge (explained below).
+
+**Qualified this: `[RequestScope, ~, written]`** — instead of declaring
+`written: []` and writing `response: [written]`, this navigates the runtime
+composition graph to access the `written` property inherited from
+`HttpSendResponse`. The advantage: if `HttpSendResponse` is accidentally not
+composed, this fails with an error instead of silently creating an empty scope.
+
+#### `NetworkServer` + `app` — composition, deep merge, config scoping
+
+```yaml
+NetworkServer:
+  - [ffi, HttpServerCreate]
+  - host: []
+    port: []
+    RequestScope: []
+    _handler:
+      - [ffi, HttpHandlerClass]
+      - RequestScope: [RequestScope]
+    handler_class: [_handler, handler_class]
+
+app:
+  - [SQLiteDatabase]
+  - [UserRepository]
+  - [HttpHandlers]
+  - [NetworkServer]
+  - database_path: ":memory:"
+    setup_sql: |
+      CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
+      INSERT INTO users VALUES (1, 'alice');
+      INSERT INTO users VALUES (2, 'bob');
+    user_count_sql: "SELECT COUNT(*) FROM users"
+    host: "127.0.0.1"
+    port: 0
+    RequestScope:
+      user_query_sql: "SELECT id, name FROM users WHERE id = ?"
+      path_separator: "/"
+      response_template: "total={total} current={current}"
+```
+
+**Composition via inheritance:** `app` inherits four scopes. This is not four
+separate instances — it is a single scope with all four merged together. The
+last list item supplies concrete values for every `[]` extern.
+
+**Deep merge:** Both `UserRepository` and `HttpHandlers` define a
+`RequestScope`. When composed inside `app`, these merge by name into a single
+`RequestScope`. After merging:
+
+- `user_id` (from `HttpHandlers.RequestScope` via `ExtractUserId`) becomes
+  visible to `UserRepository.RequestScope`, which uses it to look up
+  `current_user`
+- `current_user_name` (from `UserRepository.RequestScope`) becomes visible to
+  `HttpHandlers.RequestScope`, which uses it in `_format`
+
+Neither scope imports or references the other — deep merge makes their fields
+mutual siblings automatically. This is the most powerful feature of the Overlay
+language: cross-cutting concerns compose without glue code.
+
+**Config value scoping:** App-lifetime values (`database_path`, `host`, `port`)
+live directly in `app`. Request-lifetime values (`user_query_sql`,
+`path_separator`, `response_template`) live in `app.RequestScope` — they are
+only needed during request handling.
+
+#### Syntax quick reference
+
+| Syntax | Meaning |
+|--------|---------|
+| `field: []` | **Extern** — value must be provided by a parent scope or caller |
+| `field: [other]` | **Lexical reference** — look up `other` in the lexical scope chain |
+| `field: [child, property]` | **Path navigation** — access `property` on `child` |
+| `field: [Scope, ~, symbol]` | **Qualified this** — access inherited `symbol` through the runtime graph |
+| `field: "literal"` | **Scalar value** — string, number, etc. |
+| `_field: ...` | **Private** — not visible to external callers (leading underscore) |
+| `Scope:` with a mapping | **Nested scope** — a child scope with its own fields |
+| `Scope:` with a list | **Inheritance** — `- [Parent]` items are inherited scopes; the last item (a mapping) defines own fields |
+
+#### Python vs Overlay language
+
+| Aspect | Python `@scope` | `.oyaml` |
+|--------|-----------------|----------|
+| Composition | Manual `@extend` + `RelativeReference` | Inheritance list: `- [Parent]` |
+| Dependency injection | `@extern` parameter names | `field: []` + lexical scope chain |
+| Expression style | Nested function calls | ANF: every intermediate has a name |
+| Cross-cutting concerns | Explicit adapter / glue code | Deep merge: same-named scopes auto-merge |
+| Accessing inherited members | `self.xxx` / parameter injection | Qualified this: `[Scope, ~, symbol]` |
+| Business logic location | Mixed with I/O in Python | Separate `.oyaml` file, portable across FFI |
+| Configuration | Kwargs at call site | Scalar values in `app:` scope |
+
+### Evaluation
+
+```python
+import tests.fixtures.app_oyaml as app_oyaml
+from overlay.language.runtime import evaluate
+
+# evaluate() auto-discovers ffi.py and App.oyaml within the package.
+root = evaluate(app_oyaml, modules_public=True)
+
+# Access the composed app — App is the .oyaml file name.
+composed_app = root.App.app
+
+composed_app.server               # HTTPServer on 127.0.0.1:<assigned port>
+composed_app.connection           # sqlite3.Connection to :memory:
+composed_app.user_count           # 2
+
+# Create a fresh request scope (per-request resources):
+scope = composed_app.RequestScope(request=fake_request)
+scope.current_user.name           # "alice"
+scope.response                    # sends HTTP response as side effect
+```
+
+Swapping configuration is just a different `.oyaml` — the Python FFI adapters
+never change. Swapping the FFI layer is just different `@scope` classes — the
+`.oyaml` business logic never changes.
+
+Runnable tests for this example are in
+[tests/test_readme_package_examples.py](tests/test_readme_package_examples.py),
+using the fixture package at [tests/fixtures/app_oyaml/](tests/fixtures/app_oyaml/).
 
 The full language specification is in [specification.md](specification.md).
 
 The semantics of the Overlay language are grounded in the
 [Overlay Calculus](https://arxiv.org/abs/2602.16291), a formal calculus for
-mixin composition.
+overlays.
 
 ---
 

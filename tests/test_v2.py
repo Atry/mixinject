@@ -1338,12 +1338,14 @@ class TestDefinitionSharing:
 
 
 class TestExtendInstanceScopeProhibition:
-    """Test that extend cannot reference a path through InstanceScope (ported from V1)."""
+    """Test that extend from a resource with @scope evaluates as RESOURCE."""
 
-    def test_extend_instance_scope_raises_value_error(self) -> None:
-        """Extending from a resource returning Scope raises ValueError.
+    def test_extend_instance_scope_evaluates_as_resource(self) -> None:
+        """Extending from a resource with @scope class evaluates as RESOURCE.
 
-        Scope MixinSymbol cannot coexist with MergerSymbol or PatcherSymbol.
+        Extended has no children (len == 0) but has evaluators from
+        @resource my_instance via @extend, so symbol_kind is RESOURCE.
+        The resource evaluation returns the instantiated MyOuter scope.
         """
 
         @scope
@@ -1370,11 +1372,7 @@ class TestExtendInstanceScopeProhibition:
                 pass
 
         root = evaluate(Root)
-        with pytest.raises(
-            ValueError,
-            match="Scope MixinSymbol cannot coexist with MergerSymbol or PatcherSymbol",
-        ):
-            _ = root.Extended.foo
+        assert root.Extended.foo == "foo_42"
 
     def test_extend_path_through_resource_raises_value_error(self) -> None:
         """Extending from a path through a resource raises ValueError.

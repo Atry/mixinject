@@ -36,7 +36,7 @@ FIXTURES_PATH = Path(__file__).parent / "fixtures"
 def fixture_symbol() -> MixinSymbol:
     """Load the OuterVsLexicalOuter fixture and return its MixinSymbol."""
     fixtures_definition = DirectoryMixinDefinition(
-        bases=(), is_public=True, underlying=FIXTURES_PATH
+        inherits=(), is_public=True, underlying=FIXTURES_PATH
     )
     root = MixinSymbol(origin=(fixtures_definition,))
     return root["OuterVsLexicalOuter"]
@@ -282,7 +282,7 @@ class TestGetSymbolIsomorphicWithFindMixin:
     @pytest.fixture
     def fixture_scope(self) -> Scope:
         fixtures_definition = DirectoryMixinDefinition(
-            bases=(), is_public=True, underlying=FIXTURES_PATH
+            inherits=(), is_public=True, underlying=FIXTURES_PATH
         )
         root_scope = evaluate(fixtures_definition, modules_public=True)
         result = root_scope.OuterVsLexicalOuter

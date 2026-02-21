@@ -30,7 +30,7 @@ from typing import (
     final,
 )
 
-from overlay.language import HasDict, OuterSentinel
+from overlay.language import HasDict, OuterSentinel, SymbolKind
 
 
 class KwargsSentinel(Enum):
@@ -225,12 +225,19 @@ class Mixin(HasDict):
         - If symbol is a scope symbol: returns Scope
         - If symbol is a resource symbol: returns evaluated value
         """
-        if self.symbol.is_scope:
-            # Scope: construct nested Scope
-            return self._construct_scope()
-        else:
-            # Resource: merge patches and return value
-            return self._evaluate_resource()
+        try:
+            match self.symbol.symbol_kind:
+                case SymbolKind.SCOPE:
+                    return self._construct_scope()
+                case SymbolKind.RESOURCE:
+                    return self._evaluate_resource()
+                case SymbolKind.CONFLICT:
+                    raise ValueError(
+                        f"Symbol '{self.symbol.key}' has both children and evaluators"
+                    )
+        except BaseException as error:
+            error.add_note(f"While evaluating {self.symbol.path}...")
+            raise
 
     def _construct_scope(self) -> Scope:
         """
@@ -247,7 +254,7 @@ class Mixin(HasDict):
             (child_symbol := symbol[key]): Mixin(
                 symbol=child_symbol,
                 outer=self,
-                kwargs=KwargsSentinel.STATIC if child_symbol.is_scope else self.kwargs,
+                kwargs=KwargsSentinel.STATIC if child_symbol.symbol_kind is SymbolKind.SCOPE else self.kwargs,
             )
             for key in symbol
         }

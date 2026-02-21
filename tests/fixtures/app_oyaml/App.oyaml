@@ -1,0 +1,93 @@
+SQLiteDatabase:
+  database_path: []
+  setup_sql: []
+  _db:
+    - [ffi, SqliteConnectAndExecuteScript]
+    - database_path: [database_path]
+      setup_sql: [setup_sql]
+  connection: [_db, connection]
+
+UserRepository:
+  connection: []
+  user_count_sql: []
+  User:
+    user_id: []
+    name: []
+  _count:
+    - [ffi, SqliteScalarQuery]
+    - connection: [connection]
+      sql: [user_count_sql]
+  user_count: [_count, scalar]
+  RequestScope:
+    user_id: []
+    user_query_sql: []
+    _params:
+      - [ffi, TupleWrap]
+      - element: [user_id]
+    _row:
+      - [ffi, SqliteRowQuery]
+      - connection: [connection]
+        sql: [user_query_sql]
+        parameters: [_params, wrapped]
+    _identifier:
+      - [ffi, GetItem]
+      - sequence: [_row, row]
+        index: 0
+    _name:
+      - [ffi, GetItem]
+      - sequence: [_row, row]
+        index: 1
+    current_user:
+      user_id: [_identifier, element]
+      name: [_name, element]
+    current_user_name: [current_user, name]
+
+HttpHandlers:
+  user_count: []
+  RequestScope:
+    - [ffi, HttpRequestExtern]
+    - [ffi, ExtractUserId]
+    - [ffi, HttpSendResponse]
+    - request: []
+      path_separator: []
+      response_template: []
+      status_code: 200
+      current_user_name: []
+      _format:
+        - [ffi, FormatResponse]
+        - response_template: [response_template]
+          user_count: [user_count]
+          current_user_name: [current_user_name]
+      response_body: [_format, response_body]
+      body: [response_body]
+      # Qualified this: fails loudly if HttpSendResponse is not composed,
+      # unlike `written: []` which silently creates an empty scope.
+      response: [RequestScope, ~, written]
+
+NetworkServer:
+  - [ffi, HttpServerCreate]
+  - host: []
+    port: []
+    RequestScope: []
+    _handler:
+      - [ffi, HttpHandlerClass]
+      - RequestScope: [RequestScope]
+    handler_class: [_handler, handler_class]
+
+app:
+  - [SQLiteDatabase]
+  - [UserRepository]
+  - [HttpHandlers]
+  - [NetworkServer]
+  - database_path: ":memory:"
+    setup_sql: |
+      CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
+      INSERT INTO users VALUES (1, 'alice');
+      INSERT INTO users VALUES (2, 'bob');
+    user_count_sql: "SELECT COUNT(*) FROM users"
+    host: "127.0.0.1"
+    port: 0
+    RequestScope:
+      user_query_sql: "SELECT id, name FROM users WHERE id = ?"
+      path_separator: "/"
+      response_template: "total={total} current={current}"

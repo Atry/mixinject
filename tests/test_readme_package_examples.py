@@ -10,19 +10,25 @@ The DI semantics are identical — only the declaration style differs:
   nested @scope class RequestScope   →   request_scope/ subpackage
 """
 
+import tempfile
 import threading
 import urllib.request
+from pathlib import Path
+from types import ModuleType
 
+import pytest
+
+import tests.fixtures.app_di as app_di
 import tests.fixtures.app_di.eager_database as eager_database
-import tests.fixtures.app_di.http_handlers as http_handlers
-import tests.fixtures.app_di.network_server as network_server
 import tests.fixtures.app_di.pragmas.base as pragma_base
 import tests.fixtures.app_di.pragmas.foreign_keys as foreign_keys
 import tests.fixtures.app_di.pragmas.user_version as user_version
 import tests.fixtures.app_di.pragmas.wal_mode as wal_mode
-import tests.fixtures.app_di.sqlite_database as sqlite_database
-import tests.fixtures.app_di.user_repository as user_repository
+import tests.fixtures.app_oyaml as app_oyaml
 
+from overlay.language import extern, public, resource, scope
+from overlay.language.mixin_directory import DirectoryMixinDefinition
+from overlay.language.mixin_parser import OverlayFileScopeDefinition
 from overlay.language.runtime import evaluate
 
 
@@ -35,8 +41,8 @@ class TestStep1ModuleServices:
     """Module/package equivalents of README Step 1 examples."""
 
     def test_extern_and_flat_composition(self) -> None:
-        """sqlite_database.py + user_repository/ union-mounted flat."""
-        app = evaluate(sqlite_database, user_repository, modules_public=True)(
+        """step1_app composes sqlite_database + user_repository via @extend."""
+        app = evaluate(app_di, modules_public=True).step1_app(
             database_path=":memory:",
         )
         assert app.user_count == 2
@@ -96,17 +102,8 @@ class TestStep4ModuleHttpServer:
     """Module/package equivalents of README Step 4 examples."""
 
     def test_app_and_request_scope(self) -> None:
-        """sqlite_database + user_repository + http_handlers + network_server union-mounted flat.
-        user_repository/request_scope/ and http_handlers/request_scope/ are
-        union-mounted automatically into a single request_scope subpackage.
-        """
-        app = evaluate(
-            sqlite_database,
-            user_repository,
-            http_handlers,
-            network_server,
-            modules_public=True,
-        )(
+        """step4_app composes all four modules via @extend; request scopes union-mounted automatically."""
+        app = evaluate(app_di, modules_public=True).step4_app(
             database_path=":memory:",
             host="127.0.0.1",
             port=0,
@@ -117,9 +114,7 @@ class TestStep4ModuleHttpServer:
         server_thread.start()
 
         assigned_port = server.server_address[1]
-        response = urllib.request.urlopen(
-            f"http://127.0.0.1:{assigned_port}/users/1"
-        )
+        response = urllib.request.urlopen(f"http://127.0.0.1:{assigned_port}/users/1")
         assert response.read() == b"total=2 current=alice"
 
         server_thread.join(timeout=2)
@@ -128,12 +123,7 @@ class TestStep4ModuleHttpServer:
 
     def test_request_scope_created_fresh_per_request(self) -> None:
         """Each call to request_scope(...) produces an independent InstanceScope."""
-        app = evaluate(
-            sqlite_database,
-            user_repository,
-            http_handlers,
-            modules_public=True,
-        )(
+        app = evaluate(app_di, modules_public=True).step4_request_app(
             database_path=":memory:",
         )
 
@@ -149,3 +139,99 @@ class TestStep4ModuleHttpServer:
         assert scope_a is not scope_b
 
         app.connection.close()
+
+
+class TestOyamlScopeClassComposition:
+    """Tests oyaml scalar field values overriding @extern definitions
+    inside a @scope class.
+    """
+
+    def test_scope_class_with_oyaml_scalar_fields(self) -> None:
+        """Inherit a @scope class in oyaml and provide scalar field values."""
+        module = ModuleType("remove_prefix_module")
+        module.__name__ = "remove_prefix_module"
+
+        @public
+        @scope
+        class RemovePrefix:
+            @extern
+            def this() -> str: ...
+
+            @extern
+            def prefix() -> str: ...
+
+            @public
+            @resource
+            def prefix_removed(this: str, prefix: str) -> str:
+                return this.removeprefix(prefix)
+
+        module.RemovePrefix = RemovePrefix  # type: ignore[attr-defined]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            Path(tmpdir, "App.oyaml").write_text(
+                "_greeting:\n"
+                "  - [RemovePrefix]\n"
+                '  - this: "Hello World"\n'
+                '    prefix: "Hello "\n'
+                "greeting: [_greeting, prefix_removed]\n"
+            )
+
+            directory_definition = DirectoryMixinDefinition(
+                inherits=(),
+                is_public=True,
+                underlying=Path(tmpdir),
+            )
+
+            root = evaluate(module, directory_definition, modules_public=True)
+            assert root.App.greeting == "World"  # type: ignore[union-attr]
+
+
+# ---------------------------------------------------------------------------
+# Step 4 – App scope vs request scope (oyaml equivalents)
+# ---------------------------------------------------------------------------
+
+
+class TestOyamlHttpApp:
+    """Oyaml equivalents of README Step 4 examples.
+
+    App.oyaml composes SQLiteDatabase + UserRepository + HttpHandlers +
+    NetworkServer using inheritance lists.  The FFI layer lives in
+    tests/fixtures/app_oyaml/__init__.py.
+    """
+
+    def test_oyaml_app_http_request(self) -> None:
+        """app scope in App.oyaml serves correct response for GET /users/1."""
+        root = evaluate(app_oyaml, modules_public=True)
+        composed_app = root.App.app  # type: ignore[union-attr]
+
+        server = composed_app.server
+        server_thread = threading.Thread(target=server.handle_request, daemon=True)
+        server_thread.start()
+
+        assigned_port = server.server_address[1]
+        response = urllib.request.urlopen(
+            f"http://127.0.0.1:{assigned_port}/users/1"
+        )
+        assert response.read() == b"total=2 current=alice"
+
+        server_thread.join(timeout=2)
+        server.server_close()
+        composed_app.connection.close()
+
+    def test_oyaml_app_request_scope_created_fresh_per_request(self) -> None:
+        """Each call to request_scope(...) produces an independent scope instance."""
+        root = evaluate(app_oyaml, modules_public=True)
+        composed_app = root.App.app  # type: ignore[union-attr]
+
+        class FakeRequest:
+            path = "/users/1"
+
+        scope_a = composed_app.RequestScope(request=FakeRequest())
+        scope_b = composed_app.RequestScope(request=FakeRequest())
+
+        assert scope_a.current_user.user_id == 1
+        assert scope_a.current_user.name == "alice"
+        assert scope_b.current_user.user_id == 1
+        assert scope_a is not scope_b
+
+        composed_app.connection.close()

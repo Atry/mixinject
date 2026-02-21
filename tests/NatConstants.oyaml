@@ -1,0 +1,32 @@
+- [Builtin, NatData]
+
+- Zero:
+    - [NatConstants, ~, NatFactory, Zero]
+
+  One:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [Zero]
+
+  Two:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [One]
+
+  Three:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [Two]
+
+  Four:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [Three]
+
+  Five:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [Four]
+
+  Six:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [Five]
+
+  Seven:
+    - [NatConstants, ~, NatFactory, Successor]
+    - predecessor: [Six]

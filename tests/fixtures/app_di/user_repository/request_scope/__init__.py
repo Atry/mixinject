@@ -7,7 +7,7 @@ from overlay.language import extern, public, resource
 
 
 @extern
-def user_id() -> int: ...  # provided by app_services.request_scope
+def user_id() -> int: ...  # provided by http_handlers.request_scope
 
 
 @public

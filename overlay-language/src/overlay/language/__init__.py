@@ -1029,7 +1029,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             return existing
 
         # Leaf symbol (Resource) - no nested items
-        if not self.is_scope:
+        if self.symbol_kind is not SymbolKind.SCOPE:
             raise KeyError(key)
 
         # Use Nested to create child symbol with lazy definition resolution
@@ -1075,22 +1075,26 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         )
 
     @cached_property
-    def is_scope(self) -> bool:
-        """
-        Returns True if this symbol evaluates to a scope.
+    def symbol_kind(self) -> "SymbolKind":
+        """Classify this symbol into one of three categories.
 
-        A symbol is a scope if all definitions (own and super) are ScopeDefinition.
+        Uses MixinSymbol.__iter__ (len(self) > 0) for has_children,
+        evaluator_symbols from qualified_this for has_evaluators.
+
+        - No evaluators → SCOPE (including empty scopes)
+        - Has evaluators, no children → RESOURCE
+        - Has evaluators and children → CONFLICT
         """
-        all_definitions = tuple(
-            definition
+        has_evaluators = any(
+            symbol.evaluator_symbols
             for symbol in self.qualified_this
-            for definition in symbol.definitions
         )
-        if not all_definitions:
-            return False
-        return all(
-            isinstance(definition, ScopeDefinition) for definition in all_definitions
-        )
+        if not has_evaluators:
+            return SymbolKind.SCOPE
+        has_children = len(self) > 0
+        if has_children:
+            return SymbolKind.CONFLICT
+        return SymbolKind.RESOURCE
 
     @cached_property
     def elected_merger_index(
@@ -1108,44 +1112,16 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             ElectedMerger: Position of the elected MergerSymbol
             MergerElectionSentinel.PATCHER_ONLY: Has patchers but no merger
         """
-        import logging
-        logger = logging.getLogger(__name__)
-
         # Collect all (symbol, evaluator_getter_index, getter) tuples
         all_merger_symbols: list[tuple["MixinSymbol", int, "MergerSymbol"]] = []
         all_patcher_symbols: list[tuple["MixinSymbol", int, "PatcherSymbol"]] = []
 
-        logger.debug(
-            "elected_merger_index for symbol=%(key)s qualified_this_count=%(qt_count)d path=%(path)s",
-            {"key": self.key, "qt_count": len(self.qualified_this), "path": self.path}
-        )
-
         for symbol in self.qualified_this:
-            logger.debug(
-                "  checking symbol=%(sym_key)s path=%(sym_path)s evaluator_symbols_count=%(eval_count)d",
-                {"sym_key": symbol.key, "sym_path": symbol.path, "eval_count": len(symbol.evaluator_symbols)}
-            )
             for getter_index, getter in enumerate(symbol.evaluator_symbols):
-                logger.debug(
-                    "    evaluator[%(idx)d]: type=%(getter_type)s",
-                    {"idx": getter_index, "getter_type": type(getter).__name__}
-                )
                 if isinstance(getter, MergerSymbol):
                     all_merger_symbols.append((symbol, getter_index, getter))
                 if isinstance(getter, PatcherSymbol):
                     all_patcher_symbols.append((symbol, getter_index, getter))
-
-        # Check for scope symbols (definitions containing ScopeDefinition)
-        has_scope_symbol = any(
-            any(isinstance(d, ScopeDefinition) for d in symbol.definitions)
-            for symbol in self.qualified_this
-        )
-
-        # Rule 0: Scope MixinSymbol cannot coexist with MergerSymbol/PatcherSymbol
-        if has_scope_symbol and (all_merger_symbols or all_patcher_symbols):
-            raise ValueError(
-                "Scope MixinSymbol cannot coexist with MergerSymbol or PatcherSymbol"
-            )
 
         # Find pure mergers (MergerSymbol but not PatcherSymbol)
         patcher_getter_ids = {id(getter) for _, _, getter in all_patcher_symbols}
@@ -1162,33 +1138,20 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
             if isinstance(getter, SemigroupSymbol)
         ]
 
-        logger.debug(
-            "  all_merger_symbols=%(merger_count)d all_patcher_symbols=%(patcher_count)d pure_mergers=%(pure_count)d semigroups=%(semi_count)d",
-            {
-                "merger_count": len(all_merger_symbols),
-                "patcher_count": len(all_patcher_symbols),
-                "pure_count": len(pure_mergers),
-                "semi_count": len(semigroups)
-            }
-        )
-
         match pure_mergers:
             case [(elected_symbol, getter_index, _)]:
-                logger.debug("  result: ElectedMerger from pure_merger")
                 return ElectedMerger(
                     symbol=elected_symbol, evaluator_getter_index=getter_index
                 )
             case []:
                 match semigroups:
                     case [(elected_symbol, getter_index, _), *_]:
-                        logger.debug("  result: ElectedMerger from semigroup")
                         return ElectedMerger(
                             symbol=elected_symbol,
                             evaluator_getter_index=getter_index,
                         )
                     case []:
                         if all_patcher_symbols:
-                            logger.debug("  result: PATCHER_ONLY")
                             return MergerElectionSentinel.PATCHER_ONLY
                         # Note: has_scope_symbol case is no longer needed because
                         # Scope doesn't have evaluated property, so this code path
@@ -1230,7 +1193,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
                         pending.extend(resolved_reference.get_symbols(current.outer))
             return visited
         except BaseException as e:
-            e.add_note(f"While evaluating {self.path}...")
+            e.add_note(f"While resolving qualified_this for {self.path}...")
             raise
 
     def _generate_overlays(self) -> Iterator["MixinSymbol"]:
@@ -1253,6 +1216,25 @@ class OuterSentinel(Enum):
 
 
 # V1 Runtime classes (Node, Mixin, Scope, Resource) removed - replaced by Mixin/Scope
+
+
+class SymbolKind(Enum):
+    """Classification of a MixinSymbol based on its children and evaluators.
+
+    Three categories based on MixinSymbol.__iter__ and evaluator_symbols:
+    - SCOPE: no evaluators (regardless of children, including empty scopes)
+    - RESOURCE: has evaluators, no children
+    - CONFLICT: has evaluators AND has children → error
+    """
+
+    SCOPE = auto()
+    """No evaluators → _construct_scope()"""
+
+    RESOURCE = auto()
+    """Has evaluators, no children → _evaluate_resource()"""
+
+    CONFLICT = auto()
+    """Has both children and evaluators → raise error"""
 
 
 class MergerElectionSentinel(Enum):
@@ -1517,10 +1499,6 @@ class Definition(ABC):
 
     is_public: bool
 
-    @property
-    @abstractmethod
-    def inherits(self) -> tuple["ResourceReference", ...]: ...
-
 
 @dataclass(kw_only=True, frozen=True, eq=False)
 class EvaluatorDefinition(Definition, ABC):
@@ -1530,11 +1508,7 @@ class EvaluatorDefinition(Definition, ABC):
     All concrete subclasses must have a ``function`` field of type ``Callable[..., T]``.
     """
 
-    bases: tuple["ResourceReference", ...]
-
-    @property
-    def inherits(self) -> tuple["ResourceReference", ...]:
-        return self.bases
+    inherits: tuple["ResourceReference", ...]
 
     @abstractmethod
     def compile(self, symbol: "MixinSymbol", /) -> "EvaluatorSymbol":
@@ -1628,11 +1602,7 @@ class ScopeDefinition(
     multiple same-name definitions within a single scope.
     """
 
-    bases: tuple["ResourceReference", ...]
-
-    @property
-    def inherits(self) -> tuple["ResourceReference", ...]:
-        return self.bases
+    inherits: tuple["ResourceReference", ...]
 
     def __len__(self) -> int:
         return sum(1 for _ in self)
@@ -1756,13 +1726,13 @@ class PackageScopeDefinition(ObjectScopeDefinition):
                     if hasattr(submod, "__path__"):
                         definitions.append(
                             PackageScopeDefinition(
-                                bases=(), is_public=self.is_public, underlying=submod
+                                inherits=(), is_public=self.is_public, underlying=submod
                             )
                         )
                     else:
                         definitions.append(
                             ObjectScopeDefinition(
-                                bases=(), is_public=self.is_public, underlying=submod
+                                inherits=(), is_public=self.is_public, underlying=submod
                             )
                         )
             except ImportError:
@@ -1840,7 +1810,7 @@ def scope(c: object) -> ObjectScopeDefinition:
             root.Combined.bar  # "foo_bar"
 
     """
-    return ObjectScopeDefinition(bases=(), is_public=False, underlying=c)
+    return ObjectScopeDefinition(inherits=(), is_public=False, underlying=c)
 
 
 TDefinition = TypeVar("TDefinition", bound=Definition)
@@ -1917,7 +1887,7 @@ def extend(
     """
 
     def decorator(definition: TDefinition) -> TDefinition:
-        return replace(definition, bases=inherits)
+        return replace(definition, inherits=inherits)
 
     return decorator
 
@@ -1937,8 +1907,8 @@ def _parse_package(module: ModuleType) -> ScopeDefinition:
     """
     # Modules are private by default; use modules_public=True in evaluate to make public
     if hasattr(module, "__path__"):
-        return PackageScopeDefinition(bases=(), is_public=False, underlying=module)
-    return ObjectScopeDefinition(bases=(), is_public=False, underlying=module)
+        return PackageScopeDefinition(inherits=(), is_public=False, underlying=module)
+    return ObjectScopeDefinition(inherits=(), is_public=False, underlying=module)
 
 
 Endofunction = Callable[[TResult], TResult]
@@ -2003,7 +1973,7 @@ def merge(
     See :func:`scope` for examples.
     """
     return FunctionalMergerDefinition(
-        bases=(), function=callable, is_eager=False, is_public=False
+        inherits=(), function=callable, is_eager=False, is_public=False
     )
 
 
@@ -2013,7 +1983,7 @@ def patch(
     """
     A decorator that converts a callable into a patch definition.
     """
-    return SinglePatcherDefinition(bases=(), is_public=False, function=callable)
+    return SinglePatcherDefinition(inherits=(), is_public=False, function=callable)
 
 
 def patch_many(
@@ -2022,7 +1992,7 @@ def patch_many(
     """
     A decorator that converts a callable into a patch definition.
     """
-    return MultiplePatcherDefinition(bases=(), is_public=False, function=callable)
+    return MultiplePatcherDefinition(inherits=(), is_public=False, function=callable)
 
 
 def extern(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
@@ -2066,7 +2036,7 @@ def extern(callable: Callable[..., Any]) -> PatcherDefinition[Any]:
     empty_patches_provider.__signature__ = sig  # type: ignore[attr-defined]
 
     return MultiplePatcherDefinition(
-        bases=(), is_public=False, function=empty_patches_provider
+        inherits=(), is_public=False, function=empty_patches_provider
     )
 
 
@@ -2101,7 +2071,7 @@ def resource(
             )
     """
     return EndofunctionMergerDefinition(
-        bases=(), function=callable, is_eager=False, is_public=False
+        inherits=(), function=callable, is_eager=False, is_public=False
     )
 
 
@@ -2339,6 +2309,55 @@ def _compile_function_with_mixin(
         compute_dependency_reference(parameter) for parameter in keyword_params
     )
 
+    def _resolve_dependency(
+        search_mixin: "runtime.Mixin",
+        resolved_reference: ResolvedReference,
+        extra_levels: int,
+    ) -> "runtime.Mixin":
+        """Resolve a dependency mixin without calling get_symbols at runtime.
+
+        Uses search_mixin.symbol.qualified_this[anchor] to find the composition-site
+        outer scopes. The anchor is the definition-site symbol at the same level as
+        search_mixin.symbol:
+
+        - extra_levels=0: search_mixin.symbol is the composition-site resource symbol.
+          anchor = resource_symbol (definition-site resource).
+          search_mixin.symbol.qualified_this[resource_symbol] gives the composition-site
+          parent scopes that instantiate resource_symbol within search_mixin.symbol.
+
+        - extra_levels=1 (same-name): search_mixin.symbol is the composition-site
+          outer_symbol (after going up one level from the resource).
+          anchor = outer_symbol (definition-site outer).
+          search_mixin.symbol.qualified_this[outer_symbol] gives the composition-site
+          parent scopes of outer_symbol.
+
+        resource_symbol and outer_symbol are captured from the enclosing
+        _compile_function_with_mixin call via closure.
+        """
+        # The anchor is the definition-site symbol at the same level as search_mixin.symbol.
+        anchor: MixinSymbol = resource_symbol if extra_levels == 0 else outer_symbol
+        # Start from composition-site outers of anchor within search_mixin.symbol.
+        # qualified_this is a pre-computed @cached_property — no runtime overhead.
+        composition_site_outers: frozenset[MixinSymbol] = frozenset(
+            search_mixin.symbol.qualified_this[anchor]
+        )
+        definition_site: MixinSymbol = resolved_reference.origin_symbol
+        for _ in range(resolved_reference.de_bruijn_index):
+            composition_site_outers = frozenset(
+                qt
+                for composition_outer in composition_site_outers
+                for qt in composition_outer.qualified_this[definition_site]
+            )
+            definition_site = definition_site.outer  # type: ignore[assignment]
+        results: list[MixinSymbol] = []
+        for composition_outer in composition_site_outers:
+            navigated: MixinSymbol = composition_outer
+            for key in resolved_reference.path:
+                navigated = navigated[key]
+            results.append(navigated)
+        (target_symbol,) = results
+        return search_mixin.find_mixin(target_symbol)
+
     # Return a compiled function that resolves dependencies at runtime (V2)
     def compiled_wrapper(mixin: "runtime.Mixin") -> T:
         resolved_kwargs: dict[str, object] = {}
@@ -2349,13 +2368,7 @@ def _compile_function_with_mixin(
                 outer_mixin = search_mixin.outer
                 assert isinstance(outer_mixin, runtime.Mixin)
                 search_mixin = outer_mixin
-            # Navigate to target via symbol layer + mixin tree
-            search_outer = search_mixin.outer
-            assert isinstance(search_outer, runtime.Mixin)
-            (target_symbol,) = resolved_reference.get_symbols(
-                current=search_outer.symbol,
-            )
-            dependency_mixin = search_mixin.find_mixin(target_symbol)
+            dependency_mixin = _resolve_dependency(search_mixin, resolved_reference, extra_levels)
             resolved_kwargs[param_name] = dependency_mixin.evaluated
 
         return function(**resolved_kwargs)  # type: ignore
@@ -2371,13 +2384,7 @@ def _compile_function_with_mixin(
                 outer_mixin = search_mixin.outer
                 assert isinstance(outer_mixin, runtime.Mixin)
                 search_mixin = outer_mixin
-            # Navigate to target via symbol layer + mixin tree
-            search_outer = search_mixin.outer
-            assert isinstance(search_outer, runtime.Mixin)
-            (target_symbol,) = resolved_reference.get_symbols(
-                current=search_outer.symbol,
-            )
-            dependency_mixin = search_mixin.find_mixin(target_symbol)
+            dependency_mixin = _resolve_dependency(search_mixin, resolved_reference, extra_levels)
             resolved_kwargs[param_name] = dependency_mixin.evaluated
 
         def inner(positional_argument: object, /) -> T:

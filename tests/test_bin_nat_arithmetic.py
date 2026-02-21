@@ -26,7 +26,7 @@ TESTS_PATH = Path(__file__).parent
 def bin_nat_scope() -> Scope:
     """Load and evaluate the binary natural arithmetic test fixture."""
     tests_definition = DirectoryMixinDefinition(
-        bases=(), is_public=True, underlying=TESTS_PATH
+        inherits=(), is_public=True, underlying=TESTS_PATH
     )
     root = evaluate(overlay.library, tests_definition, modules_public=True)
     result = root.BinNatArithmeticTest
