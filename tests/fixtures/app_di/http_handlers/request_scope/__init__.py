@@ -1,8 +1,13 @@
 """HttpHandlers.RequestScope: extracts request-scoped values from the HTTP request."""
 
 from http.server import BaseHTTPRequestHandler
+from typing import Protocol
 
 from overlay.language import extern, public, resource
+
+
+class _RequestWithPath(Protocol):
+    path: str
 
 
 @extern
@@ -15,7 +20,7 @@ def current_user() -> object: ...
 
 @public
 @resource
-def user_id(request: BaseHTTPRequestHandler) -> int:
+def user_id(request: _RequestWithPath) -> int:
     return int(request.path.split("/")[-1])
 
 

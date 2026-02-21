@@ -123,9 +123,14 @@ class TestStep4ModuleHttpServer:
 
     def test_request_scope_created_fresh_per_request(self) -> None:
         """Each call to request_scope(...) produces an independent InstanceScope."""
+        from typing import Protocol
+
         app = evaluate(app_di, modules_public=True).step4_request_app(
             database_path=":memory:",
         )
+
+        class _RequestWithPath(Protocol):
+            path: str
 
         class FakeRequest:
             path = "/users/1"
@@ -219,8 +224,13 @@ class TestOyamlHttpApp:
 
     def test_oyaml_app_request_scope_created_fresh_per_request(self) -> None:
         """Each call to request_scope(...) produces an independent scope instance."""
+        from typing import Protocol
+
         root = evaluate(app_oyaml, modules_public=True)
         composed_app = root.Apps.memory_app  # type: ignore[union-attr]
+
+        class _RequestWithPath(Protocol):
+            path: str
 
         class FakeRequest:
             path = "/users/1"

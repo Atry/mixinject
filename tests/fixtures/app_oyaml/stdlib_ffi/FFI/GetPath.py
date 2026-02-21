@@ -1,15 +1,19 @@
 """request.path -> str"""
 
-from http.server import BaseHTTPRequestHandler
+from typing import Protocol
 
 from overlay.language import extern, public, resource
 
 
+class _RequestWithPath(Protocol):
+    path: str
+
+
 @extern
-def request() -> BaseHTTPRequestHandler: ...
+def request() -> _RequestWithPath: ...
 
 
 @public
 @resource
-def path(request: BaseHTTPRequestHandler) -> str:
+def path(request: _RequestWithPath) -> str:
     return request.path

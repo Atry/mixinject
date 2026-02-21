@@ -14,7 +14,7 @@ import urllib.request
 from concurrent.futures import Future
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Protocol
 
 from types import ModuleType
 
@@ -288,6 +288,9 @@ class TestStep4HttpServer:
             @public
             @scope
             class RequestScope:
+                class _RequestWithPath(Protocol):
+                    path: str
+
                 @extern
                 def request() -> BaseHTTPRequestHandler: ...
 
@@ -298,7 +301,7 @@ class TestStep4HttpServer:
                 # UserRepository.RequestScope.current_user automatically.
                 @public
                 @resource
-                def user_id(request: BaseHTTPRequestHandler) -> int:
+                def user_id(request: _RequestWithPath) -> int:
                     return int(request.path.split("/")[-1])
 
                 @public
