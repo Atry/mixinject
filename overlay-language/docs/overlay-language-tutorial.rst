@@ -21,11 +21,12 @@ The Overlay language solves this by separating the application into three layers
   per operation (``sqlite3.connect``, ``str.split``, ``wfile.write``). Each adapter
   declares its inputs as ``@extern`` and exposes a single ``@public @resource``
   output. The adapter contains **zero business logic**.
-- **``.oyaml`` files** contain all application logic. Overlay is not just a
-  configuration format — it is a complete language with lexical scoping, nested
-  scopes, deep-merge composition, and lazy evaluation. These features make it
-  more natural than Python for expressing business logic, which is inherently
-  declarative ("the user ID is the last URL segment", "the response format is
+- **``.oyaml`` files** contain all application logic, written in the Overlay
+  language. The Overlay language is not just a configuration format — it is a
+  complete language with lexical scoping, nested scopes, deep-merge composition,
+  and lazy evaluation. These features make it more natural than Python for
+  expressing business logic, which is inherently declarative ("the user ID is
+  the last URL segment", "the response format is
   ``total={total} current={current}``").
 - **Configuration values** (SQL queries, format strings, host/port) are pure
   YAML scalars, gathered in one place.
@@ -282,7 +283,7 @@ Python vs Overlay language
 
    * - Aspect
      - Python ``@scope``
-     - ``.oyaml``
+     - Overlay language (``.oyaml``)
    * - Composition
      - Manual ``@extend`` + ``RelativeReference``
      - Inheritance list: ``- [Parent]``
