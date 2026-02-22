@@ -3,10 +3,9 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import subprocess
 import sys
 from pathlib import Path
-
-from sphinx_github_style.utils.git import get_head
 
 # -- Path setup --------------------------------------------------------------
 # Add overlay-language/src to sys.path so autodoc can import the modules.
@@ -25,7 +24,6 @@ author = 'Bo Yang'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.extlinks',
-    'sphinx_github_style',
     'sphinx_mdinclude',
 ]
 
@@ -48,6 +46,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'api/modules.rst', 'api/
 
 html_theme = 'alabaster'
 html_theme_options = {
+    'description': 'A dependency injection framework with pytest-fixture syntax, '
+                   'plus a configuration language for declarative programming.',
     'fixed_sidebar': True,
     'github_user': 'Atry',
     'github_repo': 'overlay',
@@ -58,14 +58,13 @@ html_theme_options = {
 
 # -- GitHub source links (pinned to git commit) --------------------------------
 
-linkcode_blob = "head"
-linkcode_url = "https://github.com/Atry/overlay"
-
-_git_blob = get_head()
+_git_commit = subprocess.check_output(
+    ["git", "rev-parse", "HEAD"], text=True
+).strip()
 
 extlinks = {
     'github': (
-        f'https://github.com/Atry/overlay/tree/{_git_blob}/%s',
+        f'https://github.com/Atry/overlay/tree/{_git_commit}/%s',
         '%s',
     ),
 }
