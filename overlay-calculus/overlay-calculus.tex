@@ -135,7 +135,7 @@
 \label{sec:introduction}
 
 Declarative and configuration languages are ubiquitous in modern software
-engineering. Systems such as NixOS modules~\cite{dolstra2008nixos,nixosmodules},
+engineering. Systems such as NixOS modules~\cite{dolstra2010nixos,nixosmodules},
 Jsonnet~\cite{jsonnet}, Hydra~\cite{hydra2023}, CUE~\cite{cue2019}, Dhall~\cite{dhall2017},
 Kustomize~\cite{kustomize}, and JSON Patch~\cite{rfc6902} all provide mechanisms for composing
 structured data through inheritance or overlay. Among these, the NixOS
@@ -608,8 +608,8 @@ frontier $S$, those whose overlay component matches
 $p_{\mathrm{def}}$, and collects the corresponding
 inheritance-site paths as the new frontier.
 After $n$ steps the frontier contains the answer:
+{\small
 \begin{equation}\label{eq:this}
-  \small
   \this(S,\; p_{\mathrm{def}},\; n) =
   \begin{cases}
     S & \text{if } n = 0 \\[6pt]
@@ -627,7 +627,7 @@ After $n$ steps the frontier contains the answer:
     \right)
     & \text{if } n > 0
   \end{cases}
-\end{equation}
+\end{equation}}%
 At each step $\init$ shortens $p_{\mathrm{def}}$ by one label
 and $n$ decreases by one.
 Since $n$ is a non-negative integer, the recursion terminates.
@@ -668,7 +668,7 @@ is inspired by F-coalgebras~\cite{rutten2000universal}, where
 identity is determined by observable behavior rather than by internal
 structure.
 
-\section{Translation from $\lambda$-Calculus}
+\section{Embedding the $\lambda$-Calculus}
 \label{sec:translation}
 
 The following translation maps the $\lambda$-calculus in
@@ -816,7 +816,7 @@ no game-theoretic machinery.
 Scott's $D_\infty$ model~\cite{scott1976data} uses heavier
 machinery yet is only adequate, not fully
 abstract~\cite{plotkin1975callbyname};
-Hyland and Ong's game semantics~\cite{hyland2000full} achieves
+Abramsky and McCusker's game semantics~\cite{abramsky1995games} achieves
 full abstraction but at the cost of even greater
 mathematical complexity.
 The overlay tree semantics achieves full abstraction with
@@ -987,8 +987,8 @@ Addition is a separate overlay file that inherits $\mathrm{NatData}$
 and extends each constructor with a $\mathrm{Plus}$ operation
 exposing a $\mathrm{sum}$ field.
 The base case is $0 + m = m$; the recursive case reduces
-$\mathrm{S}(n) + m$ to $\mathrm{S}(n_0 + (m+1))$, where $n_0$
-is the predecessor of $n$, by delegating to $n_0$'s $\mathrm{Plus}$:
+$\mathrm{S}(n_0) + m$ to $n_0 + \mathrm{S}(m)$
+by delegating to $n_0$'s $\mathrm{Plus}$ with an incremented addend:
 \begin{align*}
   \mathrm{NatPlus} \mapsto \{\;&
     \mathrm{NatData},\\
@@ -1050,13 +1050,14 @@ $\mathrm{Zero}$ is equal only to another $\mathrm{Zero}$;
 $\mathrm{Successor}$ is equal only to another $\mathrm{Successor}$
 with an equal predecessor.
 Case analysis on $\mathrm{other}$ is done via its $\mathrm{Visitor}$:
+{\small
 \begin{align*}
   \mathrm{NatEquality} \mapsto \{\;&
     \mathrm{NatVisitor},\; \mathrm{BooleanData},\\
     &\mathrm{NatFactory} \mapsto \{\\
     &\quad \mathrm{Product} \mapsto \{\mathrm{Equal} \mapsto \{
       \mathrm{other} \mapsto \{\mathrm{Product}\},\\
-    &\qquad\quad
+    &\qquad
       \mathrm{equal} \mapsto \{
         \qualifiedthis{\mathrm{NatEquality}}.\mathrm{Boolean}\}\}\},\\[2pt]
     &\quad \mathrm{Zero} \mapsto \{\mathrm{Equal} \mapsto \{
@@ -1064,15 +1065,15 @@ Case analysis on $\mathrm{other}$ is done via its $\mathrm{Visitor}$:
     &\qquad
       \mathrm{OtherVisitor} \mapsto \{
         \mathrm{other}.\mathrm{Visitor},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{VisitZero} \mapsto \{
           \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{True}\}\},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{VisitSuccessor} \mapsto \{
           \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{False}\}\},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{Visit} \mapsto \{
           \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{Boolean}\}\}\},\\
@@ -1086,28 +1087,28 @@ Case analysis on $\mathrm{other}$ is done via its $\mathrm{Visitor}$:
     &\qquad
       \mathrm{RecursiveEquality} \mapsto \{
         \qualifiedthis{\mathrm{Successor}}.\mathrm{predecessor}.\mathrm{Equal},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{other} \mapsto \{
           \qualifiedthis{\mathrm{Equal}}.\mathrm{other}.\mathrm{predecessor}\}\},\\
     &\qquad
       \mathrm{OtherVisitor} \mapsto \{
         \mathrm{other}.\mathrm{Visitor},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{VisitZero} \mapsto \{
           \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{False}\}\},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{VisitSuccessor} \mapsto \{
           \mathrm{equal} \mapsto \{
             \mathrm{RecursiveEquality}.\mathrm{equal}\}\},\\
-    &\qquad\quad
+    &\qquad\;
         \mathrm{Visit} \mapsto \{
           \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{Boolean}\}\}\},\\
     &\qquad
       \mathrm{equal} \mapsto \{
         \mathrm{OtherVisitor}.\mathrm{Visit}.\mathrm{equal}\}\}\}\}\}
-\end{align*}
+\end{align*}}
 Composing $\mathrm{NatPlus}$ with $\mathrm{NatEquality}$ by
 inheriting both---with no modifications to either file---gives the
 resulting Nat values both $\mathrm{Plus}$ and $\mathrm{Equal}$
@@ -1426,7 +1427,7 @@ in practice turn out to be instances of Overlay-Calculus.
 
 \subsubsection{Configuration and Object-Oriented Languages}
 \label{sec:practical-config}
-The NixOS module system~\cite{dolstra2008nixos,nixosmodules}---whose
+The NixOS module system~\cite{dolstra2010nixos,nixosmodules}---whose
 recursive attribute merging motivated this work---can be understood as an
 implementation of Overlay-Calculus with additional features (type checking,
 error reporting, FFI to the Nix language).
@@ -1634,7 +1635,7 @@ $\lambda$-calculus with records, where composition is a record merge
 operator, not an inheritance mechanism.
 
 \paragraph{Module systems and deep merge}
-The NixOS module system~\cite{dolstra2008nixos,nixosmodules}
+The NixOS module system~\cite{dolstra2010nixos,nixosmodules}
 composes modules by \emph{recursively merging nested attribute sets},
 not by linearization or method-level override---the same overlay
 semantics that distinguishes tree-level inheritance from mixin and
@@ -1654,8 +1655,8 @@ semantics of self-reference under multiple inheritance.
 When two independent modules that inherit from the same
 deferred module are composed, each import introduces its own
 declaration of the shared options; the module system's
-\texttt{mergeOptionDecls} rejects duplicate declarations with
-a static error (Appendix~\ref{app:scala-multi-path}).
+\texttt{merge\-Option\-Decls} rejects duplicate declarations
+with a static error (Appendix~\ref{app:scala-multi-path}).
 The module system cannot express that both routes contribute
 equally to the same option---the multi-path situation that
 recursive merging naturally gives rise to---which motivated the
@@ -1744,6 +1745,14 @@ An important consequence is that such chains do \emph{not}
 commute---they have a fixed order---and therefore cannot be extended
 through open inheritance, which is the correct semantics for closed
 dispatch.
+
+\section{Conclusion}
+
+The goals of declarative programming forced the semantics
+of Overlay-Calculus upon us.
+The emergent phenomena suggest that
+it is a more expressive computational
+foundation than the $\lambda$-calculus.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
@@ -1895,9 +1904,9 @@ let
           default = { };
           type = lib.types.submoduleWith {
             modules = [
-              toplevel.config.Object1.MyInner
-              toplevel.config.Object2.MyInner
-            ];
+            toplevel.config.Object1.MyInner
+            toplevel.config.Object2.MyInner
+          ];
           };
         };
       })
@@ -1918,12 +1927,14 @@ error: The option `MyObjectA.outer'
 \end{verbatim}
 
 \noindent
-The rejection occurs because \texttt{Object1.MyInner} and
-\texttt{Object2.MyInner} each carry the full
-\texttt{staticModules} of the \texttt{MyInner} deferred module,
-including the declaration \texttt{options.outer}.
-When \texttt{MyObjectA} imports both, the module system's
-\texttt{mergeOptionDecls} encounters two declarations of the
+The rejection occurs because
+\texttt{Object1.\allowbreak{}My\-Inner} and
+\texttt{Object2.\allowbreak{}My\-Inner} each carry the full
+\texttt{static\-Modules} of the \texttt{My\-Inner} deferred
+module, including the declaration
+\texttt{options.\allowbreak{}outer}.
+When \texttt{My\-ObjectA} imports both, the module system's
+\texttt{merge\-Option\-Decls} encounters two declarations of the
 same option and raises a static error---it cannot express that
 both declarations originate from the same trait and should be
 unified.
@@ -2027,11 +2038,13 @@ as the domain of an existential quantifier in a set
 comprehension~\cite{aczel1977inductive}.
 
 \paragraph{Equation~(\ref{eq:properties}): $\properties$}
-$\properties(p) =
-\bigl\{\, \ell \bigm|
-  (\_, p_{\mathrm{overlay}}) \in \supers(p),\;
-  \ell \in \defines(p_{\mathrm{overlay}})
-\,\bigr\}$.
+\[
+  \properties(p) =
+  \bigl\{\, \ell \bigm|
+    (\_, p_{\mathrm{overlay}}) \in \supers(p),\;
+    \ell \in \defines(p_{\mathrm{overlay}})
+  \,\bigr\}.
+\]
 The function $\supers$ appears as the set being iterated
 over ($\in \supers(p)$).
 The predicate $\ell \in \defines(\cdot)$ involves only
@@ -2056,13 +2069,13 @@ result.
 
 \paragraph{Equation~(\ref{eq:overlays}): $\overlays$}
 For $p \neq ()$:
-\[
+\begin{multline*}
   \overlays(p) = \{p\} \cup
-  \bigl\{\, p_{\mathrm{branch}} \snoc \last(p) \bigm|
+  \bigl\{\, p_{\mathrm{branch}} \snoc \last(p) \bigm| {} \\
     (\_, p_{\mathrm{branch}}) \in \supers(\init(p)),\;
     \last(p) \in \defines(p_{\mathrm{branch}})
   \,\bigr\}.
-\]
+\end{multline*}
 The function $\supers$ appears as the set being iterated over.
 The filtering condition $\last(p) \in \defines(\cdot)$
 involves only the AST primitive.
@@ -2071,14 +2084,14 @@ to the result.
 \emph{Positive in $\supers$.}
 
 \paragraph{Equation~(\ref{eq:bases}): $\bases$}
-\[
+\begin{multline*}
   \bases(p) =
   \bigl\{\, p_{\mathrm{target}} \bigm|
-    p_{\mathrm{overlay}} \in \overlays(p),\;
+    p_{\mathrm{overlay}} \in \overlays(p),\\
     (n, \ell_{\mathrm{down},*}) \in \inherits(p_{\mathrm{overlay}}),\;
     p_{\mathrm{target}} \in \resolve(\ldots)
   \,\bigr\}.
-\]
+\end{multline*}
 Both $\overlays$ and $\resolve$ appear as sets being iterated
 over.
 The function $\inherits$ is an AST primitive.
@@ -2187,13 +2200,15 @@ is an infinite labeled tree defined by:
   \bot & \text{if } M \text{ has no HNF} \\[6pt]
   \lambda x_1 \ldots x_m.\;
   y\bigl(\mathrm{BT}(M_1),\; \ldots,\; \mathrm{BT}(M_k)\bigr)
-  & \text{if } M \to^*_h
-  \lambda x_1 \ldots x_m.\; y\; M_1 \cdots M_k
+  & \begin{aligned}[t]
+    &\text{if } M \to^*_h \\[-2pt]
+    &\lambda x_1 \ldots x_m.\; y\; M_1 \cdots M_k
+  \end{aligned}
 \end{cases}
 \]
 B\"ohm tree equivalence $\mathrm{BT}(M) = \mathrm{BT}(N)$ is the
 standard observational equivalence of the lazy
-$\lambda$-calculus~\cite{barendregt1984lambda,hyland2000full}.
+$\lambda$-calculus~\cite{barendregt1984lambda,abramsky1993lazy}.
 
 \subsection{Path Encoding}
 
@@ -2406,10 +2421,13 @@ $(\lambda y.\, M')[V/x] = \lambda y.\, (M'[V/x])$
 \paragraph{Inductive case:
   $M = \mathbf{let}\; z = V_1\; V_2$
 $\mathbf{in}\; M'$}
-Then $\mathcal{T}(M) =
-\{z \mapsto \{\mathcal{T}(V_1),\;
-  \mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
-\mathrm{result} \mapsto \mathcal{T}(M')\}$.
+Then
+\[
+  \mathcal{T}(M) =
+  \{z \mapsto \{\mathcal{T}(V_1),\;
+    \mathrm{argument} \mapsto \mathcal{T}(V_2)\},\;
+  \mathrm{result} \mapsto \mathcal{T}(M')\}.
+\]
 The substitution distributes:
 $M[V/x] =
 \mathbf{let}\; z = V_1[V/x]\; V_2[V/x]
@@ -2668,7 +2686,7 @@ Hence $\mathcal{T}(M) \approx \mathcal{T}(N)$.
 Suppose $\mathrm{BT}(M) \neq \mathrm{BT}(N)$.
 B\"ohm tree equivalence coincides with observational
 equivalence for the lazy
-$\lambda$-calculus~\cite{barendregt1984lambda,hyland2000full}:
+$\lambda$-calculus~\cite{barendregt1984lambda,abramsky1993lazy}:
 there exists a context $C[\cdot]$ such that $C[M]$ converges
 and $C[N]$ diverges (or vice versa).
 By Theorem~\ref{thm:adequacy},
@@ -2682,7 +2700,7 @@ The proof rests on two pillars: Adequacy
 (Theorem~\ref{thm:adequacy}), which is our contribution, and
 the classical result that B\"ohm tree equivalence equals
 observational equivalence for the lazy
-$\lambda$-calculus~\cite{barendregt1984lambda,hyland2000full}.
+$\lambda$-calculus~\cite{barendregt1984lambda,abramsky1993lazy}.
 The overlay tree semantics inherits full abstraction from the
 $\lambda$-calculus without needing to define or compare
 absolute paths inside overlay trees.
