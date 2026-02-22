@@ -1,12 +1,12 @@
 {
   "mcpServers": {
     "doi-mcp": {
-      "type": "http",
-      "url": "https://server.smithery.ai/@tfscharff/doi-mcp"
-    },
-    "paper-search-mcp": {
-      "type": "http",
-      "url": "https://server.smithery.ai/@openags/paper-search-mcp"
+      "command": "direnv",
+      "args": [
+        "exec",
+        ".",
+        "doi-mcp"
+      ]
     },
     "jupyter": {
       "command": "direnv",

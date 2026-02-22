@@ -1,0 +1,6 @@
+{
+  "name": "overlay",
+  "devDependencies": {
+    "doi-mcp": "github:tfscharff/doi-mcp"
+  }
+}

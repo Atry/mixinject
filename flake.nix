@@ -54,6 +54,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    doi-mcp = {
+      url = "github:tfscharff/doi-mcp";
+      flake = false;
+    };
+
   };
   outputs =
     inputs:
@@ -64,6 +69,7 @@
         ./modules/python.nix
         ./modules/jupyter.nix
         ./modules/codex.nix
+        ./modules/doi-mcp.nix
       ];
       systems = import inputs.systems;
     };

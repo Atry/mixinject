@@ -237,3 +237,4 @@ experiment_results.db
 /.vscode/extensions.json
 
 /overlay-calculus/arxiv-submission.tar.gz
+node_modules/

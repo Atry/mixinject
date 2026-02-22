@@ -12,6 +12,22 @@
         "url": "file:///dev/null"
       }
     },
+    "doi-mcp": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770202261,
+        "narHash": "sha256-7vaUXK+9Q5vKFtjwMMslh2gCueYjM+PBL7D5qOSJ46c=",
+        "owner": "tfscharff",
+        "repo": "doi-mcp",
+        "rev": "3454e6bce6ff5006b72d5b665820b450b34cf4fa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tfscharff",
+        "repo": "doi-mcp",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
@@ -113,6 +129,7 @@
     "root": {
       "inputs": {
         "devenv-root": "devenv-root",
+        "doi-mcp": "doi-mcp",
         "flake-parts": "flake-parts",
         "nixpkgs": "nixpkgs",
         "pyproject-build-systems": "pyproject-build-systems",
