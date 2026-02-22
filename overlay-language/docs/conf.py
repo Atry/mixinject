@@ -44,10 +44,13 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'api/modules.rst', 'api/
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
+html_static_path = ['_static']
 html_theme = 'alabaster'
+html_favicon = '_static/favicon.svg'
 html_theme_options = {
     'description': 'A dependency injection framework with pytest-fixture syntax, '
                    'plus a configuration language for declarative programming.',
+    'logo': 'logo.svg',
     'fixed_sidebar': True,
     'github_user': 'Atry',
     'github_repo': 'overlay',

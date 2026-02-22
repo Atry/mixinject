@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <!-- Lab-harmonized: RGB L*=50 max chroma, CMY L*=85 max chroma -->
+    <!-- Main sectors: 56° each, interpolation sectors: 4° each (Lab 1/2 midpoint) -->
+
+    <radialGradient id="gradient-0" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F00000" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#F00000" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#F00000" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#F00000" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#F00000" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#F00000" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#F00000" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#F00000" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-0">
+      <path d="M 200,200 L 115.495,41.069 A 180,180 0 0,1 284.505,41.069 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-1" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F59500" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#F59500" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#F59500" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#F59500" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#F59500" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#F59500" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#F59500" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#F59500" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-1">
+      <path d="M 200,200 L 284.505,41.069 A 180,180 0 0,1 295.385,47.351 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-2" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ECE901" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#ECE901" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#ECE901" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#ECE901" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#ECE901" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#ECE901" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#ECE901" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ECE901" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-2">
+      <path d="M 200,200 L 295.385,47.351 A 180,180 0 0,1 379.890,193.718 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-3" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8BBA00" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#8BBA00" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#8BBA00" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#8BBA00" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#8BBA00" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#8BBA00" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#8BBA00" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#8BBA00" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-3">
+      <path d="M 200,200 L 379.890,193.718 A 180,180 0 0,1 379.890,206.282 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-4" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#008B00" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#008B00" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#008B00" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#008B00" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#008B00" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#008B00" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#008B00" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#008B00" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-4">
+      <path d="M 200,200 L 379.890,206.282 A 180,180 0 0,1 295.385,352.649 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-5" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#30BA7F" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#30BA7F" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#30BA7F" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#30BA7F" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#30BA7F" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#30BA7F" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#30BA7F" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#30BA7F" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-5">
+      <path d="M 200,200 L 295.385,352.649 A 180,180 0 0,1 284.505,358.931 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-6" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#04ECEB" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#04ECEB" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#04ECEB" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#04ECEB" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#04ECEB" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#04ECEB" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#04ECEB" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#04ECEB" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-6">
+      <path d="M 200,200 L 284.505,358.931 A 180,180 0 0,1 115.495,358.931 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-7" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#36ADF5" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#36ADF5" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#36ADF5" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#36ADF5" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#36ADF5" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#36ADF5" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#36ADF5" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#36ADF5" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-7">
+      <path d="M 200,200 L 115.495,358.931 A 180,180 0 0,1 104.615,352.649 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-8" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#006FFC" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#006FFC" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#006FFC" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#006FFC" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#006FFC" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#006FFC" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#006FFC" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#006FFC" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-8">
+      <path d="M 200,200 L 104.615,352.649 A 180,180 0 0,1 20.110,206.282 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-9" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#AA96FC" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#AA96FC" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#AA96FC" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#AA96FC" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#AA96FC" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#AA96FC" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#AA96FC" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#AA96FC" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-9">
+      <path d="M 200,200 L 20.110,206.282 A 180,180 0 0,1 20.110,193.718 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-10" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFC0FA" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#FFC0FA" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#FFC0FA" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#FFC0FA" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#FFC0FA" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#FFC0FA" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#FFC0FA" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFC0FA" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-10">
+      <path d="M 200,200 L 20.110,193.718 A 180,180 0 0,1 104.615,47.351 Z"/>
+    </clipPath>
+
+    <radialGradient id="gradient-11" cx="200" cy="200" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF7C82" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#FF7C82" stop-opacity="0"/>
+      <stop offset="32%" stop-color="#FF7C82" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#FF7C82" stop-opacity="0.5"/>
+      <stop offset="37%" stop-color="#FF7C82" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#FF7C82" stop-opacity="1"/>
+      <stop offset="95%" stop-color="#FF7C82" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FF7C82" stop-opacity="0.5"/>
+    </radialGradient>
+    <clipPath id="sector-11">
+      <path d="M 200,200 L 104.615,47.351 A 180,180 0 0,1 115.495,41.069 Z"/>
+    </clipPath>
+  </defs>
+
+  <g>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-0)" clip-path="url(#sector-0)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-1)" clip-path="url(#sector-1)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-2)" clip-path="url(#sector-2)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-3)" clip-path="url(#sector-3)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-4)" clip-path="url(#sector-4)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-5)" clip-path="url(#sector-5)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-6)" clip-path="url(#sector-6)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-7)" clip-path="url(#sector-7)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-8)" clip-path="url(#sector-8)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-9)" clip-path="url(#sector-9)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-10)" clip-path="url(#sector-10)"/>
+    <circle cx="200" cy="200" r="180" fill="url(#gradient-11)" clip-path="url(#sector-11)"/>
+  </g>
+</svg>
