@@ -11,4 +11,4 @@ configuration language for declarative programming.
    tutorial
    overlay-language-tutorial
    specification
-   api/modules.rst
+   API Reference <api/overlay.language>
