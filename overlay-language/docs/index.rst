@@ -30,7 +30,7 @@ just configuration. Move that logic into the Overlay language and Python reduces
 to thin I/O adapters that are trivial to mock or replace. The same Overlay code runs against any set of adapters and the business logic
 never changes, even when you
 port your synchronous program to async — the problem known as
-`function colour <https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/>`_.
+`function color <https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/>`_.
 See :doc:`overlay-language-tutorial`.
 
 :doc:`installation`

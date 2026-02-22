@@ -218,8 +218,8 @@ The same ``Library.oyaml`` runs unchanged on both synchronous and asynchronous
 runtimes. Replacing ``- [stdlib_ffi]`` with ``- [async_ffi]`` swaps the FFI layer
 to one built on ``aiosqlite`` + ``starlette``
 (:github:`implementation <tests/fixtures/app_oyaml/async_ffi/FFI/>`) — the business
-logic never knows whether it is sync or async. Function colour is confined
-entirely to the FFI boundary; ``Library.oyaml`` itself is *colourless*.
+logic never knows whether it is sync or async. Function color is confined
+entirely to the FFI boundary; ``Library.oyaml`` itself is *colorless*.
 
 **Composition via inheritance:** ``memory_app`` inherits four scopes via
 qualified this (``[Apps, ~, SQLiteDatabase]`` etc.) because these scopes are
