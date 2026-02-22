@@ -193,8 +193,8 @@ packages) behaves as a lazily observed structure in practice, allowing any
 single package to be evaluated without materializing the entire set.
 Guided by this observation, we set out to reduce the
 NixOS module system to a minimal set of primitives.
-Through iterative refinement (beginning with
-an early version implemented in Nix), the system evolved into the Overlay
+Through iterative refinement, beginning with
+an early version implemented in Nix, the system evolved into the Overlay
 language\selfcite{~\cite{mixin2025}}{~(included as supplementary
 material)}, now implemented in Python: a declarative programming
 language with only three constructs (record literals, properties,
@@ -366,7 +366,7 @@ $\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ from it.
 The named form desugars to the indexed form during parsing
 (Section~\ref{sec:overlay-trees}).
 
-A new scope level is created at each $\{\ldots\}$ (record literal).
+A new scope level is created at each $\{\ldots\}$ record literal.
 The scope contains all properties of that overlay, including those
 inherited via inheritance sources.
 For example, $\{a \mapsto \{\},\; b \mapsto \{\}\}$ is a single overlay whose scope
@@ -603,7 +603,7 @@ then the downward projections $\ell_{\mathrm{down},*}$ are appended:
     \this(\{p_{\mathrm{site}}\},\; \init(p_{\mathrm{def}}),\; n)
   \;\bigr\}
 \end{multline}
-When multiple routes exist (due to multi-path inheritance),
+When multiple routes exist due to multi-path inheritance,
 they may yield different target paths; all are collected.
 We now define $\this$.
 
@@ -663,9 +663,9 @@ it can be established by a finite chain of applications of these
 equations.  The corresponding operator on the product lattice of
 path sets is monotone, and its least fixed point
 exists by the Knaster--Tarski theorem~\cite{tarski1955lattice}.
-The detailed well-definedness argument (identifying the lattice,
-verifying positivity of each equation, and handling the transitive
-closure $\bases^*$) is given in Appendix~\ref{app:well-definedness}.
+The detailed well-definedness argument, which identifies the lattice,
+verifies positivity of each equation, and handles the transitive
+closure $\bases^*$, is given in Appendix~\ref{app:well-definedness}.
 When no finite derivation exists for a given query, the
 membership is not in this least fixed point and the semantics is
 undefined at that point, analogous to divergence in the
@@ -807,10 +807,10 @@ no function spaces are required.
 Section~\ref{sec:bohm-tree} shows that the convergence behavior
 of the translated overlay tree corresponds exactly to the
 B\"ohm tree~\cite{barendregt1984lambda} of the original term:
-the translation is adequate (a term converges iff it has a head
-normal form) and fully abstract (two terms are
+the translation is adequate, meaning a term converges iff it has a head
+normal form, and fully abstract, meaning two terms are
   overlay-contextually equivalent iff they have the same B\"ohm
-tree).
+tree.
 
 Combining these two facts, elementary machinery and full
 abstraction, yields a noteworthy consequence:
@@ -955,8 +955,8 @@ in Appendix~\ref{app:bohm-tree-proofs}.
 \label{sec:case-study}
 \label{sec:expression-problem}
 
-We implemented boolean logic and natural number arithmetic (both unary
-and binary) as overlay
+We implemented boolean logic and natural number arithmetic, both unary
+and binary, as overlay
 files\selfcite{~\cite{mixin2025}}{~(supplementary material)}.
 This section traces the unary Nat case in detail.
 The implementation follows a declarative object-oriented style:
@@ -1161,8 +1161,8 @@ The arithmetic test inherits $\mathrm{NatConstants}$ together with the operation
 Querying $\mathrm{Test}.\mathrm{Test2plus3}.\mathrm{equal}$ via the host-language API
 returns $\mathrm{True}$.
 No existing file was modified.
-$\mathrm{NatEquality}$ (a new operation) and $\mathrm{Boolean}$
-(a new data type) each required only a new file: extensibility in both
+$\mathrm{NatEquality}$, a new operation, and $\mathrm{Boolean}$,
+a new data type, each required only a new file: extensibility in both
 dimensions of the Expression Problem~\cite{wadler1998expression}.
 
 \paragraph{Tree-level inheritance and return types.}
@@ -1394,9 +1394,9 @@ inheritance naturally produces
 Equation~(\ref{eq:this}) emerged from abandoning this
 assumption: it tracks a \emph{frontier set}~$S$ rather than a
 single current scope.
-If the equations were restricted to single-target resolution
-(as in DOT's single-valued self
-variable~\cite{amin2016dot}), they would need to reject
+If the equations were restricted to single-target resolution,
+as in DOT's single-valued self
+variable~\cite{amin2016dot}, they would need to reject
 structurally legitimate cases, adding complexity rather than
 removing it.
 
@@ -1437,8 +1437,8 @@ in practice turn out to be instances of Overlay-Calculus.
 \label{sec:practical-config}
 The NixOS module system~\cite{dolstra2010nixos,nixosmodules}, whose
 recursive attribute merging motivated this work, can be understood as an
-implementation of Overlay-Calculus with additional features (type checking,
-error reporting, FFI to the Nix language).
+implementation of Overlay-Calculus with additional features
+such as type checking, error reporting, and FFI to the Nix language.
 Detailed comparisons with CUE, Jsonnet, Dhall, with mixin and
 trait calculi, and with the NixOS module system's lazy evaluation
 limitations under multiple inheritance routes are given in
@@ -1463,8 +1463,8 @@ are filled at assembly time, with coroutine handlers under
 synchronous execution.
 More generally, empty slots can be filled with effect
 handlers~\cite{plotkin2003algebraic,pretnar2015introduction}
-(CPS interpretation) or direct implementations (direct-style
-interpretation), without explicit monad machinery.
+under a CPS interpretation, or with direct implementations
+under a direct-style interpretation, without explicit monad machinery.
 
 \subsubsection{Modular Software Architectures}
 \label{sec:practical-modular}
@@ -1523,16 +1523,16 @@ absent from the model it reduces.
 \paragraph{Denotational semantics of inheritance}
 Cook~\cite{cook1989denotational} gave the first denotational
 semantics of inheritance, modeling objects as recursive records and
-inheritance as composition of \emph{generators} (functions from self
-to complete object) and \emph{wrappers} (functions that modify
-generators), solved by a fixed-point construction.
+inheritance as composition of \emph{generators}, which are functions from self
+to complete object, and \emph{wrappers}, which are functions that modify
+generators, solved by a fixed-point construction.
 Cook's key insight, that inheritance is a general mechanism
 applicable to any form of recursive definition and not only
 object-oriented methods, is one of the starting points of the
 present work.
-The model has four primitives (records, functions, generators,
-wrappers) and requires a fixed-point combinator; composition is
-asymmetric (a wrapper modifies a generator, not vice versa).
+The model has four primitives---records, functions, generators, and
+wrappers---and requires a fixed-point combinator; composition is
+asymmetric, as a wrapper modifies a generator but not vice versa.
 
 \paragraph{Mixin-based inheritance}
 Bracha and Cook~\cite{bracha1990mixin} formalized mixins as
@@ -1598,8 +1598,8 @@ Abadi and Cardelli~\cite{abadi1996theory} developed a comprehensive
 theory of objects, treating objects rather than classes as the
 primitive notion. Their calculi include method update and
 self-referential objects, but methods are fundamentally functions
-(taking self as a parameter), and object extension is asymmetric
-(method override replaces the previous definition).
+that take self as a parameter, and object extension is asymmetric
+since method override replaces the previous definition.
 Boudol~\cite{boudol2004recursive} studied the recursive record
 semantics of objects in a call-by-value setting, showing that
 self-referential records require an unsafe fixed-point operator.
@@ -1612,14 +1612,14 @@ Harper and Pierce~\cite{harper1991record} presented a record
 calculus based on symmetric concatenation with a type system that
 tracks the absence of fields.
 When two records define the same label, concatenation
-is undefined (a type error); the calculus leaves same-label
+is undefined and raises a type error; the calculus leaves same-label
 composition undefined.
 Cardelli~\cite{cardelli1992extensible}
 studied extensible records with subtyping;
 R\'emy~\cite{remy1989type} gave a type system for records and
 variants in ML.
-These calculi operate on \emph{flat} records (no nesting) and
-treat records as \emph{data} (initial algebras): a record is a
+These calculi operate on \emph{flat} records with no nesting and
+treat records as \emph{data}, that is, initial algebras: a record is a
 finite map from labels to values, fully determined at construction
 time.  Nested records, self-reference, and lazy observation, which are the
 properties needed for records to serve as a computational
@@ -1636,7 +1636,7 @@ lead to the same enclosing scope, the resulting intersection type
 is unrealizable and Scala rejects it at compile time
 (Appendix~\ref{app:scala-multi-path}).
 DOT stratifies its syntax into terms and types, with types further
-divided into abstract type members (bounded by $L..U$) and concrete
+divided into abstract type members bounded by $L..U$ and concrete
 definitions; each stratum requires its own subtyping rules.
 Whether these three roles could be unified under a single construct
 remains an open question in the DOT line of work.
@@ -1652,13 +1652,13 @@ idempotent.
 CUE's design was motivated by Google's Borg Configuration
 Language (GCL), which used graph unification.
 CUE's lattice includes scalar types with a conflict
-semantics (unifying incompatible scalars yields $\bot$); whether
+semantics where unifying incompatible scalars yields $\bot$; whether
 scalars are necessary for a configuration language, or whether
 tree structure alone suffices, is an interesting design question.
 Jsonnet~\cite{jsonnet} provides object inheritance via the
 \texttt{+} operator with mixin semantics: composition is
-\emph{not} commutative (the right-hand side wins on scalar
-conflicts), and deep merging requires explicit opt-in (\texttt{+:}
+\emph{not} commutative since the right-hand side wins on scalar
+conflicts, and deep merging requires explicit opt-in via the \texttt{+:}
 syntax) on a per-field basis, so deep merge is
 available but not the default.
 Dhall~\cite{dhall2017} takes a functional approach: it is a typed
@@ -1877,9 +1877,9 @@ same properties and no disambiguation is needed.
 
 The NixOS module system rejects the same pattern with a static error.
 The translation uses the module system's own abstractions:
-\texttt{deferredModule} for traits (unevaluated module values imported
-into other fixpoints) and \texttt{submoduleWith} for objects (evaluated
-in their own fixpoints).
+\texttt{deferredModule} for traits, which are unevaluated module values imported
+into other fixpoints, and \texttt{submoduleWith} for objects, which are evaluated
+in their own fixpoints.
 
 \begin{verbatim}
 let
@@ -1971,7 +1971,7 @@ both declarations originate from the same trait and should be
 unified.
 
 The rejection is analogous to Scala's ``conflicting base types''
-error above: both systems assume that each option (or type member)
+error above: both systems assume that each option or type member
 has a single declaration site, and reject the multi-path situation
 where two inheritance routes introduce the same declaration
 independently.
