@@ -49,6 +49,11 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'api/modules.rst', 'api/
 html_theme = 'alabaster'
 html_theme_options = {
     'fixed_sidebar': True,
+    'github_user': 'Atry',
+    'github_repo': 'overlay',
+    'github_button': True,
+    'github_type': 'watch',
+    'github_count': True,
 }
 
 # -- GitHub source links (pinned to git commit) --------------------------------
