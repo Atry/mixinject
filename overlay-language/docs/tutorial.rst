@@ -1,5 +1,5 @@
-Getting Started
-===============
+Getting Started with Decorators
+================================
 
 The examples below build a single web application step by step, introducing one
 concept at a time. All code is runnable with the standard library only.

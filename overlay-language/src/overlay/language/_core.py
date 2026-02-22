@@ -119,21 +119,21 @@ the following algorithm:
 Definition Types and Their Roles
 ---------------------------------
 
-+-------------------+----------+---------+------------------------------------------+
-| Decorator         | Merger? | Patcher?| Description                              |
-+===================+==========+=========+==========================================+
-| @resource         | Yes      | No      | Pure merger expecting endo patches      |
-+-------------------+----------+---------+------------------------------------------+
-| @merge       | Yes      | No      | Pure merger with custom aggregation     |
-+-------------------+----------+---------+------------------------------------------+
-| @patch            | No       | Yes     | Pure patcher providing a single patch    |
-+-------------------+----------+---------+------------------------------------------+
-| @patch_many          | No       | Yes     | Pure patcher providing multiple patches  |
-+-------------------+----------+---------+------------------------------------------+
-| @extern        | No       | Yes     | Pure patcher providing no patches        |
-+-------------------+----------+---------+------------------------------------------+
-| @scope            | Yes      | Yes     | Semigroup for nested Scope creation      |
-+-------------------+----------+---------+------------------------------------------+
++-------------------+----------+----------+------------------------------------------+
+| Decorator         | Merger?  | Patcher? | Description                              |
++===================+==========+==========+==========================================+
+| ``@resource``     | Yes      | No       | Pure merger expecting endo patches       |
++-------------------+----------+----------+------------------------------------------+
+| ``@merge``        | Yes      | No       | Pure merger with custom aggregation      |
++-------------------+----------+----------+------------------------------------------+
+| ``@patch``        | No       | Yes      | Pure patcher providing a single patch    |
++-------------------+----------+----------+------------------------------------------+
+| ``@patch_many``   | No       | Yes      | Pure patcher providing multiple patches  |
++-------------------+----------+----------+------------------------------------------+
+| ``@extern``       | No       | Yes      | Pure patcher providing no patches        |
++-------------------+----------+----------+------------------------------------------+
+| ``@scope``        | Yes      | Yes      | Semigroup for nested Scope creation      |
++-------------------+----------+----------+------------------------------------------+
 
 .. todo::
     Support phony targets for marking Semigroups that return ``None``.
@@ -188,9 +188,9 @@ Definition Types and Their Roles
 
     6. **Decorator table update**:
 
-       +-------------------+----------+---------+------------------------------------------+
-       | @phony            | Yes      | Yes     | Semigroup for side-effect-only resources |
-       +-------------------+----------+---------+------------------------------------------+
+       +-------------------+----------+----------+------------------------------------------+
+       | ``@phony``        | Yes      | Yes      | Semigroup for side-effect-only resources |
+       +-------------------+----------+----------+------------------------------------------+
 
 .. todo::
     Support specifying ``PurePath`` via type annotation to locate dependencies.
@@ -753,15 +753,15 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
     Definition to EvaluatorSymbol Mapping
     =====================================
 
-    ============================== ============================ ============================
-    Definition Type                Compiled EvaluatorSymbol     Evaluator Type
-    ============================== ============================ ============================
-    ``FunctionalMergerDefinition`` ``FunctionalMergerSymbol``   ``FunctionalMerger``
-    ``EndofunctionMergerDefinition`` ``EndofunctionMergerSymbol`` ``EndofunctionMerger``
-    ``SinglePatcherDefinition``    ``SinglePatcherSymbol``      ``SinglePatcher``
-    ``MultiplePatcherDefinition``  ``MultiplePatcherSymbol``    ``MultiplePatcher``
-    ``ScopeDefinition``            (no EvaluatorSymbol)         (creates nested MixinSymbol)
-    ============================== ============================ ============================
+    ================================== ============================== ============================
+    Definition Type                    Compiled EvaluatorSymbol       Evaluator Type
+    ================================== ============================== ============================
+    ``FunctionalMergerDefinition``     ``FunctionalMergerSymbol``     ``FunctionalMerger``
+    ``EndofunctionMergerDefinition``   ``EndofunctionMergerSymbol``   ``EndofunctionMerger``
+    ``SinglePatcherDefinition``        ``SinglePatcherSymbol``        ``SinglePatcher``
+    ``MultiplePatcherDefinition``      ``MultiplePatcherSymbol``      ``MultiplePatcher``
+    ``ScopeDefinition``                (no EvaluatorSymbol)           (creates nested MixinSymbol)
+    ================================== ============================== ============================
 
     .. todo:: Mixin and Scope Redesign
 
@@ -2065,26 +2065,28 @@ def resource(
     It's a syntactic sugar for using ``merge`` with a standard endofunction application strategy.
 
     Example:
-    The following example defines a resource that can be modified by patches.
-        from overlay.language import resource, patch
-        @resource
-        def greeting() -> str:
-            return "Hello"
+        The following example defines a resource that can be modified by patches::
+
+            from overlay.language import resource, patch
+            @resource
+            def greeting() -> str:
+                return "Hello"
 
 
-        @patch
-        def enthusiastic_greeting() -> Endofunction[str]:
-            return lambda original: original + "!!!"
+            @patch
+            def enthusiastic_greeting() -> Endofunction[str]:
+                return lambda original: original + "!!!"
 
-    Alternatively, ``greeting`` can be defined with an explicit merge:
-        from overlay.language import merge
-        @merge
-        def greeting() -> Callable[[Iterator[Endofunction[str]]], str]:
-            return lambda endos: reduce(
-                (lambda original, endo: endo(original)),
-                endos,
-                "Hello"
-            )
+        Alternatively, ``greeting`` can be defined with an explicit merge::
+
+            from overlay.language import merge
+            @merge
+            def greeting() -> Callable[[Iterator[Endofunction[str]]], str]:
+                return lambda endos: reduce(
+                    (lambda original, endo: endo(original)),
+                    endos,
+                    "Hello"
+                )
     """
     return EndofunctionMergerDefinition(
         inherits=(), function=callable, is_eager=False, is_public=False
@@ -2637,14 +2639,18 @@ class LexicalReference:
     ---------------------------------
 
     At each static level (``outer``, ...):
+
     1. Is path[0] a property of that level?
+
        - If path[0] == symbol.key and this is the first match → skip, continue to outer
        - Otherwise → return full path
+
     2. Recurse to static outer
 
-    The returned RelativeReference has:
-    - de_bruijn_index: Static levels to go up.
-    - path: Always the full path from the original reference.
+    The returned ``RelativeReference`` has:
+
+    - ``de_bruijn_index``: Static levels to go up.
+    - ``path``: Always the full path from the original reference.
     """
 
     path: Final[tuple[Hashable, ...]]
