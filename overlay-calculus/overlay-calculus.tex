@@ -191,12 +191,14 @@ distinction: the \texttt{nixpkgs} package
 collection~\cite{dolstra2006purely}---over 100{,}000
 packages---behaves as a lazily observed structure in practice, allowing any
 single package to be evaluated without materializing the entire set.
-Guided by this observation and by the NixOS module system's
-recursive merging mechanism, we built the Overlay
+Guided by this observation, we set out to reduce the
+NixOS module system to a minimal set of primitives.
+Through iterative refinement of these primitives---beginning with
+an early version implemented in Nix---the system evolved into the Overlay
 language\selfcite{~\cite{mixin2025}}{~(included as supplementary
-material)}---a declarative programming language with only three
-constructs (record literals, properties, and inheritance) and no
-functions or let-bindings.
+material)}, now implemented in Python---a declarative programming
+language with only three constructs (record literals, properties,
+and inheritance) and no functions or let-bindings.
 
 In developing real programs in the Overlay language---boolean logic and
 natural number arithmetic (Section~\ref{sec:case-study}) and a web application
@@ -249,7 +251,13 @@ inheritance) to serve as the foundation of declarative programming.
 All constructions in this paper have been implemented and tested in
 the Overlay language,
 \selfcite{available as open source~\cite{mixin2025}}{included as supplementary material},
-with a test suite covering every example.
+with a test suite covering every example.%
+\footnote{The Overlay language is statically typed and therefore
+stricter than the untyped Overlay-Calculus.
+All examples in this paper are ported from the Overlay language
+and conform to both semantics.
+Elements added to satisfy the type checker are harmless
+for the algorithms presented here and may aid readability.}
 All tests are mechanically verified against expected output snapshots.
 
 \paragraph{Contributions}
@@ -1488,6 +1496,29 @@ both the source program and the compilation target.
 
 \section{Related Work}
 \label{sec:related-work}
+
+\paragraph{Minimal Turing-complete models}
+Sch\"onfinkel~\cite{schonfinkel1924} and
+Curry~\cite{curry1958combinatory} showed that the
+$\lambda$-calculus reduces to three combinators $S$, $K$, $I$
+($I$ is redundant: $I = SKK$).
+The bracket abstraction that compiles $\lambda$-terms to SKI
+is mechanical but incurs exponential blow-up in term size;
+no new computational patterns emerge beyond those already
+present in the $\lambda$-calculus.
+Dolan~\cite{dolan2013mov} showed that the x86 \texttt{mov}
+instruction alone is Turing complete by exploiting
+addressing modes as implicit arithmetic on mutable memory;
+the resulting programs are correct but provide no
+abstraction mechanisms beyond those of the RAM Machine.
+The Turing Machine itself, while universal, lacks random
+access: reading a cell at distance~$d$ requires $d$
+sequential tape movements.
+Each of these models achieves Turing completeness by
+\emph{removing} structure from an existing model---fewer
+abstractions, worse ergonomics, no new expressiveness.
+None of these reductions exhibits emergent phenomena
+absent from the model it reduces.
 
 \paragraph{Denotational semantics of inheritance}
 Cook~\cite{cook1989denotational} gave the first denotational
