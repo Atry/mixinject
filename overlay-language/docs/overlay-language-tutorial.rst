@@ -342,5 +342,5 @@ using the fixture package at
 The full language specification is in :doc:`specification`.
 
 The semantics of the Overlay language are grounded in the
-`Overlay-Calculus <https://arxiv.org/abs/2602.16291>`_, a formal calculus of
+`overlay-calculus <https://arxiv.org/abs/2602.16291>`_, a formal calculus of
 overlays.

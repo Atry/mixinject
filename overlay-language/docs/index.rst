@@ -24,7 +24,7 @@ logic, or dreaded porting an application from sync to async, or needed to swap
 between providers without rewriting half your Python — the Overlay language can
 help. Despite looking like a configuration format, it is also a statically typed
 modern programming language based on
-`Overlay-Calculus <https://arxiv.org/abs/2602.16291>`_, which is provably more
+`overlay-calculus <https://arxiv.org/abs/2602.16291>`_, which is provably more
 expressive than λ-calculus, so it can express your entire business logic — not
 just configuration. Move that logic into the Overlay language and Python reduces
 to thin I/O adapters that are trivial to mock or replace. The same Overlay code runs against any set of adapters and the business logic

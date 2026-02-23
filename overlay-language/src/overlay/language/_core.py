@@ -1184,7 +1184,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         symbol is expanded through its ``unions`` and their
         ``normalized_references``.
 
-        Corresponds to the ``this`` function in the Overlay-Calculus paper::
+        Corresponds to the ``this`` function in the overlay-calculus paper::
 
             this(p, p_def) = { p_site | (p_site, p_overlay) in supers(p),
                                         s.t. p_overlay = p_def }

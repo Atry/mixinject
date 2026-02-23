@@ -7,6 +7,7 @@
 \pagestyle{plain}
 
 \usepackage{mathtools}
+\usepackage{mathrsfs}
 
 %% Conditional citation: hide self-citations under anonymous review.
 %% Use \@firstoftwo / \@secondoftwo so the unchosen branch is never
@@ -52,7 +53,7 @@
 \begin{abstract}
   Just as the $\lambda$-calculus uses three primitives (abstraction,
   application, variable) as the foundation of functional programming,
-  Overlay-Calculus uses three primitives (record, definition, inheritance)
+  overlay-calculus uses three primitives (record, definition, inheritance)
   as the foundation of declarative programming.
   It trivially embeds the $\lambda$-calculus, although the entire
   semantics rests solely on naive set theory;
@@ -62,13 +63,16 @@
   does not arise.
   This induces a fully abstract semantics of the lazy
   $\lambda$-calculus with respect to B\"ohm tree
-  equivalence.
-  Overlay-Calculus is distilled from the Overlay language, a
+  equivalence~\cite{barendregt1984lambda}.
+  Overlay-calculus is distilled from the Overlay language, a
   practical implementation in which we observed further emergent
   phenomena: the Expression Problem dissolves, programs are
   function color blind~\cite{nystrom2015color}, ordinary arithmetic
   yields the relational semantics of logic programming,
-  and self-reference resolves to multiple targets.
+  and self-reference resolves to multiple targets,
+  making overlay-calculus strictly more expressive than the
+  $\lambda$-calculus in Felleisen's
+  sense~\cite{felleisen1991expressive}.
   These properties suggest applications to configuration languages,
   dependency injection, object-oriented programming, composable
   effect systems, modular software architectures,
@@ -226,26 +230,27 @@ execution without modification, an instance of function color
 blindness~\cite{nystrom2015color}, equivalently CPS-agnostic behavior
 (Section~\ref{sec:practical-function-color}).
 
-This paper distills these observations into \textbf{Overlay-Calculus},
+This paper distills these observations into \textbf{overlay-calculus},
 a minimal computational model for declarative programming.
 \emph{Function application translates directly into inheritance}:
 a $\lambda$-abstraction corresponds to a record with an
 $\mathrm{argument}$ slot and a $\mathrm{result}$ slot, and function
 application corresponds to inheriting from the function record and a record
 that supplies the argument. Since the $\lambda$-calculus embeds into
-Overlay-Calculus, Overlay-Calculus is Turing complete.
-The translation reveals an \emph{asymmetry}:
-while embedding the $\lambda$-calculus into Overlay-Calculus is trivial,
-the reverse is non-trivial because Overlay-Calculus provides primitive
-operations, namely self-referential records, open recursion, and symmetric
-inheritance, that have no direct counterparts in the $\lambda$-calculus.
-This asymmetry suggests that Overlay-Calculus is not merely a
-syntactic variant of the $\lambda$-calculus but captures
-different computational patterns.
+overlay-calculus, overlay-calculus is Turing complete.
+The translation reveals an asymmetry: embedding the
+$\lambda$-calculus into overlay-calculus requires five local,
+syntax-directed rules
+(Section~\ref{sec:forward-translation}), but the reverse is
+impossible---overlay enables open extension that changes
+operational equivalence on $\lambda$-terms, establishing a
+strict separation in Felleisen's sense of
+expressiveness~\cite{felleisen1991expressive}
+(Section~\ref{sec:asymmetry}).
 
 Just as the $\lambda$-calculus uses three primitives (abstraction,
 application, variable) to serve as the foundation of functional
-programming, Overlay-Calculus uses three primitives (record, definition,
+programming, overlay-calculus uses three primitives (record, definition,
 inheritance) to serve as the foundation of declarative programming.
 
 All constructions in this paper have been implemented and tested in
@@ -253,7 +258,7 @@ the Overlay language,
 \selfcite{available as open source~\cite{mixin2025}}{included as supplementary material},
 with a test suite covering every example.%
 \footnote{The Overlay language is statically typed and therefore
-stricter than the untyped Overlay-Calculus.
+stricter than the untyped overlay-calculus.
 All examples in this paper are ported from the Overlay language
 and conform to both semantics.
 Elements added to satisfy the type checker are harmless
@@ -262,7 +267,7 @@ All tests are mechanically verified against expected output snapshots.
 
 \paragraph{Contributions}
 \begin{itemize}
-  \item We present Overlay-Calculus, a minimal computational model for
+  \item We present overlay-calculus, a minimal computational model for
     declarative programming that contains only overlay constructs (record,
     definition, inheritance) and no functions or scalar types.
   \item Inheritance operates at the \emph{tree level}:
@@ -292,7 +297,7 @@ All tests are mechanically verified against expected output snapshots.
     Since inheritance is idempotent, all objects contribute
     equally; no disambiguation is needed.
   \item The $\lambda$-calculus (in A-normal form) translates into
-    Overlay-Calculus in five rules (Section~\ref{sec:translation}).
+    overlay-calculus in five rules (Section~\ref{sec:translation}).
     The translation is fully abstract with respect to
     B\"ohm tree equivalence (Section~\ref{sec:bohm-tree}),
     yielding a semantics of the lazy $\lambda$-calculus that
@@ -304,10 +309,15 @@ All tests are mechanically verified against expected output snapshots.
     (Section~\ref{sec:case-study}), and function color
     blindness~\cite{nystrom2015color}
     (Section~\ref{sec:practical-function-color}).
+  \item Open extension via overlay changes the operational
+    equivalence of $\lambda$-terms, establishing via
+    Felleisen's Theorem~3.14~\cite{felleisen1991expressive}
+    that the $\lambda$-calculus cannot macro-express overlay
+    (Section~\ref{sec:asymmetry}).
 \end{itemize}
 
 Section~\ref{sec:case-study} demonstrates these properties
-through a case study of the Expression Problem.
+through a case study of Nat arithmetic.
 
 \section{Syntax}
 \label{sec:syntax}
@@ -336,9 +346,9 @@ duplicates have no effect; inheritance is inherently commutative,
 idempotent, and associative.
 
 The $\mapsto$ in $\ell \mapsto e$ defines a property, not a let-binding.
-There is no variable binding in Overlay-Calculus.
+There is no variable binding in overlay-calculus.
 The Overlay language also provides scalar types through a
-foreign-function interface (FFI); Overlay-Calculus is what remains
+foreign-function interface (FFI); overlay-calculus is what remains
 after removing the FFI.
 None of the examples in this paper uses the FFI; scalars
 did not arise.
@@ -403,7 +413,7 @@ each position in the tree? This section answers the question by
 defining a collection of mutually recursive functions over paths.
 
 Unlike the $\lambda$-calculus, which requires reduction rules
-($\beta$-reduction) to specify how terms compute, Overlay-Calculus has
+($\beta$-reduction) to specify how terms compute, overlay-calculus has
 \emph{no reduction steps}. There is no rewriting of terms, no
 evaluation order, and no notion of a ``result'' that a term reduces to.
 Instead, the semantics is purely \emph{observational}: one queries
@@ -644,11 +654,11 @@ This completes the chain of definitions needed to compute $\properties(p)$.
 
 \paragraph{Observational semantics without reduction}
 The definitions above constitute the complete semantics of
-Overlay-Calculus. There are no reduction rules, no evaluation contexts,
+overlay-calculus. There are no reduction rules, no evaluation contexts,
 and no small-step or big-step judgments. In the $\lambda$-calculus, a term such as
 $(\lambda x.\, x)\; y$ must be \emph{reduced} to $y$ before its
 meaning is apparent; the operational semantics specifies how and in what
-order reductions occur. In Overlay-Calculus, an inheritance tree such as
+order reductions occur. In overlay-calculus, an inheritance tree such as
 $\{a \mapsto \{\},\; b \mapsto \{\}\}$ does not reduce to
 anything: it \emph{is} the value. The functions $\properties$,
 $\supers$, etc.\ determine what is observable at each path, and that is
@@ -676,11 +686,14 @@ is inspired by F-coalgebras~\cite{rutten2000universal}, where
 identity is determined by observable behavior rather than by internal
 structure.
 
-\section{Embedding the $\lambda$-Calculus}
+\section{Embedding the \texorpdfstring{$\lambda$}{λ}-Calculus}
 \label{sec:translation}
 
+\subsection{From \texorpdfstring{$\lambda$}{λ}-Calculus to Overlay-calculus}
+\label{sec:forward-translation}
+
 The following translation maps the $\lambda$-calculus in
-A-normal form (ANF)~\cite{flanagan1993essence} to Overlay-Calculus.
+A-normal form (ANF)~\cite{flanagan1993essence} to overlay-calculus.
 In ANF, every intermediate result is bound to a name and each
 expression contains at most one application:
 \[
@@ -695,7 +708,7 @@ Every $\lambda$-term can be mechanically converted to ANF by
 naming intermediate results, and every ANF term is a
 $\lambda$-term, so ANF is neither a restriction nor an
 extension of the $\lambda$-calculus.
-The ANF structure matches Overlay-Calculus naturally: each
+The ANF structure matches overlay-calculus naturally: each
 $\mathbf{let}$-binding becomes a named record property, and
 each application is wrapped and projected via
 $.\mathrm{result}$.
@@ -753,10 +766,10 @@ structure (the $\mathrm{argument}$ and $\mathrm{result}$ labels
 of the callee) does not leak to the enclosing scope.
 
 The five rules above are a complete translation from the
-$\lambda$-calculus (via ANF) to Overlay-Calculus: every ANF
+$\lambda$-calculus (via ANF) to overlay-calculus: every ANF
 term has an image, and the construction is compositional.
 Since the $\lambda$-calculus is Turing complete, so is
-Overlay-Calculus.
+overlay-calculus.
 
 \paragraph{An elementary semantics of the $\lambda$-calculus}
 Composing the translation $\mathcal{T}$ with the semantic
@@ -830,62 +843,6 @@ mathematical complexity.
 The overlay tree semantics achieves full abstraction with
 strictly simpler foundations than either.
 
-The reverse direction is non-trivial, as we discuss next.
-
-\subsection{Expressive Asymmetry}
-\label{sec:asymmetry}
-
-The translation above consists of five rules; the full computational
-power of the $\lambda$-calculus embeds into Overlay-Calculus with no
-additional machinery.
-
-The reverse direction, encoding Overlay-Calculus in pure
-$\lambda$-calculus, is non-trivial.
-Defining the meaning of Overlay-Calculus requires machinery for
-lazy allocation, recursive data structures, and set-valued
-resolution that have no direct counterparts in the $\lambda$-calculus.
-This sophistication is not accidental; it reflects three features:
-
-\begin{enumerate}
-  \item \textbf{Self-referential records with lazy evaluation.}
-    An overlay's properties can reference other properties and enclosing scopes
-    through qualified this without explicit binding.
-    In the $\lambda$-calculus, encoding such self-referential
-    structures requires explicit allocation of mutable or lazy
-    references (e.g., Haskell-style thunks or ML-style \texttt{ref}
-    cells), obscuring the declarative intent.
-
-  \item \textbf{Open recursion with symmetric inheritance.}
-    Inheritance merges definitions from independent sources,
-    all sharing the same inherited overlay tree. Encoding this in
-    the $\lambda$-calculus requires maintaining an extensible dictionary
-    of methods that can be merged from multiple directions. Cook's
-    denotational semantics of inheritance~\cite{cook1989denotational}
-    devoted an entire dissertation to formalizing this pattern in a
-    functional setting.
-
-  \item \textbf{Commutative, idempotent merge.}
-    Inheritance in Overlay-Calculus is symmetric:
-    a record's elements form a set, so reordering them produces
-    the same observable result. In the $\lambda$-calculus, function composition
-    $(f \circ g)$ is neither commutative nor idempotent, and simulating
-    these properties requires additional machinery.
-\end{enumerate}
-
-\noindent
-Overlay-Calculus is not the $\lambda$-calculus in disguise:
-it provides primitive operations for computational patterns that are
-\emph{derivable but complex} in the $\lambda$-calculus.
-
-The reverse asymmetry also exists: nested expressions such as
-$f\;(g\;x)$ are primitive in the $\lambda$-calculus but require
-manual A-normal form conversion in Overlay-Calculus, since the
-intermediate result $g\;x$ must be given an explicit name.
-However, ANF conversion is a mechanical
-transformation~\cite{flanagan1993essence}; a surface language built
-on Overlay-Calculus can support nested expressions as syntactic
-sugar without extending the calculus itself.
-
 \subsection{B\"ohm Tree Correspondence}
 \label{sec:bohm-tree}
 
@@ -950,6 +907,33 @@ distinguishes~\cite{plotkin1975callbyname}.
 The full proof, including the Single-Path Lemma,
 Substitution Lemma, and Convergence Preservation, is given
 in Appendix~\ref{app:bohm-tree-proofs}.
+
+\subsection{Expressive Asymmetry}
+\label{sec:asymmetry}
+\label{sec:formal-separation}
+Two $\lambda$-terms that are B\"ohm-tree equivalent---and
+therefore indistinguishable in the $\lambda$-calculus---can be
+separated in overlay-calculus by overlaying new observable
+projections onto an existing definition via open extension.
+By Felleisen's expressiveness
+criterion~\cite{felleisen1991expressive}, overlay-calculus is
+strictly more expressive than the $\lambda$-calculus:
+the forward embedding is macro-expressible
+(Theorem~\ref{thm:forward-macro}), but the reverse is not
+(Theorem~\ref{thm:cartesian-non-expressibility}).
+The formal definitions, constructions, and proofs are given in
+Appendix~\ref{app:expressiveness};
+the separating construction is itself a miniature instance of
+the Expression Problem, adding a new observable projection to
+an existing definition without modifying it.
+
+The underlying mechanism is open extension: overlay
+definitions compose via open recursion, so existing
+definitions gain new observable properties without
+modification.  In the $\lambda$-calculus, a function's result
+is closed---there is no way to add new observable projections
+to an already-computed value without modifying the function's
+definition.
 
 \section{Case Study: Nat Arithmetic}
 \label{sec:case-study}
@@ -1237,12 +1221,105 @@ $\mathrm{Equal}$ then applies to every pair drawn from $\{4,5,6\} \times \{4,5,6
 querying $\mathrm{CartesianTest}.\mathrm{Check}.\mathrm{equal}$ via the host-language API
 returns $\{\mathrm{True}, \mathrm{False}\}$.
 The same $\mathrm{Plus}$ and $\mathrm{Equal}$ files that operate on
-single values produce, without modification, the Cartesian-product
-semantics of relational programming (Datalog, Prolog):
+single values produce, without modification, the relational
+semantics of logic programming (Datalog, Prolog):
 $\overlays$ and $\supers$ collect all inheritance paths, and
 every operation distributes over them.
 
 \section{Discussion}
+
+\subsection{Emergent Phenomena}
+\label{sec:reverse-translation}
+\label{sec:emergent-phenomena}
+
+Several features of overlay-calculus are primitive yet have no
+direct counterpart in the $\lambda$-calculus.  Encoding any one
+of them requires pervasive, non-local changes to program
+structure.
+
+\begin{enumerate}
+  \item \textbf{Self-referential records with lazy evaluation.}
+    An overlay's properties can reference other properties and enclosing scopes
+    through qualified this without explicit binding.
+    In the $\lambda$-calculus, encoding such self-referential
+    structures requires explicit allocation of mutable or lazy
+    references~\cite{boudol2004recursive} (e.g., Haskell-style
+    thunks or ML-style \texttt{ref} cells), obscuring the
+    declarative intent.
+
+  \item \textbf{Open recursion with symmetric inheritance.}
+    Inheritance merges definitions from independent sources,
+    all sharing the same inherited overlay tree.  Encoding this in
+    the $\lambda$-calculus requires maintaining an extensible dictionary
+    of methods that can be merged from multiple directions.  Cook's
+    denotational semantics of inheritance~\cite{cook1989denotational}
+    devoted an entire dissertation to formalizing this pattern in a
+    functional setting.
+
+  \item \textbf{Commutative, idempotent merge.}
+    Inheritance in overlay-calculus is symmetric:
+    a record's elements form a set, so reordering them produces
+    the same observable result.  In the $\lambda$-calculus, function composition
+    $(f \circ g)$ is neither commutative nor idempotent, and simulating
+    these properties requires additional
+    machinery~\cite{harper1991record,cardelli1992extensible}.
+
+  \item \textbf{Relational semantics.}
+    Every overlay-calculus operation is defined by recursion on
+    overlay trees, not on individual values.  When an overlay
+    tree is viewed as a trie, every path from the root to a leaf
+    is a tuple; tree-level recursion then becomes join,
+    projection, and union over those tuples---the
+    relational algebra of Datalog.  The carrier is a trie rather
+    than a flat relation, and the fixed point is coinductive
+    (greatest) rather than Datalog's inductive (least), but the
+    relational structure of the computation is the same.
+    In the Case Study (Section~\ref{sec:case-study}), the
+    $\mathrm{Plus}$ and $\mathrm{Equal}$ operations are defined
+    on single Nat values.  When applied to set-valued overlays
+    $\{1,2\}$ and $\{3,4\}$, the same definitions, without any
+    modification, produce the set of all pairwise sums
+    $\{4,5,6\}$.  This is relational
+    semantics in action: each operation distributes over every
+    combination of its inputs.  The behavior is native: the
+    semantic equations of Section~\ref{sec:overlay-trees}
+    resolve every property to a set of paths, so single-valued
+    and set-valued computation are the same mechanism.  No code
+    change is needed to move from one to the other.
+
+  \item \textbf{Function color blindness.}
+    \label{sec:practical-function-color}
+    We implemented a web application as overlay
+    files\selfcite{~\cite{mixin2025}}{~(supplementary material)},
+    initially targeting Python's synchronous \texttt{sqlite3} and
+    \texttt{http.server} modules.
+    The business logic overlay file contained no async-specific code.
+    Later, we replaced the FFI layer with one built on
+    \texttt{aiosqlite} and \texttt{starlette}; the business logic
+    overlay file did not change.
+    This is an instance of function color
+    blindness~\cite{nystrom2015color}: async and sync functions are
+    distinct types in the host language, yet the overlay file is
+    agnostic to the distinction because its empty property slots
+    are filled at assembly time, with coroutine handlers under
+    \texttt{asyncio}, or with direct implementations under
+    synchronous execution.
+    More generally, empty slots can be filled with effect
+    handlers~\cite{plotkin2003algebraic,pretnar2015introduction}
+    under a CPS interpretation, or with direct implementations
+    under a direct-style interpretation, without explicit monad machinery.
+\end{enumerate}
+
+\noindent
+Each of these features is primitive in overlay-calculus.
+In the $\lambda$-calculus, encoding them requires
+pervasive changes to program structure:
+every scope must thread a mutable store for lazy allocation,
+every method invocation must consult a dynamically constructed
+dictionary for open recursion, and every composition must
+be wrapped in order-insensitive infrastructure for commutativity.
+These are global, cascading transformations, not local
+rewrites of individual terms.
 
 \subsection{Classification of Semantic Variants}
 \label{sec:semantic-variants}
@@ -1280,7 +1357,7 @@ Existing designs occupy several of the resulting cells:
   & NixOS modules~\cite{nixosmodules} \\
   \textbf{Multi-target} $\this$
   & ---
-  & Overlay-Calculus \\
+  & overlay-calculus \\
 \end{tabular}
 \end{center}
 
@@ -1361,7 +1438,7 @@ and the NixOS module system rejects the duplicate option
 declaration (Appendix~\ref{app:scala-multi-path}); neither
 can express that all routes are equally valid.
 
-Overlay-Calculus combines the predictability of lexical scope
+Overlay-calculus combines the predictability of lexical scope
 with the flexibility of dynamic scope.
 The reference itself is lexically determined at the definition site
 as a de~Bruijn index, so what $\this$ looks up is predictable.
@@ -1427,72 +1504,6 @@ threading, MRO, shadowing, route selection, and error
 reporting, are more artificial than their absence.
 The equations of Section~\ref{sec:overlay-trees} contain
 none of them.
-
-\subsection{Relationship to Practical Systems}
-
-Several classes of declarative systems that have emerged independently
-in practice turn out to be instances of Overlay-Calculus.
-
-\subsubsection{Configuration and Object-Oriented Languages}
-\label{sec:practical-config}
-The NixOS module system~\cite{dolstra2010nixos,nixosmodules}, whose
-recursive attribute merging motivated this work, can be understood as an
-implementation of Overlay-Calculus with additional features
-such as type checking, error reporting, and FFI to the Nix language.
-Detailed comparisons with CUE, Jsonnet, Dhall, with mixin and
-trait calculi, and with the NixOS module system's lazy evaluation
-limitations under multiple inheritance routes are given in
-Section~\ref{sec:related-work}.
-
-\subsubsection{Function Color Blindness}
-\label{sec:practical-function-color}
-We implemented a web application as overlay
-files\selfcite{~\cite{mixin2025}}{~(supplementary material)},
-initially targeting Python's synchronous \texttt{sqlite3} and
-\texttt{http.server} modules.
-The business logic overlay file contained no async-specific code.
-Later, we replaced the FFI layer with one built on
-\texttt{aiosqlite} and \texttt{starlette}; the business logic
-overlay file did not change.
-This is an instance of function color
-blindness~\cite{nystrom2015color}: async and sync functions are
-distinct types in the host language, yet the overlay file is
-agnostic to the distinction because its empty property slots
-are filled at assembly time, with coroutine handlers under
-\texttt{asyncio}, or with direct implementations under
-synchronous execution.
-More generally, empty slots can be filled with effect
-handlers~\cite{plotkin2003algebraic,pretnar2015introduction}
-under a CPS interpretation, or with direct implementations
-under a direct-style interpretation, without explicit monad machinery.
-
-\subsubsection{Modular Software Architectures}
-\label{sec:practical-modular}
-Plugin systems, component frameworks, and dependency injection frameworks
-enable software extensibility through declarative inheritance. The
-symmetric, associative nature of inheritance (Section~\ref{sec:overlay-trees}) explains why such
-systems work: components can be inherited in any order without changing
-behavior. These systems implement Overlay-Calculus patterns ad hoc.
-
-\subsubsection{Union File Systems}
-\label{sec:practical-union-fs}
-Union file systems (UnionFS, OverlayFS, AUFS) layer multiple directory
-hierarchies to present a unified view. Their semantics resembles
-Overlay-Calculus in that later layers override earlier layers and files from all
-layers remain accessible, but without a formal foundation these systems
-resort to ad-hoc choices: asymmetric inheritance, non-commutative
-conflict resolution for scalar files, and no late-binding or dynamic
-dispatch across layers.
-We implemented Overlay-Calculus directly as a union file
-system\selfcite{~\cite{ratarmount2025}}{~(included as supplementary material)},
-obtaining late-binding semantics and dynamic dispatch for file lookups
-with no additional mechanism beyond the three primitives.
-In package managers, build systems, and OS distributions,
-external toolchains transform configuration into file trees;
-here, the file system serves as configuration to itself,
-and the transformation is inheritance: a
-\emph{file-system-as-compiler} in which the directory tree is
-both the source program and the compilation target.
 
 \section{Related Work}
 \label{sec:related-work}
@@ -1693,11 +1704,39 @@ equally to the same option, that is, the multi-path situation that
 recursive merging naturally gives rise to, which motivated the
 coalgebraic semantics of Section~\ref{sec:overlay-trees}.
 
+\paragraph{Modular software architectures}
+\label{sec:practical-modular}
+Plugin systems, component frameworks, and dependency injection frameworks
+enable software extensibility through declarative inheritance. The
+symmetric, associative nature of inheritance (Section~\ref{sec:overlay-trees}) explains why such
+systems work: components can be inherited in any order without changing
+behavior. These systems implement overlay-calculus patterns ad hoc.
+
+\paragraph{Union file systems}
+\label{sec:practical-union-fs}
+Union file systems (UnionFS, OverlayFS, AUFS) layer multiple directory
+hierarchies to present a unified view. Their semantics resembles
+overlay-calculus in that later layers override earlier layers and files from all
+layers remain accessible, but without a formal foundation these systems
+resort to ad-hoc choices: asymmetric inheritance, non-commutative
+conflict resolution for scalar files, and no late-binding or dynamic
+dispatch across layers.
+We implemented overlay-calculus directly as a union file
+system\selfcite{~\cite{ratarmount2025}}{~(included as supplementary material)},
+obtaining late-binding semantics and dynamic dispatch for file lookups
+with no additional mechanism beyond the three primitives.
+In package managers, build systems, and OS distributions,
+external toolchains transform configuration into file trees;
+here, the file system serves as configuration to itself,
+and the transformation is inheritance: a
+\emph{file-system-as-compiler} in which the directory tree is
+both the source program and the compilation target.
+
 \section{Future Work}
 \label{sec:future-work}
 
 \selfcite{The Overlay language~\cite{mixin2025}}{The supplementary
-implementation} is an executable implementation of Overlay-Calculus
+implementation} is an executable implementation of overlay-calculus
 that already goes beyond the untyped calculus presented here:
 it includes compile-time checking that all references resolve to
 valid paths in the inheritance, and a foreign-function interface (FFI)
@@ -1714,8 +1753,8 @@ well-typed programs do not produce dangling references at
 runtime, is one direction of future work.
 Such a formalization would relate to the DOT
 calculus~\cite{amin2016dot} in a manner analogous to how
-Overlay-Calculus relates to the $\lambda$-calculus: a Typed
-Overlay-Calculus can be viewed as DOT without $\lambda$, retaining
+overlay-calculus relates to the $\lambda$-calculus: a Typed
+overlay-calculus can be viewed as DOT without $\lambda$, retaining
 path-dependent types while replacing functions with
 overlay inheritance.
 A formal type system would be amenable to mechanization in proof
@@ -1727,7 +1766,7 @@ features would strengthen the language.
 A key example is \emph{totality checking}: verifying that a
 inheritance provides implementations for all required slots, not
 merely that references resolve.
-In untyped Overlay-Calculus, writing $\mathrm{magnitude} \mapsto \{\}$
+In untyped overlay-calculus, writing $\mathrm{magnitude} \mapsto \{\}$
 is purely documentary: it defines a structural slot but imposes no
 constraint on what must fill it.
 Totality checking would enforce such declarations statically,
@@ -1738,13 +1777,13 @@ The remaining items concern the \emph{standard library}: they require
 no extensions to the calculus or type system, but involve nontrivial
 encodings within the existing framework.
 
-Overlay-Calculus is \emph{open by default}: inheritance
+Overlay-calculus is \emph{open by default}: inheritance
 can freely merge any two overlays, and a value may simultaneously
 inhabit multiple constructors (e.g.,
 $\{\mathrm{Zero},\; \mathrm{Odd},\; \mathrm{half} \mapsto \mathrm{Zero}\}$).
 This is not a defect; it is the natural trie semantics of the
 calculus, and the basis for solving the expression problem
-(Section~\ref{sec:asymmetry}).
+(Section~\ref{sec:expression-problem}).
 However, many operations (e.g., equality testing) assume that values
 are \emph{linear}, inhabiting exactly one constructor.
 The observer pattern (Section~\ref{sec:case-study}) does not enforce
@@ -1780,15 +1819,225 @@ dispatch.
 \section{Conclusion}
 
 The goals of declarative programming forced the semantics
-of Overlay-Calculus upon us.
-The emergent phenomena suggest that
-it is a more expressive computational
-foundation than the $\lambda$-calculus.
+of overlay-calculus upon us.
+The emergent phenomena exhibit an expressive asymmetry
+between overlay-calculus and the $\lambda$-calculus.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
 \appendix
+
+\section{Expressive Asymmetry: Proofs}
+\label{app:expressiveness}
+
+\begin{definition}[Macro-expressibility, after Felleisen~\cite{felleisen1991expressive}]
+\label{def:macro-expressibility}
+A construct $C$ of language $\mathscr{L}_1$ is \emph{macro-expressible}
+in language $\mathscr{L}_0$ if there exists a translation $\mathcal{E}$
+such that for every program $P$ containing occurrences of $C$,
+the translation $\mathcal{E}(P)$ is obtained by replacing each
+occurrence of $C$ with an $\mathscr{L}_0$ expression that depends only
+on $C$'s subexpressions, leaving all other constructs of $P$
+unchanged.
+\end{definition}
+
+\begin{theorem}[Forward macro-expressibility]
+\label{thm:forward-macro}
+The translation $\mathcal{T}$
+(Section~\ref{sec:forward-translation}) is a macro-expressible
+embedding of the $\lambda$-calculus into overlay-calculus.
+\end{theorem}
+
+\begin{proof}
+Each of the five rules of $\mathcal{T}$ replaces one
+$\lambda$-calculus construct with an overlay-calculus expression
+that depends only on the construct's immediate subexpressions.
+No rule inspects the surrounding context.
+\end{proof}
+
+\begin{theorem}[Non-expressibility of overlay]
+\label{thm:cartesian-non-expressibility}
+There is no macro-expressible translation from
+overlay-calculus to the $\lambda$-calculus.
+\end{theorem}
+
+\begin{proof}
+Let $\mathscr{L}_1$ be the overlay-calculus and let
+$\mathscr{L}_0$ be the sublanguage consisting of overlay
+trees in the image of the translation $\mathcal{T}$
+(Section~\ref{sec:forward-translation}), so that
+$\mathscr{L}_0 \subset \mathscr{L}_1$.
+Define the operational equivalence $\cong_0$ on
+$\mathscr{L}_0$ via B\"ohm trees:
+$\mathcal{T}(M) \cong_0 \mathcal{T}(N)$ iff
+$\mathrm{BT}(M) = \mathrm{BT}(N)$.
+Define $\cong_1$ on $\mathscr{L}_1$ as overlay-contextual
+equivalence:
+$S \cong_1 S'$ iff for every overlay context $C[\cdot]$,
+$C[S]{\Downarrow} \Leftrightarrow C[S']{\Downarrow}$.
+
+By the B\"ohm Tree Correspondence
+(Theorems~\ref{thm:adequacy} and~\ref{thm:full-abstraction}),
+$\mathscr{L}_1$ conservatively extends $\mathscr{L}_0$:
+for closed $\lambda$-terms $M$,
+$\mathcal{T}(M){\Downarrow}$ if and only if $M$ has a
+head normal form.
+
+Define Church booleans via the translation $\mathcal{T}$
+(Section~\ref{sec:forward-translation}):
+$\mathrm{true} = \lambda t.\,\lambda f.\, t$ and
+$\mathrm{false} = \lambda t.\,\lambda f.\, f$.
+In de~Bruijn notation:
+\begin{align*}
+  \mathrm{true}  &\mapsto \{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \dbi{1}.\mathrm{argument}\}\} \\
+  \mathrm{false} &\mapsto \{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \dbi{0}.\mathrm{argument}\}\}
+\end{align*}
+Define Church boolean equality
+$\mathrm{eq} = \lambda a.\,\lambda b.\,
+  (a\;b)\;(b\;\mathrm{false}\;\mathrm{true})$.
+In ANF:
+\[
+  \mathrm{eq} = \lambda a.\,\lambda b.\,
+  \mathbf{let}\; x_1 = b\;\mathrm{false} \;\mathbf{in}\;
+  \mathbf{let}\; x_2 = x_1\;\mathrm{true} \;\mathbf{in}\;
+  \mathbf{let}\; x_3 = a\;b \;\mathbf{in}\;
+  x_3\; x_2
+\]
+Applying $\mathcal{T}$ (Section~\ref{sec:forward-translation}):
+\begin{align*}
+  \mathrm{eq} &\mapsto \{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \{
+      \mathrm{argument} \mapsto \{\}, \\
+  & \quad
+      x_1 \mapsto \{\dbi{0}.\mathrm{argument},\;
+        \mathrm{argument} \mapsto \mathrm{false}\}, \\
+  & \quad
+      x_2 \mapsto \{x_1.\mathrm{result},\;
+        \mathrm{argument} \mapsto \mathrm{true}\}, \\
+  & \quad
+      x_3 \mapsto \{\dbi{1}.\mathrm{argument},\;
+        \mathrm{argument} \mapsto
+          \dbi{0}.\mathrm{argument}\}, \\
+  & \quad
+      \_\mathrm{tail} \mapsto \{x_3.\mathrm{result},\;
+        \mathrm{argument} \mapsto x_2.\mathrm{result}\}, \\
+  & \quad
+      \mathrm{result} \mapsto
+        \_\mathrm{tail}.\mathrm{result}
+    \}\}
+\end{align*}
+Here $\dbi{1}.\mathrm{argument}$ in $x_3$ reaches the outer
+$\lambda a$ scope (one $\lambda$ up from $\lambda b$), and
+$\dbi{0}.\mathrm{argument}$ reaches $\lambda b$ itself.
+
+In overlay-calculus, applying a function record to an argument
+is: inherit the function, override its $\mathrm{argument}$
+slot, and project $\mathrm{result}$.
+Define overlay trees $e_1$ and $e_2$ that apply
+$\mathrm{eq}$ to its two arguments via this mechanism:
+\begin{align*}
+  e_1 \;=\; \{&
+    \mathrm{eqFalse} \mapsto
+      \{\mathrm{eq},\;
+        \mathrm{argument} \mapsto \mathrm{false}\}, \\
+    & \mathrm{applied} \mapsto
+      \{\mathrm{eqFalse}.\mathrm{result},\;
+        \mathrm{argument} \mapsto \mathrm{false}\}, \\
+    & \mathrm{result} \mapsto
+      \mathrm{applied}.\mathrm{result}
+  \;\} \\[6pt]
+  e_2 \;=\; \{&
+    \mathrm{eqTrue} \mapsto
+      \{\mathrm{eq},\;
+        \mathrm{argument} \mapsto \mathrm{true}\}, \\
+    & \mathrm{applied} \mapsto
+      \{\mathrm{eqTrue}.\mathrm{result},\;
+        \mathrm{argument} \mapsto \mathrm{true}\}, \\
+    & \mathrm{result} \mapsto
+      \mathrm{applied}.\mathrm{result}
+  \;\}
+\end{align*}
+That is,
+$e_1 = \mathcal{T}(\mathrm{ANF}(
+  \mathrm{eq}\;\mathrm{false}\;\mathrm{false}))$
+and
+$e_2 = \mathcal{T}(\mathrm{ANF}(
+  \mathrm{eq}\;\mathrm{true}\;\mathrm{true}))$,
+where $\mathrm{ANF}$ converts a $\lambda$-term to A-normal
+form by naming every intermediate application
+(Section~\ref{sec:forward-translation}).
+Since both $\mathrm{ANF}$ and $\mathcal{T}$ are
+macro-expressible, their composition is too,
+so $e_1, e_2 \in \mathscr{L}_0$.
+Both $e_1.\mathrm{result}$ and $e_2.\mathrm{result}$
+evaluate to Church $\mathrm{true}$.
+By Full Abstraction (Theorem~\ref{thm:full-abstraction}),
+$\mathrm{BT}(e_1) = \mathrm{BT}(e_2)$,
+so $e_1 \cong_0 e_2$.
+
+All the definitions above---$\mathrm{true}$,
+$\mathrm{false}$, $\mathrm{eq}$, $e_1$, $e_2$---are
+siblings in a common enclosing scope $S$.
+Now define an overlay $C$ on $S$ that extends $\mathrm{eq}$
+with a $\mathrm{repr}$ scope.
+The overlay targets the inner $\lambda b$ scope (the
+$\mathrm{result}$ of $\mathrm{eq}$) and adds
+a sibling record $\mathrm{repr}$:
+\begin{align*}
+  C ={} & \{\mathrm{eq} \mapsto \{
+    \mathrm{result} \mapsto \{
+      \mathrm{repr} \mapsto \{
+        \mathrm{firstOperand}
+          \mapsto \dbi{2}.\mathrm{argument},\;
+        \mathrm{secondOperand}
+          \mapsto \dbi{1}.\mathrm{argument}
+    \}\}\}\}
+\end{align*}
+The de~Bruijn indices count scope levels from
+$\mathrm{repr}$: $\dbi{0}$ is $\mathrm{repr}$ itself,
+$\dbi{1}$ is the $\lambda b$ scope, and
+$\dbi{2}$ is the $\lambda a$ scope.
+Thus $\mathrm{firstOperand}$ projects $\lambda a$'s argument
+and $\mathrm{secondOperand}$ projects $\lambda b$'s argument.
+
+In the composite scope $\{S,\, C\}$, the definition of
+$\mathrm{eq}$ gains $\mathrm{repr}$ as a new sibling of
+$x_1, x_2, x_3$ inside the $\lambda b$ scope.
+By open recursion, the de~Bruijn references
+$\dbi{2}.\mathrm{argument}$ and
+$\dbi{1}.\mathrm{argument}$ resolve through the same scope
+chain as the existing let-bindings.
+Since $e_1$ and $e_2$ inherit $\mathrm{eq}$, they also
+inherit the newly added $\mathrm{repr}$:
+$e_1.\mathrm{repr}.\mathrm{firstOperand} = \mathrm{false}$
+and
+$e_2.\mathrm{repr}.\mathrm{firstOperand} = \mathrm{true}$.
+These produce structurally distinct overlay trees
+(one converges to an abstraction selecting its first argument,
+the other to an abstraction selecting its second),
+so $e_1 \not\cong_1 e_2$.
+
+Since $e_1 \cong_0 e_2$ but $e_1 \not\cong_1 e_2$,
+we have ${\cong_0} \neq {(\cong_1|_{\mathscr{L}_0})}$.
+By Theorem~3.14(i) of
+Felleisen~\cite{felleisen1991expressive},
+$\mathscr{L}_0$ cannot macro-express the overlay facilities of $\mathscr{L}_1$.
+\end{proof}
+
+\begin{corollary}
+\label{cor:expressive-asymmetry}
+Overlay-calculus is strictly more expressive than the
+$\lambda$-calculus in the sense of
+Felleisen~\cite{felleisen1991expressive}: the forward
+embedding is macro-expressible
+(Theorem~\ref{thm:forward-macro}), but the reverse is not
+(Theorem~\ref{thm:cartesian-non-expressibility}).
+\end{corollary}
 
 
 \section{Multi-Path Self-Reference in Other Systems}
@@ -1796,7 +2045,7 @@ foundation than the $\lambda$-calculus.
 
 This appendix demonstrates that two representative systems, Scala~3
 and the NixOS module system, reject the multi-path self-reference
-pattern that Overlay-Calculus handles naturally.
+pattern that overlay-calculus handles naturally.
 
 \subsection*{Scala~3}
 
@@ -1836,7 +2085,7 @@ Their intersection requires \texttt{outer} to simultaneously
 return \texttt{Object1} and \texttt{Object2}, but DOT's self
 variable is single-valued, making this intersection unrealizable.
 
-The equivalent Overlay-Calculus definition is:
+The equivalent overlay-calculus definition is:
 \begin{align*}
 \{ \quad \mathrm{MyOuter} &\mapsto \{
     \mathrm{MyInner} \mapsto \{
@@ -1848,7 +2097,7 @@ The equivalent Overlay-Calculus definition is:
   \mathrm{Object2}.\mathrm{MyInner}\}
 \quad \}
 \end{align*}
-This is well-defined in Overlay-Calculus.
+This is well-defined in overlay-calculus.
 The reference
 $\qualifiedthis{\mathrm{MyOuter}}$ inside $\mathrm{outer}$
 has de~Bruijn index $n = 1$:
@@ -1975,7 +2224,7 @@ error above: both systems assume that each option or type member
 has a single declaration site, and reject the multi-path situation
 where two inheritance routes introduce the same declaration
 independently.
-In Overlay-Calculus, the same pattern is well-defined because
+In overlay-calculus, the same pattern is well-defined because
 $\overlays$ (equation~\ref{eq:overlays}) recognizes that both
 routes lead to the same definition, and $\supers$
 (equation~\ref{eq:supers}) collects both inheritance-site

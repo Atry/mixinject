@@ -12,7 +12,7 @@ compose freely without glue code, dissolving the
 [Expression Problem](https://en.wikipedia.org/wiki/Expression_problem).
 If you prefer declarative programming, you can even move all your business logic
 from Python into the Overlay language — it is based on
-[Overlay-Calculus](https://arxiv.org/abs/2602.16291), which is provably more
+[overlay-calculus](https://arxiv.org/abs/2602.16291), which is provably more
 expressive than λ-calculus. As a bonus, your Python code
 reduces to thin I/O adapters, trivially mockable, and the same Overlay language
 code runs unchanged on both sync and async runtimes
