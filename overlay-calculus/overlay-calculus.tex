@@ -299,7 +299,8 @@ All tests are mechanically verified against expected output snapshots.
   \item The $\lambda$-calculus (in A-normal form) translates into
     overlay-calculus in five rules (Section~\ref{sec:translation}).
     The translation is fully abstract with respect to
-    B\"ohm tree equivalence (Section~\ref{sec:bohm-tree}),
+    B\"ohm tree equivalence under $\lambda$-definable contexts
+    (Section~\ref{sec:bohm-tree}),
     yielding a semantics of the lazy $\lambda$-calculus that
     requires no domain theory.
   \item We observe further properties: extensibility in the sense of the
@@ -819,14 +820,16 @@ Section~\ref{sec:bohm-tree} shows that the convergence behavior
 of the translated overlay tree corresponds exactly to the
 B\"ohm tree~\cite{barendregt1984lambda} of the original term:
 the translation is adequate, meaning a term converges iff it has a head
-normal form, and fully abstract, meaning two terms are
-  overlay-contextually equivalent iff they have the same B\"ohm
+normal form, and fully abstract with respect to
+$\lambda$-definable contexts, meaning two $\lambda$-terms are
+equivalent under the translation iff they have the same B\"ohm
 tree.
 
 Combining these two facts, elementary machinery and full
 abstraction, yields a noteworthy consequence:
 \emph{the lazy $\lambda$-calculus admits a fully abstract
-semantics that lives entirely in naive set theory.}
+semantics (w.r.t.\ $\lambda$-definable contexts)
+that lives entirely in naive set theory.}
 The only mathematical prerequisites are powerset lattices,
 set-theoretic monotonicity, and the Knaster--Tarski
 fixed-point theorem.
@@ -876,25 +879,30 @@ We write $T{\Uparrow}$ if no such depth exists.
   only if $\mathcal{T}(M){\Downarrow}$.
 \end{theorem}
 
-\begin{theorem}[Full Abstraction]\label{thm:full-abstraction}
+\begin{theorem}[Full abstraction w.r.t.\ $\lambda$-definable contexts]%
+\label{thm:full-abstraction}
   For closed $\lambda$-terms $M$ and $N$, define
-  $\mathcal{T}(M) \approx \mathcal{T}(N)$ iff for every
-  closing context $C[\cdot]$,
+  $\mathcal{T}(M) \approx_\lambda \mathcal{T}(N)$ iff for every
+  closing $\lambda$-calculus context $C[\cdot]$,
   $\mathcal{T}(C[M]){\Downarrow} \Leftrightarrow
   \mathcal{T}(C[N]){\Downarrow}$.
   Then:
   \[
-    \mathcal{T}(M) \approx \mathcal{T}(N)
+    \mathcal{T}(M) \approx_\lambda \mathcal{T}(N)
     \quad\Longleftrightarrow\quad
     \mathrm{BT}(M) = \mathrm{BT}(N)
   \]
 \end{theorem}
 
 \noindent
+Here $\approx_\lambda$ quantifies over $\lambda$-calculus
+contexts only; overlay contexts are strictly more
+discriminating (Section~\ref{sec:asymmetry}).
 Together, Adequacy and Full Abstraction establish that
-the overlay tree semantics is a computation mechanism for
-B\"ohm trees~\cite{barendregt1984lambda}, the canonical fully
-abstract model of the lazy $\lambda$-calculus, using only
+the translation $\mathcal{T}$ is a fully faithful embedding of the
+lazy $\lambda$-calculus into overlay-calculus
+with respect to B\"ohm tree
+equivalence~\cite{barendregt1984lambda}, using only
 powerset lattices and the Knaster--Tarski fixed-point theorem,
 without the topological infrastructure of domain theory.
 This is stronger than Scott's denotational
@@ -905,6 +913,16 @@ distinguishes~\cite{plotkin1975callbyname}.
 The full proof, including the Single-Path Lemma,
 Substitution Lemma, and Convergence Preservation, is given
 in Appendix~\ref{app:bohm-tree-proofs}.
+
+The relationship between $\approx_\lambda$ and full
+overlay-contextual equivalence is clarified by the expressive
+asymmetry of the next section:
+overlay contexts can separate $\lambda$-terms that are
+B\"ohm-tree equivalent, so
+${\approx_\lambda} \subsetneq {(\approx_{\mathrm{ov}}|_{\mathrm{im}(\mathcal{T})})}$.
+This gap is precisely the source of overlay-calculus's
+additional expressiveness
+(Theorem~\ref{thm:cartesian-non-expressibility}).
 
 \subsection{Expressive Asymmetry}
 \label{sec:asymmetry}
@@ -2953,10 +2971,10 @@ Full abstraction lifts this to an equivalence between terms:
 the translation $\mathcal{T}$ preserves and reflects
 observational equivalence.
 
-\begin{definition}[Overlay-contextual equivalence]%
+\begin{definition}[$\lambda$-contextual equivalence under $\mathcal{T}$]%
 \label{def:ctx-equiv}
 For closed $\lambda$-terms $M$ and $N$, write
-$\mathcal{T}(M) \approx \mathcal{T}(N)$ if for every
+$\mathcal{T}(M) \approx_\lambda \mathcal{T}(N)$ if for every
 closing $\lambda$-calculus context $C[\cdot]$:
 \[
   \mathcal{T}(C[M]){\Downarrow}
@@ -2966,11 +2984,13 @@ closing $\lambda$-calculus context $C[\cdot]$:
 \end{definition}
 
 \noindent
+The subscript $\lambda$ emphasizes that the quantification ranges
+over $\lambda$-calculus contexts, not over all overlay contexts.
 This definition observes only convergence (a single bit), but
-quantifying over all contexts makes it a fine-grained
+quantifying over all $\lambda$-contexts makes it a fine-grained
 equivalence: different contexts can supply different arguments
 and project different results, probing every aspect of the
-term's behavior.
+term's behavior within the $\lambda$-definable fragment.
 
 \begin{proof}[Proof of Theorem~\ref{thm:full-abstraction}]
 The translation $\mathcal{T}$ is compositional: for every
@@ -2990,7 +3010,7 @@ In particular, $C[M]$ has a head normal form iff $C[N]$ does.
 By Theorem~\ref{thm:adequacy},
 $\mathcal{T}(C[M]){\Downarrow}$ iff
 $\mathcal{T}(C[N]){\Downarrow}$.
-Hence $\mathcal{T}(M) \approx \mathcal{T}(N)$.
+Hence $\mathcal{T}(M) \approx_\lambda \mathcal{T}(N)$.
 
 \medskip\noindent
 ($\Rightarrow$)
@@ -3003,7 +3023,7 @@ and $C[N]$ diverges (or vice versa).
 By Theorem~\ref{thm:adequacy},
 $\mathcal{T}(C[M]){\Downarrow}$ and
 $\mathcal{T}(C[N]){\Uparrow}$.
-Hence $\mathcal{T}(M) \not\approx \mathcal{T}(N)$.
+Hence $\mathcal{T}(M) \not\approx_\lambda \mathcal{T}(N)$.
 \end{proof}
 
 \noindent
