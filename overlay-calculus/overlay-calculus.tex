@@ -262,10 +262,10 @@ the Overlay language,
 \selfcite{available as open source~\cite{mixin2025}}{included as supplementary material},
 with a test suite covering every example.%
 \footnote{The Overlay language is statically typed and therefore
-stricter than the untyped overlay-calculus.
-All examples in this paper are ported from the Overlay language
-and conform to both semantics.
-Elements added to satisfy the type checker are harmless
+  stricter than the untyped overlay-calculus.
+  All examples in this paper are ported from the Overlay language
+  and conform to both semantics.
+  Elements added to satisfy the type checker are harmless
 for the algorithms presented here and may aid readability.}
 All tests are mechanically verified against expected output snapshots.
 
@@ -633,24 +633,24 @@ $p_{\mathrm{def}}$, and collects the corresponding
 inheritance-site paths as the new frontier.
 After $n$ steps the frontier contains the answer:
 {\small
-\begin{equation}\label{eq:this}
-  \this(S,\; p_{\mathrm{def}},\; n) =
-  \begin{cases}
-    S & \text{if } n = 0 \\[6pt]
-    \this\!\left(
-      \left\{\; p_{\mathrm{site}} \;\left|\;
-        \begin{aligned}
-          &p_{\mathrm{current}} \in S, \\
-          &(p_{\mathrm{site}},\; p_{\mathrm{overlay}})
-          \in \supers(p_{\mathrm{current}}), \\
-          &\text{s.t.}\; p_{\mathrm{overlay}} = p_{\mathrm{def}}
-        \end{aligned}
-      \right.\right\},\;
-      \init(p_{\mathrm{def}}),\;
-      n - 1
-    \right)
-    & \text{if } n > 0
-  \end{cases}
+  \begin{equation}\label{eq:this}
+    \this(S,\; p_{\mathrm{def}},\; n) =
+    \begin{cases}
+      S & \text{if } n = 0 \\[6pt]
+      \this\!\left(
+        \left\{\; p_{\mathrm{site}} \;\left|\;
+          \begin{aligned}
+            &p_{\mathrm{current}} \in S, \\
+            &(p_{\mathrm{site}},\; p_{\mathrm{overlay}})
+            \in \supers(p_{\mathrm{current}}), \\
+            &\text{s.t.}\; p_{\mathrm{overlay}} = p_{\mathrm{def}}
+          \end{aligned}
+        \right.\right\},\;
+        \init(p_{\mathrm{def}}),\;
+        n - 1
+      \right)
+      & \text{if } n > 0
+    \end{cases}
 \end{equation}}%
 At each step $\init$ shortens $p_{\mathrm{def}}$ by one label
 and $n$ decreases by one.
@@ -833,7 +833,7 @@ tree.
 Combining these two facts, elementary machinery and full
 abstraction, yields a noteworthy consequence:
 \emph{the lazy $\lambda$-calculus admits a fully abstract
-semantics (w.r.t.\ $\lambda$-definable contexts)
+  semantics (w.r.t.\ $\lambda$-definable contexts)
 that lives entirely in naive set theory.}
 The only mathematical prerequisites are powerset lattices,
 set-theoretic monotonicity, and the Knaster--Tarski
@@ -885,7 +885,7 @@ We write $T{\Uparrow}$ if no such depth exists.
 \end{theorem}
 
 \begin{theorem}[Full abstraction w.r.t.\ $\lambda$-definable contexts]%
-\label{thm:full-abstraction}
+  \label{thm:full-abstraction}
   For closed $\lambda$-terms $M$ and $N$, define
   $\mathcal{T}(M) \approx_\lambda \mathcal{T}(N)$ iff for every
   closing $\lambda$-calculus context $C[\cdot]$,
@@ -985,14 +985,14 @@ The file name $\mathrm{NatData}$ is itself the top-level scope:
   \mathrm{NatData} \mapsto \{\;&
     \mathrm{NatFactory} \mapsto \{
       \mathrm{Product} \mapsto \{\},\\
-    &\quad
+      &\quad
       \mathrm{Zero} \mapsto \{\mathrm{Product}\},\\
-    &\quad
+      &\quad
       \mathrm{Successor} \mapsto \{
         \mathrm{Product},\;
-        \mathrm{predecessor} \mapsto \{\mathrm{Product}\}\}\},\\
+    \mathrm{predecessor} \mapsto \{\mathrm{Product}\}\}\},\\
     &\mathrm{Nat} \mapsto \{\mathrm{NatFactory},\;
-      \mathrm{NatFactory}.\mathrm{Product}\}\}
+  \mathrm{NatFactory}.\mathrm{Product}\}\}
 \end{align*}
 
 \paragraph{NatPlus}
@@ -1006,25 +1006,25 @@ by delegating to $n_0$'s $\mathrm{Plus}$ with an incremented addend:
   \mathrm{NatPlus} \mapsto \{\;&
     \mathrm{NatData},\\
     &\mathrm{NatFactory} \mapsto \{\\
-    &\quad \mathrm{Product} \mapsto \{\mathrm{Plus} \mapsto \{
+      &\quad \mathrm{Product} \mapsto \{\mathrm{Plus} \mapsto \{
       \mathrm{sum} \mapsto \{\mathrm{Product}\}\}\},\\[2pt]
-    &\quad \mathrm{Zero} \mapsto \{\mathrm{Plus} \mapsto \{
-      \mathrm{addend} \mapsto \{\mathrm{Product}\},\;
+      &\quad \mathrm{Zero} \mapsto \{\mathrm{Plus} \mapsto \{
+          \mathrm{addend} \mapsto \{\mathrm{Product}\},\;
       \mathrm{sum} \mapsto \{\mathrm{addend}\}\}\},\\[2pt]
-    &\quad \mathrm{Successor} \mapsto \{\mathrm{Plus} \mapsto \{
-      \mathrm{addend} \mapsto \{\mathrm{Product}\},\\
-    &\qquad
-      \mathrm{\_increasedAddend} \mapsto \{
-        \mathrm{Successor},\;
-        \mathrm{predecessor} \mapsto \{\mathrm{addend}\}\},\\
-    &\qquad
-      \mathrm{\_recursiveAddition} \mapsto \{
-        \qualifiedthis{\mathrm{Successor}}.\mathrm{predecessor}.\mathrm{Plus},\\
-    &\qquad\quad
-        \mathrm{addend} \mapsto \{\mathrm{\_increasedAddend}\}\},\\
-    &\qquad
-      \mathrm{sum} \mapsto \{
-        \mathrm{\_recursiveAddition}.\mathrm{sum}\}\}\}\}\}
+      &\quad \mathrm{Successor} \mapsto \{\mathrm{Plus} \mapsto \{
+          \mathrm{addend} \mapsto \{\mathrm{Product}\},\\
+          &\qquad
+          \mathrm{\_increasedAddend} \mapsto \{
+            \mathrm{Successor},\;
+          \mathrm{predecessor} \mapsto \{\mathrm{addend}\}\},\\
+          &\qquad
+          \mathrm{\_recursiveAddition} \mapsto \{
+            \qualifiedthis{\mathrm{Successor}}.\mathrm{predecessor}.\mathrm{Plus},\\
+            &\qquad\quad
+          \mathrm{addend} \mapsto \{\mathrm{\_increasedAddend}\}\},\\
+          &\qquad
+          \mathrm{sum} \mapsto \{
+  \mathrm{\_recursiveAddition}.\mathrm{sum}\}\}\}\}\}
 \end{align*}
 
 \paragraph{NatEquality}
@@ -1038,14 +1038,14 @@ $\mathrm{VisitZero}$ or $\mathrm{VisitSuccessor}$ branch:
   \mathrm{NatVisitor} \mapsto \{\;&
     \mathrm{NatData},\\
     &\mathrm{NatFactory} \mapsto \{\\
-    &\quad \mathrm{Product} \mapsto \{\mathrm{Visitor} \mapsto \{
+      &\quad \mathrm{Product} \mapsto \{\mathrm{Visitor} \mapsto \{
       \mathrm{Visit} \mapsto \{\}\}\},\\[2pt]
-    &\quad \mathrm{Zero} \mapsto \{\mathrm{Visitor} \mapsto \{
-      \mathrm{VisitZero} \mapsto \{\},\;
+      &\quad \mathrm{Zero} \mapsto \{\mathrm{Visitor} \mapsto \{
+          \mathrm{VisitZero} \mapsto \{\},\;
       \mathrm{Visit} \mapsto \{\mathrm{VisitZero}\}\}\},\\[2pt]
-    &\quad \mathrm{Successor} \mapsto \{\mathrm{Visitor} \mapsto \{
-      \mathrm{VisitSuccessor} \mapsto \{\},\;
-      \mathrm{Visit} \mapsto \{\mathrm{VisitSuccessor}\}\}\}\}\}
+      &\quad \mathrm{Successor} \mapsto \{\mathrm{Visitor} \mapsto \{
+          \mathrm{VisitSuccessor} \mapsto \{\},\;
+  \mathrm{Visit} \mapsto \{\mathrm{VisitSuccessor}\}\}\}\}\}
 \end{align*}
 $\mathrm{BooleanData}$ defines the output sort:
 \begin{align*}
@@ -1053,9 +1053,9 @@ $\mathrm{BooleanData}$ defines the output sort:
     \mathrm{BooleanFactory} \mapsto \{
       \mathrm{Product} \mapsto \{\},\;
       \mathrm{True} \mapsto \{\mathrm{Product}\},\;
-      \mathrm{False} \mapsto \{\mathrm{Product}\}\},\\
+    \mathrm{False} \mapsto \{\mathrm{Product}\}\},\\
     &\mathrm{Boolean} \mapsto \{\mathrm{BooleanFactory},\;
-      \mathrm{BooleanFactory}.\mathrm{Product}\}\}
+  \mathrm{BooleanFactory}.\mathrm{Product}\}\}
 \end{align*}
 $\mathrm{NatEquality}$ inherits $\mathrm{NatVisitor}$ and $\mathrm{BooleanData}$,
 and adds an $\mathrm{Equal}$ operation to each constructor.
@@ -1064,63 +1064,63 @@ $\mathrm{Successor}$ is equal only to another $\mathrm{Successor}$
 with an equal predecessor.
 Case analysis on $\mathrm{other}$ is done via its $\mathrm{Visitor}$:
 {\small
-\begin{align*}
-  \mathrm{NatEquality} \mapsto \{\;&
-    \mathrm{NatVisitor},\; \mathrm{BooleanData},\\
-    &\mathrm{NatFactory} \mapsto \{\\
-    &\quad \mathrm{Product} \mapsto \{\mathrm{Equal} \mapsto \{
-      \mathrm{other} \mapsto \{\mathrm{Product}\},\\
-    &\qquad
-      \mathrm{equal} \mapsto \{
+  \begin{align*}
+    \mathrm{NatEquality} \mapsto \{\;&
+      \mathrm{NatVisitor},\; \mathrm{BooleanData},\\
+      &\mathrm{NatFactory} \mapsto \{\\
+        &\quad \mathrm{Product} \mapsto \{\mathrm{Equal} \mapsto \{
+            \mathrm{other} \mapsto \{\mathrm{Product}\},\\
+            &\qquad
+            \mathrm{equal} \mapsto \{
         \qualifiedthis{\mathrm{NatEquality}}.\mathrm{Boolean}\}\}\},\\[2pt]
-    &\quad \mathrm{Zero} \mapsto \{\mathrm{Equal} \mapsto \{
-      \mathrm{other} \mapsto \{\mathrm{Product}\},\\
-    &\qquad
-      \mathrm{OtherVisitor} \mapsto \{
-        \mathrm{other}.\mathrm{Visitor},\\
-    &\qquad\;
-        \mathrm{VisitZero} \mapsto \{
-          \mathrm{equal} \mapsto \{
-            \qualifiedthis{\mathrm{NatEquality}}.\mathrm{True}\}\},\\
-    &\qquad\;
-        \mathrm{VisitSuccessor} \mapsto \{
-          \mathrm{equal} \mapsto \{
-            \qualifiedthis{\mathrm{NatEquality}}.\mathrm{False}\}\},\\
-    &\qquad\;
-        \mathrm{Visit} \mapsto \{
-          \mathrm{equal} \mapsto \{
+        &\quad \mathrm{Zero} \mapsto \{\mathrm{Equal} \mapsto \{
+            \mathrm{other} \mapsto \{\mathrm{Product}\},\\
+            &\qquad
+            \mathrm{OtherVisitor} \mapsto \{
+              \mathrm{other}.\mathrm{Visitor},\\
+              &\qquad\;
+              \mathrm{VisitZero} \mapsto \{
+                \mathrm{equal} \mapsto \{
+              \qualifiedthis{\mathrm{NatEquality}}.\mathrm{True}\}\},\\
+              &\qquad\;
+              \mathrm{VisitSuccessor} \mapsto \{
+                \mathrm{equal} \mapsto \{
+              \qualifiedthis{\mathrm{NatEquality}}.\mathrm{False}\}\},\\
+              &\qquad\;
+              \mathrm{Visit} \mapsto \{
+                \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{Boolean}\}\}\},\\
-    &\qquad
-      \mathrm{equal} \mapsto \{
+            &\qquad
+            \mathrm{equal} \mapsto \{
         \mathrm{OtherVisitor}.\mathrm{Visit}.\mathrm{equal}\}\}\},\\[2pt]
-    &\quad \mathrm{Successor} \mapsto \{\mathrm{Equal} \mapsto \{
-      \mathrm{other} \mapsto \{
-        \mathrm{Product},\;
-        \mathrm{predecessor} \mapsto \{\mathrm{Product}\}\},\\
-    &\qquad
-      \mathrm{RecursiveEquality} \mapsto \{
-        \qualifiedthis{\mathrm{Successor}}.\mathrm{predecessor}.\mathrm{Equal},\\
-    &\qquad\;
-        \mathrm{other} \mapsto \{
-          \qualifiedthis{\mathrm{Equal}}.\mathrm{other}.\mathrm{predecessor}\}\},\\
-    &\qquad
-      \mathrm{OtherVisitor} \mapsto \{
-        \mathrm{other}.\mathrm{Visitor},\\
-    &\qquad\;
-        \mathrm{VisitZero} \mapsto \{
-          \mathrm{equal} \mapsto \{
-            \qualifiedthis{\mathrm{NatEquality}}.\mathrm{False}\}\},\\
-    &\qquad\;
-        \mathrm{VisitSuccessor} \mapsto \{
-          \mathrm{equal} \mapsto \{
-            \mathrm{RecursiveEquality}.\mathrm{equal}\}\},\\
-    &\qquad\;
-        \mathrm{Visit} \mapsto \{
-          \mathrm{equal} \mapsto \{
+        &\quad \mathrm{Successor} \mapsto \{\mathrm{Equal} \mapsto \{
+            \mathrm{other} \mapsto \{
+              \mathrm{Product},\;
+            \mathrm{predecessor} \mapsto \{\mathrm{Product}\}\},\\
+            &\qquad
+            \mathrm{RecursiveEquality} \mapsto \{
+              \qualifiedthis{\mathrm{Successor}}.\mathrm{predecessor}.\mathrm{Equal},\\
+              &\qquad\;
+              \mathrm{other} \mapsto \{
+            \qualifiedthis{\mathrm{Equal}}.\mathrm{other}.\mathrm{predecessor}\}\},\\
+            &\qquad
+            \mathrm{OtherVisitor} \mapsto \{
+              \mathrm{other}.\mathrm{Visitor},\\
+              &\qquad\;
+              \mathrm{VisitZero} \mapsto \{
+                \mathrm{equal} \mapsto \{
+              \qualifiedthis{\mathrm{NatEquality}}.\mathrm{False}\}\},\\
+              &\qquad\;
+              \mathrm{VisitSuccessor} \mapsto \{
+                \mathrm{equal} \mapsto \{
+              \mathrm{RecursiveEquality}.\mathrm{equal}\}\},\\
+              &\qquad\;
+              \mathrm{Visit} \mapsto \{
+                \mathrm{equal} \mapsto \{
             \qualifiedthis{\mathrm{NatEquality}}.\mathrm{Boolean}\}\}\},\\
-    &\qquad
-      \mathrm{equal} \mapsto \{
-        \mathrm{OtherVisitor}.\mathrm{Visit}.\mathrm{equal}\}\}\}\}\}
+            &\qquad
+            \mathrm{equal} \mapsto \{
+    \mathrm{OtherVisitor}.\mathrm{Visit}.\mathrm{equal}\}\}\}\}\}
 \end{align*}}
 Composing $\mathrm{NatPlus}$ with $\mathrm{NatEquality}$ by
 inheriting both, with no modifications to either file, gives the
@@ -1132,25 +1132,25 @@ The concrete numerals live in a shared file that inherits only $\mathrm{NatData}
     \mathrm{NatData},\\
     &\mathrm{One} \mapsto \{
       \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Successor},\\
-    &\quad\quad
+      &\quad\quad
       \mathrm{predecessor} \mapsto \{
-        \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Zero}\}\},\\
+    \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Zero}\}\},\\
     &\mathrm{Two} \mapsto \{
       \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Successor},\\
-    &\quad\quad
-      \mathrm{predecessor} \mapsto \{\mathrm{One}\}\},\\
+      &\quad\quad
+    \mathrm{predecessor} \mapsto \{\mathrm{One}\}\},\\
     &\mathrm{Three} \mapsto \{
       \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Successor},\\
-    &\quad\quad
-      \mathrm{predecessor} \mapsto \{\mathrm{Two}\}\},\\
+      &\quad\quad
+    \mathrm{predecessor} \mapsto \{\mathrm{Two}\}\},\\
     &\mathrm{Four} \mapsto \{
       \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Successor},\\
-    &\quad\quad
-      \mathrm{predecessor} \mapsto \{\mathrm{Three}\}\},\\
+      &\quad\quad
+    \mathrm{predecessor} \mapsto \{\mathrm{Three}\}\},\\
     &\mathrm{Five} \mapsto \{
       \qualifiedthis{\mathrm{NatConstants}}.\mathrm{NatFactory}.\mathrm{Successor},\\
-    &\quad\quad
-      \mathrm{predecessor} \mapsto \{\mathrm{Four}\}\}\}
+      &\quad\quad
+  \mathrm{predecessor} \mapsto \{\mathrm{Four}\}\}\}
 \end{align*}
 The arithmetic test inherits $\mathrm{NatConstants}$ together with the operations it needs:
 \begin{align*}
@@ -1158,10 +1158,10 @@ The arithmetic test inherits $\mathrm{NatConstants}$ together with the operation
     \mathrm{NatConstants},\; \mathrm{NatPlus},\; \mathrm{NatEquality},\\
     &\mathrm{Addition} \mapsto \{
       \qualifiedthis{\mathrm{Test}}.\mathrm{Two}.\mathrm{Plus},\;
-      \mathrm{addend} \mapsto \{\qualifiedthis{\mathrm{Test}}.\mathrm{Three}\}\},\\
+    \mathrm{addend} \mapsto \{\qualifiedthis{\mathrm{Test}}.\mathrm{Three}\}\},\\
     &\mathrm{Test2plus3} \mapsto \{
       \qualifiedthis{\mathrm{Test}}.\mathrm{Five}.\mathrm{Equal},\;
-      \mathrm{other} \mapsto \{\mathrm{Addition}.\mathrm{sum}\}\}\}
+  \mathrm{other} \mapsto \{\mathrm{Addition}.\mathrm{sum}\}\}\}
 \end{align*}
 Querying $\mathrm{Test}.\mathrm{Test2plus3}.\mathrm{equal}$ via the host-language API
 returns $\mathrm{True}$.
@@ -1226,16 +1226,16 @@ with $\mathrm{Equal}$:
     \mathrm{NatConstants},\; \mathrm{NatPlus},\; \mathrm{NatEquality},\\
     &\mathrm{OneOrTwo} \mapsto \{
       \qualifiedthis{\mathrm{CartesianTest}}.\mathrm{One},\;
-      \qualifiedthis{\mathrm{CartesianTest}}.\mathrm{Two}\},\\
+    \qualifiedthis{\mathrm{CartesianTest}}.\mathrm{Two}\},\\
     &\mathrm{ThreeOrFour} \mapsto \{
       \qualifiedthis{\mathrm{CartesianTest}}.\mathrm{Three},\;
-      \qualifiedthis{\mathrm{CartesianTest}}.\mathrm{Four}\},\\
+    \qualifiedthis{\mathrm{CartesianTest}}.\mathrm{Four}\},\\
     &\mathrm{Result} \mapsto \{
       \mathrm{OneOrTwo}.\mathrm{Plus},\;
-      \mathrm{addend} \mapsto \{\mathrm{ThreeOrFour}\}\},\\
+    \mathrm{addend} \mapsto \{\mathrm{ThreeOrFour}\}\},\\
     &\mathrm{Check} \mapsto \{
       \mathrm{Result}.\mathrm{sum}.\mathrm{Equal},\;
-      \mathrm{other} \mapsto \{\mathrm{Result}.\mathrm{sum}\}\}\}
+  \mathrm{other} \mapsto \{\mathrm{Result}.\mathrm{sum}\}\}\}
 \end{align*}
 $\mathrm{Result}.\mathrm{sum}$ evaluates to the trie $\{4,5,6\}$, the set of all pairwise sums.
 $\mathrm{Equal}$ then applies to every pair drawn from $\{4,5,6\} \times \{4,5,6\}$;
@@ -1368,8 +1368,8 @@ structure.
     must encode nonextensible constructs into extensible constructs
     using sophisticated
     mechanisms~\cite{liang1995monad, lammel2003scrap, loh2006open,
-    swierstra2008data, carette2009finally, oliveira2012extensibility,
-    kiselyov2013extensible, wu2014effect, kiselyov2015freer,
+      swierstra2008data, carette2009finally, oliveira2012extensibility,
+      kiselyov2013extensible, wu2014effect, kiselyov2015freer,
     wang2016trivially, leijen2017type, poulsen2023hefty},
     and code that uses nonextensible constructs
     cannot be extended unless rewritten in the framework.
@@ -1396,12 +1396,12 @@ structure.
     This is the extensibility that the Expression
     Problem~\cite{wadler1998expression} demands.%
     \footnote{As an untyped calculus, overlay-calculus cannot violate
-    the extensibility requirement of the Expression Problem but does
-    not encounter its type-safety requirement.
-    A typed language built on
-    overlay-calculus\selfcite{~\cite{mixin2025}}{~(supplementary
-    material)} inherits the immunity to nonextensibility and need
-    only ensure that its type system does not introduce
+      the extensibility requirement of the Expression Problem but does
+      not encounter its type-safety requirement.
+      A typed language built on
+      overlay-calculus\selfcite{~\cite{mixin2025}}{~(supplementary
+      material)} inherits the immunity to nonextensibility and need
+      only ensure that its type system does not introduce
     nonextensible constructs.}
 \end{enumerate}
 
@@ -1438,22 +1438,22 @@ which has separate primitives for methods, classes, objects, and types.
 Existing designs occupy several of the resulting cells:
 
 \begin{center}
-\begin{tabular}{lll}
-  & \textbf{No deep merge} & \textbf{Deep merge} \\
-  \hline
-  \textbf{Early binding}
-  & ---
-  & CUE~\cite{cue2019} \\
-  \textbf{Dynamic scope}
-  & ---
-  & union file systems, Jsonnet~\cite{jsonnet} \\
-  \textbf{Lexical scope}
-  & Scala~\cite{odersky2004overview}
-  & NixOS modules~\cite{nixosmodules} \\
-  \textbf{Multi-target} $\this$
-  & ---
-  & overlay-calculus \\
-\end{tabular}
+  \begin{tabular}{lll}
+    & \textbf{No deep merge} & \textbf{Deep merge} \\
+    \hline
+    \textbf{Early binding}
+    & ---
+    & CUE~\cite{cue2019} \\
+    \textbf{Dynamic scope}
+    & ---
+    & union file systems, Jsonnet~\cite{jsonnet} \\
+    \textbf{Lexical scope}
+    & Scala~\cite{odersky2004overview}
+    & NixOS modules~\cite{nixosmodules} \\
+    \textbf{Multi-target} $\this$
+    & ---
+    & overlay-calculus \\
+  \end{tabular}
 \end{center}
 
 \paragraph{Early binding}
@@ -1591,7 +1591,7 @@ why systems without deep merge rarely support
 path-dependent multiple inheritance in practice.
 Restricting $\this$ to a single path requires a mechanism to
 select among inheritance routes (Scala rejects the ambiguity
-at compile time; the NixOS module system raises a
+  at compile time; the NixOS module system raises a
 duplicate-declaration error), and loses contributions from
 all non-selected routes.
 These mechanisms, including early-binding freezing, runtime context
@@ -1989,14 +1989,14 @@ In de~Bruijn notation:
 \begin{align*}
   \mathrm{true}  &\mapsto \{\mathrm{argument} \mapsto \{\},\;
     \mathrm{result} \mapsto \{\mathrm{argument} \mapsto \{\},\;
-    \mathrm{result} \mapsto \dbi{1}.\mathrm{argument}\}\} \\
+  \mathrm{result} \mapsto \dbi{1}.\mathrm{argument}\}\} \\
   \mathrm{false} &\mapsto \{\mathrm{argument} \mapsto \{\},\;
     \mathrm{result} \mapsto \{\mathrm{argument} \mapsto \{\},\;
-    \mathrm{result} \mapsto \dbi{0}.\mathrm{argument}\}\}
+  \mathrm{result} \mapsto \dbi{0}.\mathrm{argument}\}\}
 \end{align*}
 Define Church boolean equality
 $\mathrm{eq} = \lambda a.\,\lambda b.\,
-  (a\;b)\;(b\;\mathrm{false}\;\mathrm{true})$.
+(a\;b)\;(b\;\mathrm{false}\;\mathrm{true})$.
 In ANF:
 \[
   \mathrm{eq} = \lambda a.\,\lambda b.\,
@@ -2010,23 +2010,23 @@ Applying $\mathcal{T}$ (Section~\ref{sec:forward-translation}):
   \mathrm{eq} &\mapsto \{\mathrm{argument} \mapsto \{\},\;
     \mathrm{result} \mapsto \{
       \mathrm{argument} \mapsto \{\}, \\
-  & \quad
+      & \quad
       x_1 \mapsto \{\dbi{0}.\mathrm{argument},\;
-        \mathrm{argument} \mapsto \mathrm{false}\}, \\
-  & \quad
+      \mathrm{argument} \mapsto \mathrm{false}\}, \\
+      & \quad
       x_2 \mapsto \{x_1.\mathrm{result},\;
-        \mathrm{argument} \mapsto \mathrm{true}\}, \\
-  & \quad
+      \mathrm{argument} \mapsto \mathrm{true}\}, \\
+      & \quad
       x_3 \mapsto \{\dbi{1}.\mathrm{argument},\;
         \mathrm{argument} \mapsto
-          \dbi{0}.\mathrm{argument}\}, \\
-  & \quad
+      \dbi{0}.\mathrm{argument}\}, \\
+      & \quad
       \_\mathrm{tail} \mapsto \{x_3.\mathrm{result},\;
-        \mathrm{argument} \mapsto x_2.\mathrm{result}\}, \\
-  & \quad
+      \mathrm{argument} \mapsto x_2.\mathrm{result}\}, \\
+      & \quad
       \mathrm{result} \mapsto
-        \_\mathrm{tail}.\mathrm{result}
-    \}\}
+      \_\mathrm{tail}.\mathrm{result}
+  \}\}
 \end{align*}
 Here $\dbi{1}.\mathrm{argument}$ in $x_3$ reaches the outer
 $\lambda a$ scope (one $\lambda$ up from $\lambda b$), and
@@ -2040,31 +2040,31 @@ $\mathrm{eq}$ to its two arguments via this mechanism:
 \begin{align*}
   e_1 \;=\; \{&
     \mathrm{eqFalse} \mapsto
-      \{\mathrm{eq},\;
-        \mathrm{argument} \mapsto \mathrm{false}\}, \\
+    \{\mathrm{eq},\;
+    \mathrm{argument} \mapsto \mathrm{false}\}, \\
     & \mathrm{applied} \mapsto
-      \{\mathrm{eqFalse}.\mathrm{result},\;
-        \mathrm{argument} \mapsto \mathrm{false}\}, \\
+    \{\mathrm{eqFalse}.\mathrm{result},\;
+    \mathrm{argument} \mapsto \mathrm{false}\}, \\
     & \mathrm{result} \mapsto
-      \mathrm{applied}.\mathrm{result}
+    \mathrm{applied}.\mathrm{result}
   \;\} \\[6pt]
   e_2 \;=\; \{&
     \mathrm{eqTrue} \mapsto
-      \{\mathrm{eq},\;
-        \mathrm{argument} \mapsto \mathrm{true}\}, \\
+    \{\mathrm{eq},\;
+    \mathrm{argument} \mapsto \mathrm{true}\}, \\
     & \mathrm{applied} \mapsto
-      \{\mathrm{eqTrue}.\mathrm{result},\;
-        \mathrm{argument} \mapsto \mathrm{true}\}, \\
+    \{\mathrm{eqTrue}.\mathrm{result},\;
+    \mathrm{argument} \mapsto \mathrm{true}\}, \\
     & \mathrm{result} \mapsto
-      \mathrm{applied}.\mathrm{result}
+    \mathrm{applied}.\mathrm{result}
   \;\}
 \end{align*}
 That is,
 $e_1 = \mathcal{T}(\mathrm{ANF}(
-  \mathrm{eq}\;\mathrm{false}\;\mathrm{false}))$
+\mathrm{eq}\;\mathrm{false}\;\mathrm{false}))$
 and
 $e_2 = \mathcal{T}(\mathrm{ANF}(
-  \mathrm{eq}\;\mathrm{true}\;\mathrm{true}))$,
+\mathrm{eq}\;\mathrm{true}\;\mathrm{true}))$,
 where $\mathrm{ANF}$ converts a $\lambda$-term to A-normal
 form by naming every intermediate application
 (Section~\ref{sec:forward-translation}).
@@ -2087,13 +2087,13 @@ $\mathrm{result}$ of $\mathrm{eq}$) and adds
 a sibling record $\mathrm{repr}$:
 \begin{align*}
   C ={} & \{\mathrm{eq} \mapsto \{
-    \mathrm{result} \mapsto \{
-      \mathrm{repr} \mapsto \{
-        \mathrm{firstOperand}
+      \mathrm{result} \mapsto \{
+        \mathrm{repr} \mapsto \{
+          \mathrm{firstOperand}
           \mapsto \dbi{2}.\mathrm{argument},\;
-        \mathrm{secondOperand}
+          \mathrm{secondOperand}
           \mapsto \dbi{1}.\mathrm{argument}
-    \}\}\}\}
+  \}\}\}\}
 \end{align*}
 The de~Bruijn indices count scope levels from
 $\mathrm{repr}$: $\dbi{0}$ is $\mathrm{repr}$ itself,
@@ -2135,7 +2135,6 @@ embedding is macro-expressible
 (Theorem~\ref{thm:forward-macro}), but the reverse is not
 (Theorem~\ref{thm:cartesian-non-expressibility}).
 \end{corollary}
-
 
 \section{Multi-Path Self-Reference in Other Systems}
 \label{app:scala-multi-path}
@@ -2578,7 +2577,8 @@ is an infinite labeled tree defined by:
   \bot & \text{if } M \text{ has no HNF} \\[6pt]
   \lambda x_1 \ldots x_m.\;
   y\bigl(\mathrm{BT}(M_1),\; \ldots,\; \mathrm{BT}(M_k)\bigr)
-  & \begin{aligned}[t]
+  &
+  \begin{aligned}[t]
     &\text{if } M \to^*_h \\[-2pt]
     &\lambda x_1 \ldots x_m.\; y\; M_1 \cdots M_k
   \end{aligned}
