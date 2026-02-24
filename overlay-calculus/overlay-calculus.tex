@@ -51,35 +51,7 @@
 \thanks{This work was conducted independently prior to the author's employment at Figure AI.}
 
 \begin{abstract}
-  Just as the $\lambda$-calculus uses three primitives (abstraction,
-  application, variable) as the foundation of functional programming,
-  overlay-calculus uses three primitives (record, definition, inheritance)
-  as the foundation of declarative programming.
-  It trivially embeds the $\lambda$-calculus, although the entire
-  semantics rests solely on naive set theory;
-  as a consequence, all constructs including inheritance are
-  inherently commutative, idempotent, and associative; the
-  linearization problem of multiple inheritance
-  does not arise.
-  This induces a fully abstract semantics of the lazy
-  $\lambda$-calculus with respect to B\"ohm tree
-  equivalence~\cite{barendregt1984lambda}.
-  Overlay-calculus is distilled from the Overlay language, a
-  practical implementation in which we observed further emergent
-  phenomena: the same code acts as different function
-  colors~\cite{nystrom2015color};
-  ordinary arithmetic
-  yields the relational semantics of logic programming~\cite{vanemden1976semantics};
-  self-reference resolves to multiple targets;
-  and programs are immune to the Expression Problem~\cite{wadler1998expression}.
-  This makes overlay-calculus strictly more expressive than the
-  $\lambda$-calculus in both common sense and Felleisen's
-  sense~\cite{felleisen1991expressive}.
-  These properties suggest applications to configuration languages,
-  dependency injection, object-oriented programming, composable
-  effect systems, modular software architectures,
-  file-system-as-compiler, general-purpose programming,
-  and no-code development.
+  Just as the $\lambda$-calculus uses three primitives (abstraction, application, variable) as the foundation of functional programming, overlay-calculus uses three primitives (record, definition, inheritance) as the foundation of declarative programming. It trivially embeds the $\lambda$-calculus, although the entire semantics rests solely on naive set theory; as a consequence, all constructs including inheritance are inherently commutative, idempotent, and associative; the linearization problem of multiple inheritance does not arise. This induces a fully abstract semantics of the lazy $\lambda$-calculus with respect to B\"ohm tree equivalence~\cite{barendregt1984lambda}. Overlay-calculus is distilled from the Overlay language, a practical implementation in which we observed further emergent phenomena: the same code acts as different function colors~\cite{nystrom2015color}; ordinary arithmetic yields the relational semantics of logic programming~\cite{vanemden1976semantics}; self-reference resolves to multiple targets; and programs are immune to the Expression Problem~\cite{wadler1998expression}. This makes overlay-calculus strictly more expressive than the $\lambda$-calculus in both common sense and Felleisen's sense~\cite{felleisen1991expressive}. These properties suggest applications to configuration languages, dependency injection, object-oriented programming, composable effect systems, modular software architectures, file-system-as-compiler, general-purpose programming, and no-code development.
 \end{abstract}
 
 \begin{CCSXML}
@@ -364,18 +336,18 @@ An inheritance is written as a reference
 that navigates the scope hierarchy upward and then projects
 properties downward. The upward navigation admits two equivalent
 notations:
-\begin{itemize}
-  \item \emph{Named form}:
+\begin{description}
+  \item[Named form]
     $\qualifiedthis{\ell_{\mathrm{up}}}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$,
     analogous to Java's \texttt{Outer.this.field}.
     Each $\{\ldots\}$ record has a label in its enclosing scope;
     $\ell_{\mathrm{up}}$ names the target enclosing scope.
-  \item \emph{Indexed form}:
+  \item[Indexed form]
     $\dbi{n}.\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$,
     where $n \ge 0$ is a de~Bruijn index~\cite{debruijn1972lambda}:
     $n = 0$ refers to the reference's enclosing scope,
     and each increment of $n$ moves one scope level further out.
-\end{itemize}
+\end{description}
 Both forms retrieve the target scope, that is, the fully inherited record
 after all inheritance has been applied, and then project properties
 $\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ from it.
@@ -788,8 +760,8 @@ the fixed point yields the empty set.
 
 This induced semantics is more elementary than traditional
 approaches in the mathematical machinery it requires:
-\begin{itemize}
-  \item \emph{No function spaces.}
+\begin{description}
+  \item[No function spaces]
     Scott's denotational semantics~\cite{scott1976data} constructs a
     reflexive domain $D$ satisfying $D \cong [D \to D]$ via an
     inverse limit in a category of continuous lattices.
@@ -801,7 +773,7 @@ approaches in the mathematical machinery it requires:
     (Appendix~\ref{app:well-definedness}), which requires
     only set-theoretic monotonicity, which is strictly weaker than
     Scott continuity.
-  \item \emph{No substitution.}
+  \item[No substitution]
     Operational semantics defines $\beta$-reduction via
     capture-avoiding substitution, a mechanism whose subtleties
     motivated de~Bruijn indices~\cite{debruijn1972lambda} and
@@ -809,14 +781,14 @@ approaches in the mathematical machinery it requires:
     Here, variable references are resolved by the $\this$
     function walking the inheritance tree; no substitution
     occurs at any point.
-  \item \emph{No reduction rules.}
+  \item[No reduction rules]
     There are no $\beta$-reduction steps, no evaluation
     contexts, and no choice between call-by-name and
     call-by-value~\cite{plotkin1975callbyname}.
     The semantics is observational: one queries path
     membership, and the mutually recursive equations unfold
     on demand.
-\end{itemize}
+\end{description}
 The key step is that function application is
 encoded as record inheritance, and the resulting record is
 observed through path queries rather than applied as a function;
@@ -1277,8 +1249,8 @@ direct counterpart in the $\lambda$-calculus.  Encoding any one
 of them requires pervasive, non-local changes to program
 structure.
 
-\begin{enumerate}
-  \item \textbf{Self-referential records with lazy evaluation.}
+\begin{description}
+  \item[Self-referential records with lazy evaluation]
     An overlay's properties can reference other properties and enclosing scopes
     through qualified this without explicit binding.
     In the $\lambda$-calculus, encoding such self-referential
@@ -1287,7 +1259,7 @@ structure.
     thunks or ML-style \texttt{ref} cells), obscuring the
     declarative intent.
 
-  \item \textbf{Open recursion with symmetric inheritance.}
+  \item[Open recursion with symmetric inheritance]
     Inheritance merges definitions from independent sources,
     all sharing the same inherited overlay tree.  Encoding this in
     the $\lambda$-calculus requires maintaining an extensible dictionary
@@ -1296,7 +1268,7 @@ structure.
     devoted an entire dissertation to formalizing this pattern in a
     functional setting.
 
-  \item \textbf{Commutative, idempotent merge.}
+  \item[Commutative, idempotent merge]
     Inheritance in overlay-calculus is symmetric:
     a record's elements form a set, so reordering them produces
     the same observable result.  In the $\lambda$-calculus, function composition
@@ -1304,7 +1276,7 @@ structure.
     these properties requires additional
     machinery~\cite{harper1991record,cardelli1992extensible}.
 
-  \item \textbf{Relational semantics.}
+  \item[Relational semantics]
     Every overlay-calculus operation is defined by recursion on
     overlay trees, not on individual values.
     When an overlay tree is viewed as a trie, the correspondence
@@ -1339,7 +1311,7 @@ structure.
     and set-valued computation are the same mechanism.  No code
     change is needed to move from one to the other.
 
-  \item \textbf{Function color blindness.}
+  \item[Function color blindness]
     \label{sec:practical-function-color}
     In a web
     application\selfcite{~\cite{mixin2025}}{~(supplementary material)}
@@ -1361,7 +1333,7 @@ structure.
     under a CPS interpretation, or with direct implementations
     under a direct-style interpretation, without explicit monad machinery.
 
-  \item \textbf{Immunity to nonextensibility.}
+  \item[Immunity to nonextensibility]
     Programming languages typically provide a mix of extensible and
     nonextensible constructs.
     In such languages, extensibility is opt-in: frameworks
@@ -1403,7 +1375,7 @@ structure.
       material)} inherits the immunity to nonextensibility and need
       only ensure that its type system does not introduce
     nonextensible constructs.}
-\end{enumerate}
+\end{description}
 
 \noindent
 Each of these features is primitive in overlay-calculus.
@@ -1458,121 +1430,123 @@ Existing designs occupy several of the resulting cells:
   \end{tabular}
 \end{center}
 
-\paragraph{Early binding}
-With early binding, references resolve at definition time to a
-fixed path, independently of how the record is later inherited.
-CUE~\cite{cue2019} exemplifies this: field references are
-statically resolved, and a field in a nested record cannot refer
-back to properties of its enclosing context contributed by later
-composition.
-Early binding combined with deep merge is coherent and
-practically useful, but cross-overlay cooperation requires
-explicit wiring rather than inheritance: a definition cannot
-observe properties contributed by overlays composed after it.
+\begin{description}
+  \item[Early binding]
+    With early binding, references resolve at definition time to a
+    fixed path, independently of how the record is later inherited.
+    CUE~\cite{cue2019} exemplifies this: field references are
+    statically resolved, and a field in a nested record cannot refer
+    back to properties of its enclosing context contributed by later
+    composition.
+    Early binding combined with deep merge is coherent and
+    practically useful, but cross-overlay cooperation requires
+    explicit wiring rather than inheritance: a definition cannot
+    observe properties contributed by overlays composed after it.
 
-\paragraph{Dynamic scope}
-With dynamic scope, references resolve against the context at
-the point of use rather than the definition site.
-Early Lisp implementations used dynamic scope~\cite{mccarthy1978history},
-where variable references are resolved against the run-time call stack.
-Union file systems exhibit the same property at the file-system
-level: a symbolic link's relative path resolves against the mount
-context at dereference time, not against the layer that defined
-the link.
-Jsonnet~\cite{jsonnet} follows this approach: \texttt{self} always
-refers to the final merged object, not the object at the definition
-site.
-When the Scala multi-path example (Appendix~\ref{app:scala-multi-path})
-is translated to Jsonnet, it does not error, but \texttt{outer}
-resolves to the merged \texttt{MyObjectA} rather than to
-\texttt{Object1} or \texttt{Object2} separately, silently discarding
-the distinction between the two inheritance routes.
-Dynamic scope is flexible but loses the ability to track
-which inheritance route a reference came from.
+  \item[Dynamic scope]
+    With dynamic scope, references resolve against the context at
+    the point of use rather than the definition site.
+    Early Lisp implementations used dynamic scope~\cite{mccarthy1978history},
+    where variable references are resolved against the run-time call stack.
+    Union file systems exhibit the same property at the file-system
+    level: a symbolic link's relative path resolves against the mount
+    context at dereference time, not against the layer that defined
+    the link.
+    Jsonnet~\cite{jsonnet} follows this approach: \texttt{self} always
+    refers to the final merged object, not the object at the definition
+    site.
+    When the Scala multi-path example (Appendix~\ref{app:scala-multi-path})
+    is translated to Jsonnet, it does not error, but \texttt{outer}
+    resolves to the merged \texttt{MyObjectA} rather than to
+    \texttt{Object1} or \texttt{Object2} separately, silently discarding
+    the distinction between the two inheritance routes.
+    Dynamic scope is flexible but loses the ability to track
+    which inheritance route a reference came from.
 
-\paragraph{Deep merge}
-Without the second case of equation~(\ref{eq:overlays}),
-$\overlays(p)$ would always return $\{p\}$, a single
-element.
-When two independently authored overlays both define a label
-with the same name at the same scope level, only the
-definition at the literal path~$p$ would contribute to
-$\supers$ and hence to $\properties$; the other definitions
-would be silently invisible.
-This is the situation in most composition systems:
-pytest permits at most one fixture per name per scope;
-trait systems~\cite{scharli2003traits} flag same-name
-methods as conflicts.
-Under any of these rules, two independently authored overlays
-that both extend an entity with the same name, which is the situation
-that arises naturally when solving the Expression
-Problem~\cite{wadler1998expression}, cannot be composed.
-The non-trivial case of equation~(\ref{eq:overlays}) removes
-this limitation: it collects all paths that share the same
-label and merges their definitions rather than shadowing each other.
-This is the record-level counterpart of method override in
-object-oriented languages, and the mechanism by which the calculus
-admits extensibility in both dimensions of the Expression
-Problem~\cite{wadler1998expression}
-(Section~\ref{sec:expression-problem}).
+  \item[Deep merge]
+    Without the second case of equation~(\ref{eq:overlays}),
+    $\overlays(p)$ would always return $\{p\}$, a single
+    element.
+    When two independently authored overlays both define a label
+    with the same name at the same scope level, only the
+    definition at the literal path~$p$ would contribute to
+    $\supers$ and hence to $\properties$; the other definitions
+    would be silently invisible.
+    This is the situation in most composition systems:
+    pytest permits at most one fixture per name per scope;
+    trait systems~\cite{scharli2003traits} flag same-name
+    methods as conflicts.
+    Under any of these rules, two independently authored overlays
+    that both extend an entity with the same name, which is the situation
+    that arises naturally when solving the Expression
+    Problem~\cite{wadler1998expression}, cannot be composed.
+    The non-trivial case of equation~(\ref{eq:overlays}) removes
+    this limitation: it collects all paths that share the same
+    label and merges their definitions rather than shadowing each other.
+    This is the record-level counterpart of method override in
+    object-oriented languages, and the mechanism by which the calculus
+    admits extensibility in both dimensions of the Expression
+    Problem~\cite{wadler1998expression}
+    (Section~\ref{sec:expression-problem}).
 
-\paragraph{Multi-target qualified this}
-The qualified this reference $\this$ answers the question:
-``in the fully inherited tree, where does
-the definition-site scope $p_{\mathrm{def}}$ actually live?''
-Scheme~\cite{sussman1975scheme} introduced lexical scope,
-where a de~Bruijn index resolves in a single step by indexing
-into the statically determined environment;
-this is predictable but rigid.
-Scala~\cite{odersky2004overview} and the NixOS module
-system~\cite{nixosmodules} follow the lexical approach:
-each \texttt{this} reference is bound to a single
-statically known path.
-When inheritance introduces multiple inheritance routes
-to the same scope, Scala rejects the ambiguity at compile time
-(Appendix~\ref{app:scala-multi-path})
-and the NixOS module system rejects the duplicate option
-declaration (Appendix~\ref{app:scala-multi-path}); neither
-can express that all routes are equally valid.
+  \item[Multi-target qualified this]
+    The qualified this reference $\this$ answers the question:
+    ``in the fully inherited tree, where does
+    the definition-site scope $p_{\mathrm{def}}$ actually live?''
+    Scheme~\cite{sussman1975scheme} introduced lexical scope,
+    where a de~Bruijn index resolves in a single step by indexing
+    into the statically determined environment;
+    this is predictable but rigid.
+    Scala~\cite{odersky2004overview} and the NixOS module
+    system~\cite{nixosmodules} follow the lexical approach:
+    each \texttt{this} reference is bound to a single
+    statically known path.
+    When inheritance introduces multiple inheritance routes
+    to the same scope, Scala rejects the ambiguity at compile time
+    (Appendix~\ref{app:scala-multi-path})
+    and the NixOS module system rejects the duplicate option
+    declaration (Appendix~\ref{app:scala-multi-path}); neither
+    can express that all routes are equally valid.
 
-Overlay-calculus combines the predictability of lexical scope
-with the flexibility of dynamic scope.
-The reference itself is lexically determined at the definition site
-as a de~Bruijn index, so what $\this$ looks up is predictable.
-But because inheritance interleaves scopes from
-different overlays, the result depends on the inherited tree
-structure: $\this$ walks upward one scope level at a time,
-consulting $\supers$ at each level, and naturally tracks a
-\emph{set} of inheritance-site paths rather than a single one.
-All routes contribute equally to the inherited result, and since
-inheritance is idempotent, duplicated contributions are harmless.
-The only observable is property presence, making
-multi-path resolution well-defined without disambiguation.
+    Overlay-calculus combines the predictability of lexical scope
+    with the flexibility of dynamic scope.
+    The reference itself is lexically determined at the definition site
+    as a de~Bruijn index, so what $\this$ looks up is predictable.
+    But because inheritance interleaves scopes from
+    different overlays, the result depends on the inherited tree
+    structure: $\this$ walks upward one scope level at a time,
+    consulting $\supers$ at each level, and naturally tracks a
+    \emph{set} of inheritance-site paths rather than a single one.
+    All routes contribute equally to the inherited result, and since
+    inheritance is idempotent, duplicated contributions are harmless.
+    The only observable is property presence, making
+    multi-path resolution well-defined without disambiguation.
 
-Our first three implementations of the Overlay language used
-standard techniques for self-reference resolution: closure-based
-fixed points following Cook~\cite{cook1989denotational}, and
-stack-based environment lookup using de~Bruijn
-indices~\cite{debruijn1972lambda}.
-All three produced subtle bugs when inheritance introduced
-multiple routes to the same enclosing scope.
-The difficulty was structural, not incidental:
-a closure captures a single environment, so a fixed-point
-combinator solves for a single self-reference; a stack-based
-environment is a linear chain where each scope level has one
-parent.
-Both data structures embed a single-valued assumption
-incompatible with the multi-path situation that multiple
-inheritance naturally produces
-(Appendix~\ref{app:scala-multi-path}).
-Equation~(\ref{eq:this}) emerged from abandoning this
-assumption: it tracks a \emph{frontier set}~$S$ rather than a
-single current scope.
-If the equations were restricted to single-target resolution,
-as in DOT's single-valued self
-variable~\cite{amin2016dot}, they would need to reject
-structurally legitimate cases, adding complexity rather than
-removing it.
+    Our first three implementations of the Overlay language used
+    standard techniques for self-reference resolution: closure-based
+    fixed points following Cook~\cite{cook1989denotational}, and
+    stack-based environment lookup using de~Bruijn
+    indices~\cite{debruijn1972lambda}.
+    All three produced subtle bugs when inheritance introduced
+    multiple routes to the same enclosing scope.
+    The difficulty was structural, not incidental:
+    a closure captures a single environment, so a fixed-point
+    combinator solves for a single self-reference; a stack-based
+    environment is a linear chain where each scope level has one
+    parent.
+    Both data structures embed a single-valued assumption
+    incompatible with the multi-path situation that multiple
+    inheritance naturally produces
+    (Appendix~\ref{app:scala-multi-path}).
+    Equation~(\ref{eq:this}) emerged from abandoning this
+    assumption: it tracks a \emph{frontier set}~$S$ rather than a
+    single current scope.
+    If the equations were restricted to single-target resolution,
+    as in DOT's single-valued self
+    variable~\cite{amin2016dot}, they would need to reject
+    structurally legitimate cases, adding complexity rather than
+    removing it.
+\end{description}
 
 \paragraph{Consequences of the alternative choices}
 Choosing differently in any dimension requires
@@ -1960,7 +1934,7 @@ The future work described below concerns the distance between this
 implementation and a fully practical language, spanning both
 theoretical foundations and library-level encodings.
 
-\paragraph{Type system}
+\subsection{Type System}
 The Overlay language's existing compile-time checks verify that every
 reference path resolves to a property that exists in the inherited
 result. Formalizing the soundness of these checks, that is, proving that
@@ -1987,7 +1961,7 @@ constraint on what must fill it.
 Totality checking would enforce such declarations statically,
 rejecting inheritances that leave required slots unfilled.
 
-\paragraph{Standard library}
+\subsection{Standard Library}
 The remaining items concern the \emph{standard library}: they require
 no extensions to the calculus or type system, but involve nontrivial
 encodings within the existing framework.
