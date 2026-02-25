@@ -236,5 +236,5 @@ experiment_results.db
 # nixago: ignore-linked-files
 /.vscode/extensions.json
 
-/overlay-calculus/arxiv-submission.tar.gz
+/inheritance-calculus/arxiv-submission.tar.gz
 node_modules/

@@ -1,5 +1,9 @@
 {
   "files.associations": {
+    "*.mixin.json": "json",
+    "*.mixin.toml": "toml",
+    "*.mixin.yaml": "yaml",
+    "*.mixin.yml": "yaml",
     "*.ojson": "json",
     "*.otoml": "toml",
     "*.oyaml": "yaml",
@@ -13,6 +17,8 @@
   "python.testing.unittestEnabled": false,
   "yaml.schemas": {
     "./overlay.schema.json": [
+      "*.mixin.yaml",
+      "*.mixin.yml",
       "*.oyml",
       "*.oyaml"
     ]

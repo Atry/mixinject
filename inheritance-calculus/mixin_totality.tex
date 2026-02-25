@@ -33,7 +33,7 @@
   backgroundcolor=\color{gray!10}
 }
 
-\title{the Overlay language: A Total Language with Lazy Evaluation and Automatic Termination}
+\title{MIXINv2: A Total Language with Lazy Evaluation and Automatic Termination}
 \author{}
 \date{}
 
@@ -42,7 +42,7 @@
 \maketitle
 
 \begin{abstract}
-We present the Overlay language, a programming language that achieves a unique combination of properties: compile-time Turing completeness, runtime totality (weak totality/productivity), support for circular references, and lazy evaluation. Unlike existing total languages that require manual termination proofs, the Overlay language uses a simple naming convention combined with compile-time checks to automatically guarantee productivity. This makes the Overlay language the first total language accessible to programmers without formal verification expertise.
+We present MIXINv2, a programming language that achieves a unique combination of properties: compile-time Turing completeness, runtime totality (weak totality/productivity), support for circular references, and lazy evaluation. Unlike existing total languages that require manual termination proofs, MIXINv2 uses a simple naming convention combined with compile-time checks to automatically guarantee productivity. This makes MIXINv2 the first total language accessible to programmers without formal verification expertise.
 \end{abstract}
 
 \section{Introduction}
@@ -56,7 +56,7 @@ Totality has two levels of guarantees:
   \item \textbf{Weak Totality (Productivity)}: Data structures may be conceptually infinite, but every finite access terminates and produces a well-defined result.
 \end{itemize}
 
-\textbf{the Overlay language guarantees weak totality:}
+\textbf{MIXINv2 guarantees weak totality:}
 \begin{itemize}
   \item Every finite-depth access to any value terminates
   \item Programs may have conceptually infinite structures (via recursive instantiation)
@@ -76,22 +76,22 @@ Most programming languages are \textbf{non-total}. For example:
 
 Total languages exist (Coq, Agda, Idris), but they require programmers to \textbf{manually prove} termination or productivity, which requires expertise in type theory and formal verification.
 
-\subsection{the Overlay language's Innovation}
+\subsection{MIXINv2's Innovation}
 
-The Overlay language achieves totality \textbf{automatically} through a simple naming convention:
+MIXINv2 achieves totality \textbf{automatically} through a simple naming convention:
 \begin{itemize}
   \item \textbf{PascalCase} (e.g., \texttt{Nat}, \texttt{Succ}) → scopes (types/constructors)
   \item \textbf{lowercase} (e.g., \texttt{predecessor}, \texttt{sum}) → resources (values/computations)
   \item All values are \textbf{lazily evaluated}, enabling circular references while maintaining totality
 \end{itemize}
 
-This naming convention, combined with the Overlay language's tree-based symbol structure, guarantees totality without any manual proofs.
+This naming convention, combined with MIXINv2's tree-based symbol structure, guarantees totality without any manual proofs.
 
 \section{Key Concepts}
 
 \subsection{Symbol Tree}
 
-Every the Overlay language program's symbols form a \textbf{tree structure}:
+Every MIXINv2 program's symbols form a \textbf{tree structure}:
 
 \begin{itemize}
   \item Each symbol has exactly one parent (except the root)
@@ -124,10 +124,10 @@ Root (Nat)
 
 \textbf{Structural recursion} means recursive calls are made only on \textbf{structurally smaller} values.
 
-In the Overlay language:
+In MIXINv2:
 \begin{itemize}
   \item The entire symbol tree, constructed at compile time, defines the static structure
-  \item the Overlay language prohibits referencing the root from within nested scopes
+  \item MIXINv2 prohibits referencing the root from within nested scopes
   \item At runtime, scopes can be \textbf{instantiated} (e.g., \texttt{[Succ, predecessor: value]})
   \item Instantiation creates new runtime instances, enabling conceptually infinite paths
 \end{itemize}
@@ -165,11 +165,11 @@ ones = 1 : ones  -- Infinite list of 1s
 take 5 ones  -- [1,1,1,1,1] - terminates!
 \end{lstlisting}
 
-In the Overlay language, lazy evaluation ensures that accessing any finite depth terminates, even when the conceptual structure is infinite.
+In MIXINv2, lazy evaluation ensures that accessing any finite depth terminates, even when the conceptual structure is infinite.
 
 \subsection{Instantiation Levels}
 
-To ensure weak totality, the Overlay language uses a concept similar to \textbf{universe levels} in type theory.
+To ensure weak totality, MIXINv2 uses a concept similar to \textbf{universe levels} in type theory.
 
 \textbf{Instantiation level} is a partial order:
 \begin{itemize}
@@ -243,9 +243,9 @@ This check, combined with instantiation levels and lazy evaluation, guarantees w
   \item Corecursion \textbf{produces} infinite data (must be productive)
 \end{itemize}
 
-The Overlay language uses lazy evaluation instead of explicit guardedness, achieving the same totality guarantee with simpler syntax.
+MIXINv2 uses lazy evaluation instead of explicit guardedness, achieving the same totality guarantee with simpler syntax.
 
-\section{the Overlay language's Four Properties}
+\section{MIXINv2's Four Properties}
 
 \subsection{Property 1: Compile-Time Turing Complete}
 
@@ -319,7 +319,7 @@ Resources (lowercase names) are evaluated lazily:
 \textbf{Key difference from Agda/Coq/Idris:}
 \begin{itemize}
   \item Agda/Coq/Idris use \textbf{strict evaluation + guardedness}
-  \item the Overlay language uses \textbf{lazy evaluation + automatic guards}
+  \item MIXINv2 uses \textbf{lazy evaluation + automatic guards}
 \end{itemize}
 
 \section{Example: Church Numerals}
@@ -332,7 +332,7 @@ Church numerals encode natural numbers using the successor function:
   \item $\texttt{Succ}(n)$ represents $n + 1$
 \end{itemize}
 
-\textbf{the Overlay language encoding:}
+\textbf{MIXINv2 encoding:}
 \begin{lstlisting}[style=yaml]
 Nat:
   Zero:
@@ -414,7 +414,7 @@ Succ.Addition._increased_addend          (Level 1 Succ instance)
   \item \textbf{Lazy evaluation}: Accessing \texttt{sum} only evaluates the finite chain needed for the specific computation.
 \end{enumerate}
 
-\textbf{the Overlay language verifies this automatically} by checking that:
+\textbf{MIXINv2 verifies this automatically} by checking that:
 \begin{itemize}
   \item The symbol tree is finite (compile-time)
   \item Same-level dependencies form a DAG (compile-time)
@@ -431,7 +431,7 @@ Succ.Addition._increased_addend          (Level 1 Succ instance)
 \textbf{Language} & \textbf{Compile-time} & \textbf{Runtime} & \textbf{Circular} & \textbf{Lazy} \\
 & \textbf{Turing Complete} & \textbf{Total} & \textbf{References} & \textbf{Evaluation} \\
 \hline
-\textbf{the Overlay language} & \checkmark & \checkmark & \checkmark & \checkmark \\
+\textbf{MIXINv2} & \checkmark & \checkmark & \checkmark & \checkmark \\
 \hline
 Agda & \checkmark & \checkmark & \checkmark (coind.) & $\times$ \\
 \hline
@@ -483,7 +483,7 @@ CoFixpoint ones : Stream :=
 \begin{itemize}
   \item Agda/Coq use \textbf{guardedness checking}
   \item Programmer must ensure recursion is guarded by constructors
-  \item the Overlay language uses \textbf{lazy evaluation} (automatic guards)
+  \item MIXINv2 uses \textbf{lazy evaluation} (automatic guards)
 \end{itemize}
 
 \subsection{Idris}
@@ -517,7 +517,7 @@ data Lazy : Type -> Type where
   \item Programmer must rewrite code or provide explicit proof
 \end{enumerate}
 
-\textbf{the Overlay language:}
+\textbf{MIXINv2:}
 \begin{enumerate}
   \item Programmer writes recursive code using lowercase names
   \item Compiler checks symbol tree is finite
@@ -539,7 +539,7 @@ ackermann (S m) (S n) = ackermann m (ackermann (S m) n)
 -- Need to use assert_total or provide proof
 \end{lstlisting}
 
-\textbf{the Overlay language (automatic):}
+\textbf{MIXINv2 (automatic):}
 \begin{lstlisting}[style=yaml]
 # Just use lowercase - automatically total!
 Succ:
@@ -553,7 +553,7 @@ Succ:
 \begin{center}
 \begin{tabular}{|l|l|l|}
 \hline
-\textbf{Aspect} & \textbf{Idris/Agda/Coq} & \textbf{the Overlay language} \\
+\textbf{Aspect} & \textbf{Idris/Agda/Coq} & \textbf{MIXINv2} \\
 \hline
 Structural recursion & Manual proof & \textbf{Automatic (tree)} \\
 \hline
@@ -570,7 +570,7 @@ Target audience & Type theorists & \textbf{All programmers} \\
 \end{tabular}
 \end{center}
 
-\section{Why the Overlay language's Combination is Unique}
+\section{Why MIXINv2's Combination is Unique}
 
 \subsection{No Other Language Has All Four Properties}
 
@@ -578,12 +578,12 @@ Target audience & Type theorists & \textbf{All programmers} \\
   \item \textbf{Agda/Coq}: Total but strict, require manual proofs
   \item \textbf{Idris}: Total but strict, require manual proofs
   \item \textbf{Haskell}: Lazy but not total
-  \item \textbf{the Overlay language}: \textbf{Total + Lazy + Automatic}
+  \item \textbf{MIXINv2}: \textbf{Total + Lazy + Automatic}
 \end{itemize}
 
 \subsection{The Secret: Tree Structure + Naming Convention + Level System}
 
-The Overlay language achieves automatic totality through:
+MIXINv2 achieves automatic totality through:
 
 \begin{enumerate}
   \item \textbf{Tree structure} provides the foundation:
@@ -630,7 +630,7 @@ The Overlay language achieves automatic totality through:
 \text{Write code} \to \text{Rejected!} \to \text{Learn proofs} \to \text{Rewrite} \to \text{Repeat}
 \]
 
-\textbf{the Overlay language:}
+\textbf{MIXINv2:}
 \[
 \text{Write code with lowercase} \to \checkmark \text{ Automatically total!}
 \]
@@ -646,7 +646,7 @@ The Overlay language achieves automatic totality through:
 
 \subsection{Summary}
 
-The Overlay language achieves a unique combination of properties:
+MIXINv2 achieves a unique combination of properties:
 \begin{enumerate}
   \item \textbf{Compile-time Turing complete}: Expressive type-level computation
   \item \textbf{Runtime weakly total}: All finite accesses terminate (productivity guarantee)
@@ -665,7 +665,7 @@ This is accomplished through:
 
 \subsection{Significance}
 
-The Overlay language is the \textbf{first total language accessible to all programmers}:
+MIXINv2 is the \textbf{first total language accessible to all programmers}:
 \begin{itemize}
   \item No type theory background needed
   \item No manual termination proofs
@@ -681,11 +681,11 @@ Potential extensions to explore:
   \item \textbf{Level inference}: Automatic inference of instantiation levels for better error messages
   \item \textbf{Optimization strategies}: Lazy evaluation optimization for deep instantiation chains
   \item \textbf{Integration with existing type systems}: Explore connections to universe levels in type theory
-  \item \textbf{Practical applications}: Verified software development using the Overlay language's automatic totality
+  \item \textbf{Practical applications}: Verified software development using MIXINv2's automatic totality
 \end{itemize}
 
 \section*{Acknowledgments}
 
-This work builds on decades of research in dependent types, lazy evaluation, and termination analysis. We acknowledge the foundational work in Haskell, Agda, Coq, and Idris that inspired the Overlay language's design.
+This work builds on decades of research in dependent types, lazy evaluation, and termination analysis. We acknowledge the foundational work in Haskell, Agda, Coq, and Idris that inspired MIXINv2's design.
 
 \end{document}

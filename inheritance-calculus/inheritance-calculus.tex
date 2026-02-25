@@ -23,7 +23,7 @@
 \newcommand{\Path}{\mathtt{Path}}
 \newcommand{\dom}{\mathtt{dom}}
 \newcommand{\properties}{\mathtt{properties}}
-\newcommand{\overlays}{\mathtt{overlays}}
+\newcommand{\overrides}{\mathtt{overrides}}
 \newcommand{\supers}{\mathtt{supers}}
 \newcommand{\inherits}{\mathtt{inherits}}
 \newcommand{\defines}{\mathtt{defines}}
@@ -38,7 +38,7 @@
 
 \begin{document}
 
-\title{A Calculus of Overlays}
+\title{A Calculus of Inheritance}
 
 \author{Bo Yang}
 \affiliation{%
@@ -51,7 +51,7 @@
 \thanks{This work was conducted independently prior to the author's employment at Figure AI.}
 
 \begin{abstract}
-  Just as the $\lambda$-calculus uses three primitives (abstraction, application, variable) as the foundation of functional programming, overlay-calculus uses three primitives (record, definition, inheritance) as the foundation of declarative programming. It trivially embeds the $\lambda$-calculus, although the entire semantics rests solely on naive set theory; as a consequence, all constructs including inheritance are inherently commutative, idempotent, and associative; the linearization problem of multiple inheritance does not arise. This induces a fully abstract semantics of the lazy $\lambda$-calculus with respect to B\"ohm tree equivalence~\cite{barendregt1984lambda}. Overlay-calculus is distilled from the Overlay language, a practical implementation in which we observed further emergent phenomena: the same code acts as different function colors~\cite{nystrom2015color}; ordinary arithmetic yields the relational semantics of logic programming~\cite{vanemden1976semantics}; self-reference resolves to multiple targets; and programs are immune to the Expression Problem~\cite{wadler1998expression}. This makes overlay-calculus strictly more expressive than the $\lambda$-calculus in both common sense and Felleisen's sense~\cite{felleisen1991expressive}. These properties suggest applications to configuration languages, dependency injection, object-oriented programming, composable effect systems, modular software architectures, file-system-as-compiler, general-purpose programming, and no-code development.
+  Just as the $\lambda$-calculus uses three primitives (abstraction, application, variable) as the foundation of functional programming, inheritance-calculus uses three primitives (record, definition, inheritance) as the foundation of declarative programming. It trivially embeds the $\lambda$-calculus, although the entire semantics rests solely on naive set theory; as a consequence, all constructs including inheritance are inherently commutative, idempotent, and associative; the linearization problem of multiple inheritance does not arise. This induces a fully abstract semantics of the lazy $\lambda$-calculus with respect to B\"ohm tree equivalence~\cite{barendregt1984lambda}. Inheritance-calculus is distilled from MIXINv2, a practical implementation in which we observed further emergent phenomena: the same code acts as different function colors~\cite{nystrom2015color}; ordinary arithmetic yields the relational semantics of logic programming~\cite{vanemden1976semantics}; self-reference resolves to multiple targets; and programs are immune to the Expression Problem~\cite{wadler1998expression}. This makes inheritance-calculus strictly more expressive than the $\lambda$-calculus in both common sense and Felleisen's sense~\cite{felleisen1991expressive}. These properties suggest applications to configuration languages, dependency injection, object-oriented programming, composable effect systems, modular software architectures, file-system-as-compiler, general-purpose programming, and no-code development.
 \end{abstract}
 
 \begin{CCSXML}
@@ -116,7 +116,7 @@ Declarative and configuration languages are ubiquitous in modern software
 engineering. Systems such as NixOS modules~\cite{dolstra2010nixos,nixosmodules},
 Jsonnet~\cite{jsonnet}, Hydra~\cite{hydra2023}, CUE~\cite{cue2019}, Dhall~\cite{dhall2017},
 Kustomize~\cite{kustomize}, and JSON Patch~\cite{rfc6902} all provide mechanisms for composing
-structured data through inheritance or overlay. Among these, the NixOS
+structured data through inheritance or merging. Among these, the NixOS
 module system stands out: its recursive attribute set merging with
 fixed-point semantics and deferred modules~\cite{nixosmodules} achieves
 considerable expressiveness in practice, and the mechanism has been adopted well beyond NixOS itself: Home
@@ -171,20 +171,20 @@ packages) behaves as a lazily observed structure in practice, allowing any
 single package to be evaluated without materializing the entire set.
 Guided by this observation, we set out to reduce the
 NixOS module system to a minimal set of primitives.
-Through iterative refinement, beginning with
-an early version implemented in Nix, the system evolved into the Overlay
-language\selfcite{~\cite{mixin2025}}{~(included as supplementary
+The reduction produced MIXIN, an early implementation in Nix,
+and subsequently
+MIXINv2\selfcite{~\cite{mixin2025}}{~(included as supplementary
 material)}, now implemented in Python: a declarative programming
 language with only three constructs (record literals, properties,
 and inheritance) and no functions or let-bindings.
 
-In developing real programs in the Overlay language, including boolean logic and
+In developing real programs in MIXINv2, including boolean logic and
 natural number arithmetic (Section~\ref{sec:case-study}) and a web application
 (Section~\ref{sec:practical-function-color}), we found that the
 linearization problem of mixin-based
 systems~\cite{bracha1990mixin,c3linearization} is structurally absent:
 because records are sets, inheritance is inherently commutative,
-idempotent, and associative (Section~\ref{sec:overlay-trees}).
+idempotent, and associative (Section~\ref{sec:mixin-trees}).
 Self-reference naturally resolves to \emph{multiple objects} rather than
 one; prior systems assume single-object resolution and reject the
 multi-path situation (Scala, NixOS module system).
@@ -192,33 +192,33 @@ Self-referential records require no fixed-point combinator---the
 inheritance tree \emph{is} the call stack, and qualified this resolution
 is a first-order set-theoretic query, not a fixed-point construction.
 We also found that boolean logic and arithmetic, implemented as separate
-overlay files, extend in both dimensions of the Expression
+MIXINv2 files, extend in both dimensions of the Expression
 Problem~\cite{wadler1998expression} without any dedicated mechanism;
 that Church-encoded values automatically form trie structures; and
 that operations on tries automatically become Cartesian products, so that
 adding $\{1,2\}$ to $\{3,4\}$ yields $\{4,5,6\}$, which
 is the relational semantics of logic programming~\cite{vanemden1976semantics}
 (Section~\ref{sec:case-study}); and that the same web
-application overlay file runs under both Python asyncio and synchronous
+application MIXINv2 file runs under both Python asyncio and synchronous
 execution without modification, an instance of function color
 blindness~\cite{nystrom2015color}, equivalently CPS-agnostic behavior
 (Section~\ref{sec:practical-function-color}).
 
-This paper distills these observations into \textbf{overlay-calculus},
+This paper distills these observations into \textbf{inheritance-calculus},
 a minimal computational model for declarative programming.
 \emph{Function application translates directly into inheritance}:
 a $\lambda$-abstraction corresponds to a record with an
 $\mathrm{argument}$ slot and a $\mathrm{result}$ slot, and function
 application corresponds to inheriting from the function record and a record
 that supplies the argument. Since the $\lambda$-calculus embeds into
-overlay-calculus, overlay-calculus is Turing complete.
+inheritance-calculus, inheritance-calculus is Turing complete.
 The translation reveals an asymmetry: embedding the
-$\lambda$-calculus into overlay-calculus requires five local,
+$\lambda$-calculus into inheritance-calculus requires five local,
 syntax-directed rules
 (Section~\ref{sec:forward-translation}), but the reverse is
 not macro-expressible under the equivalence notions fixed in
 Section~\ref{sec:asymmetry} and Appendix~\ref{app:expressiveness}---
-overlay enables open extension that changes
+inheritance-calculus enables open extension that changes
 operational equivalence on $\lambda$-terms, establishing a
 strict separation in Felleisen's sense of
 expressiveness~\cite{felleisen1991expressive}
@@ -226,16 +226,16 @@ expressiveness~\cite{felleisen1991expressive}
 
 Just as the $\lambda$-calculus uses three primitives (abstraction,
 application, variable) to serve as the foundation of functional
-programming, overlay-calculus uses three primitives (record, definition,
+programming, inheritance-calculus uses three primitives (record, definition,
 inheritance) to serve as the foundation of declarative programming.
 
 All constructions in this paper have been implemented and tested in
-the Overlay language,
+MIXINv2,
 \selfcite{available as open source~\cite{mixin2025}}{included as supplementary material},
 with a test suite covering every example.%
-\footnote{The Overlay language is statically typed and therefore
-  stricter than the untyped overlay-calculus.
-  All examples in this paper are ported from the Overlay language
+\footnote{MIXINv2 is statically typed and therefore
+  stricter than the untyped inheritance-calculus.
+  All examples in this paper are ported from MIXINv2
   and conform to both semantics.
   Elements added to satisfy the type checker are harmless
 for the algorithms presented here and may aid readability.}
@@ -243,14 +243,14 @@ All tests are mechanically verified against expected output snapshots.
 
 \paragraph{Contributions}
 \begin{itemize}
-  \item We present overlay-calculus, a minimal computational model for
-    declarative programming that contains only overlay constructs (record,
+  \item We present inheritance-calculus, a minimal computational model for
+    declarative programming that contains only three constructs (record,
     definition, inheritance) and no functions or scalar types.
   \item Inheritance operates at the \emph{tree level}:
     a record is a set of elements, both definitions and
-    inheritance sources, so inheriting from two overlays that share a label
+    inheritance sources, so inheriting from two mixins that share a label
     recursively merges their subtrees (deep merge), rather
-    than overriding at the method level as in mixin and trait calculi.
+    than overriding at the method level as in prior mixin and trait calculi.
     Since records are sets, inheritance is inherently commutative,
     idempotent, and associative.
     The linearization problem inherent in prior mixin and trait
@@ -260,9 +260,9 @@ All tests are mechanically verified against expected output snapshots.
     that a term reduces to.  The observer drives computation by
     querying paths in a lazily constructed tree.
   \item Self-referential records require no fixed-point combinator.
-    The $\lambda$-calculus translation maps each application to a
+    The $\lambda$-calculus translation maps each application to an
     inheritance; the resulting inheritance tree \emph{is} the call stack.
-    The $\this$ function of Section~\ref{sec:overlay-trees} resolves
+    The $\this$ function of Section~\ref{sec:mixin-trees} resolves
     self-references by walking this tree: a first-order set-theoretic
     query, not a fixed-point construction.
   \item Self-reference resolves to \emph{multiple objects}, not one.
@@ -274,7 +274,7 @@ All tests are mechanically verified against expected output snapshots.
     equally; this semantics does not introduce a route-priority
     disambiguation rule.
   \item The $\lambda$-calculus (in A-normal form) translates into
-    overlay-calculus in five rules (Section~\ref{sec:translation}).
+    inheritance-calculus in five rules (Section~\ref{sec:translation}).
     The translation is fully abstract with respect to
     B\"ohm tree equivalence under $\lambda$-definable contexts
     (Section~\ref{sec:bohm-tree}),
@@ -287,10 +287,10 @@ All tests are mechanically verified against expected output snapshots.
     (Section~\ref{sec:case-study}), and function color
     blindness~\cite{nystrom2015color}
     (Section~\ref{sec:practical-function-color}).
-  \item Open extension via overlay changes the operational
+  \item Open extension via inheritance changes the operational
     equivalence of $\lambda$-terms, establishing via
     Felleisen's Theorem~3.14~\cite{felleisen1991expressive}
-    that the $\lambda$-calculus cannot macro-express overlay
+    that the $\lambda$-calculus cannot macro-express inheritance-calculus
     (Section~\ref{sec:asymmetry}).
 \end{itemize}
 
@@ -324,9 +324,9 @@ duplicates have no effect; inheritance is inherently commutative,
 idempotent, and associative.
 
 The $\mapsto$ in $\ell \mapsto e$ defines a property, not a let-binding.
-There is no variable binding in overlay-calculus.
-The Overlay language also provides scalar types through a
-foreign-function interface (FFI); overlay-calculus is what remains
+There is no variable binding in inheritance-calculus.
+MIXINv2 also provides scalar types through a
+foreign-function interface (FFI); inheritance-calculus is what remains
 after removing the FFI.
 None of the examples in this paper uses the FFI; scalars
 did not arise.
@@ -352,12 +352,12 @@ Both forms retrieve the target scope, that is, the fully inherited record
 after all inheritance has been applied, and then project properties
 $\ell_{\mathrm{down},1}\ldots\ell_{\mathrm{down},k}$ from it.
 The named form desugars to the indexed form during parsing
-(Section~\ref{sec:overlay-trees}).
+(Section~\ref{sec:mixin-trees}).
 
 A new scope level is created at each $\{\ldots\}$ record literal.
-The scope contains all properties of that overlay, including those
+The scope contains all properties of that mixin, including those
 inherited via inheritance sources.
-For example, $\{a \mapsto \{\},\; b \mapsto \{\}\}$ is a single overlay whose scope
+For example, $\{a \mapsto \{\},\; b \mapsto \{\}\}$ is a single mixin whose scope
 contains both $a$ and $b$; so is $\{r,\; a \mapsto \{\}\}$ where $r$
 is a reference to a record containing $b$.
 Inheritance sources do not create additional scope levels.
@@ -383,36 +383,47 @@ properties defined in record literals, not those inherited through
 inheritance; one of the two qualified forms is required for
 inherited properties or to bypass variable shadowing.
 
-\section{Overlay Trees}
-\label{sec:overlay-trees}
+\section{Mixin Trees}
+\label{sec:mixin-trees}
 
 Given an AST, what are the \emph{properties} visible at
 each position in the tree? This section answers the question by
 defining a collection of mutually recursive functions over paths.
 
+A mixin tree has a single syntactic construct---the mixin---that
+simultaneously plays the roles of field, method, class, and object
+in object-oriented languages.
+A mixin that defines no children acts as a field or method;
+a mixin that defines children acts as a class;
+and every path in the tree is already an object, since its
+observable behavior is determined by the semantic functions below.
+This unification is the source of the calculus's economy:
+the six equations that follow suffice because they need only
+describe one kind of entity.
+
 Unlike the $\lambda$-calculus, which requires reduction rules
-($\beta$-reduction) to specify how terms compute, overlay-calculus has
+($\beta$-reduction) to specify how terms compute, inheritance-calculus has
 \emph{no reduction steps}. There is no rewriting of terms, no
 evaluation order, and no notion of a ``result'' that a term reduces to.
 Instead, the semantics is purely \emph{observational}: one queries
 whether a label $\ell$ is a property at a path $p$ in the inheritance
 tree. The mutually recursive functions defined below, namely $\properties$,
-$\supers$, $\overlays$, $\bases$, $\resolve$, and $\this$, constitute the
+$\supers$, $\overrides$, $\bases$, $\resolve$, and $\this$, constitute the
 \emph{entire} semantics. This is the observational perspective
 introduced in Section~\ref{sec:introduction}: like an
-F-coalgebra~\cite{rutten2000universal}, an overlay tree's behavior is
+F-coalgebra~\cite{rutten2000universal}, a mixin tree's behavior is
 determined by observation (property presence), not by reduction.
 
-Most of these functions have direct analogues in object-oriented languages:
+Each function has an analogue in object-oriented languages:
 $\Path$ identifies a position in the tree,
 $\init$ and $\last$ navigate paths,
 $\defines$ extracts the locally defined members from the AST,
 $\inherits$ extracts the inheritance declarations from the AST,
 $\properties$ computes all visible members at a path including both locally defined and inherited ones,
 $\supers$ computes the transitive inheritance closure,
-and $\bases$ collects the direct base classes.
-One function has no object-oriented analogue:
-$\overlays$ collects the identity-sharing paths that arise
+$\bases$ collects the direct base classes,
+and $\overrides$ generalizes method override to the tree setting,
+collecting the identity-sharing paths that arise
 when inheritance introduces multiple definitions
 of the same label at the same scope level.
 Two functions, the reference resolution function $\resolve$
@@ -495,8 +506,8 @@ those inherited from all supers:
 \begin{equation}\label{eq:properties}
   \properties(p) =
   \bigl\{\; \ell \;\big|\;
-    (\_,\; p_{\mathrm{overlay}}) \in \supers(p),\;
-    \ell \in \defines(p_{\mathrm{overlay}})
+    (\_,\; p_{\mathrm{override}}) \in \supers(p),\;
+    \ell \in \defines(p_{\mathrm{override}})
   \;\bigr\}
 \end{equation}
 The remainder of this section defines $\supers$,
@@ -505,37 +516,43 @@ and its dependencies.
 
 \paragraph{Supers}
 Intuitively, $\supers(p)$ collects every path that $p$ inherits from:
-the identity-sharing paths $\overlays$ of $p$ itself,
-plus the $\overlays$ of each
+the $\overrides$ of $p$ itself,
+plus the $\overrides$ of each
 direct base $\bases$ of $p$, and so on transitively.
 Each result is paired with the inheritance-site context
 $\init(p_{\mathrm{base}})$ through which it is reached.
 This provenance is needed by qualified this resolution, i.e.\ the $\this$ function defined below,
-to map a definition-site overlay back to
+to map a definition-site mixin back to
 the inheritance-site paths that incorporate it:
 \begin{equation}\label{eq:supers}
   \supers(p) =
-  \bigl\{\; (\init(p_{\mathrm{base}}),\; p_{\mathrm{overlay}}) \;\big|\;
+  \bigl\{\; (\init(p_{\mathrm{base}}),\; p_{\mathrm{override}}) \;\big|\;
     p_{\mathrm{base}} \in \bases^*(p),\;
-    p_{\mathrm{overlay}} \in \overlays(p_{\mathrm{base}})
+    p_{\mathrm{override}} \in \overrides(p_{\mathrm{base}})
   \;\bigr\}
 \end{equation}
 Here $\bases^*$ denotes the reflexive-transitive closure of $\bases$.
 The $\supers$ formula depends on two functions:
-the identity-sharing paths $\overlays$ and the one-hop reference targets $\bases$.
-We define $\overlays$ first.
+$\overrides$ and the one-hop reference targets $\bases$.
+We define $\overrides$ first.
 
-\paragraph{Overlays}
-Intuitively, inheritance can introduce multiple
+\paragraph{Overrides}
+Because inheritance-calculus has no separate notion of ``method,''
+a mixin simultaneously plays the role of a class and the role
+of a method in object-oriented languages.
+When a mixin is viewed as a method, a child scope should be
+able to find it through the parent's label even if the child
+does not redefine that label---this is method override.
+Concretely, inheritance can introduce multiple
 definitions of the same label at the same scope level;
-$\overlays(p)$ collects all such paths that share the
+$\overrides(p)$ collects all such paths that share the
 \emph{same identity} as $p$, so that their definitions
 merge rather than shadow each other, enabling deep merge.
-Concretely, the overlays of $p$ include $p$ itself
+The overrides of $p$ include $p$ itself
 and $p_{\mathrm{branch}} \snoc \last(p)$ for every
 branch $p_{\mathrm{branch}}$ of $\init(p)$ that also defines $\last(p)$:
-\begin{equation}\label{eq:overlays}
-  \overlays(p) =
+\begin{equation}\label{eq:overrides}
+  \overrides(p) =
   \begin{cases}
     \{p\} & \text{if } p = ()  \\[6pt]
     \{p\}
@@ -556,14 +573,14 @@ Intuitively, $\bases(p)$ are the paths that $p$ directly
 inherits from via references, analogous to the direct base
 classes in object-oriented languages.
 Concretely, $\bases$ resolves every reference in
-$p$'s $\overlays$ one step:
+$p$'s $\overrides$ one step:
 \begin{equation}\label{eq:bases}
   \bases(p) =
   \left\{\; p_{\mathrm{target}} \;\left|\;
     \begin{aligned}
-      &p_{\mathrm{overlay}} \in \overlays(p), \\
-      &(n,\; \ell_{\mathrm{down},*}) \in \inherits(p_{\mathrm{overlay}}), \\
-      &p_{\mathrm{target}} \in \resolve(\init(p),\; p_{\mathrm{overlay}},\; n,\; \ell_{\mathrm{down},*})
+      &p_{\mathrm{override}} \in \overrides(p), \\
+      &(n,\; \ell_{\mathrm{down},*}) \in \inherits(p_{\mathrm{override}}), \\
+      &p_{\mathrm{target}} \in \resolve(\init(p),\; p_{\mathrm{override}},\; n,\; \ell_{\mathrm{down},*})
     \end{aligned}
   \right.\right\}
 \end{equation}
@@ -600,7 +617,7 @@ $\this$ answers the question:
 ``in the fully inherited tree, where does
 the definition-site scope $p_{\mathrm{def}}$ actually live?''
 Each step finds, among the supers of every path in the
-frontier $S$, those whose overlay component matches
+frontier $S$, those whose override component matches
 $p_{\mathrm{def}}$, and collects the corresponding
 inheritance-site paths as the new frontier.
 After $n$ steps the frontier contains the answer:
@@ -613,9 +630,9 @@ After $n$ steps the frontier contains the answer:
         \left\{\; p_{\mathrm{site}} \;\left|\;
           \begin{aligned}
             &p_{\mathrm{current}} \in S, \\
-            &(p_{\mathrm{site}},\; p_{\mathrm{overlay}})
+            &(p_{\mathrm{site}},\; p_{\mathrm{override}})
             \in \supers(p_{\mathrm{current}}), \\
-            &\text{s.t.}\; p_{\mathrm{overlay}} = p_{\mathrm{def}}
+            &\text{s.t.}\; p_{\mathrm{override}} = p_{\mathrm{def}}
           \end{aligned}
         \right.\right\},\;
         \init(p_{\mathrm{def}}),\;
@@ -632,11 +649,11 @@ This completes the chain of definitions needed to compute $\properties(p)$.
 
 \paragraph{Observational semantics without reduction}
 The definitions above constitute the complete semantics of
-overlay-calculus. There are no reduction rules, no evaluation contexts,
+inheritance-calculus. There are no reduction rules, no evaluation contexts,
 and no small-step or big-step judgments. In the $\lambda$-calculus, a term such as
 $(\lambda x.\, x)\; y$ must be \emph{reduced} to $y$ before its
 meaning is apparent; the operational semantics specifies how and in what
-order reductions occur. In overlay-calculus, an inheritance tree such as
+order reductions occur. In inheritance-calculus, an inheritance tree such as
 $\{a \mapsto \{\},\; b \mapsto \{\}\}$ does not reduce to
 anything: it \emph{is} the value. The functions $\properties$,
 $\supers$, etc.\ determine what is observable at each path, and that is
@@ -669,7 +686,7 @@ structure.
 \label{sec:forward-translation}
 
 The following translation maps the $\lambda$-calculus in
-A-normal form (ANF)~\cite{flanagan1993essence} to overlay-calculus.
+A-normal form (ANF)~\cite{flanagan1993essence} to inheritance-calculus.
 In ANF, every intermediate result is bound to a name and each
 expression contains at most one application:
 \[
@@ -684,14 +701,14 @@ Every $\lambda$-term can be mechanically converted to ANF by
 naming intermediate results, and every ANF term is a
 $\lambda$-term, so ANF is neither a restriction nor an
 extension of the $\lambda$-calculus.
-The ANF structure matches overlay-calculus naturally: each
+The ANF structure matches inheritance-calculus naturally: each
 $\mathbf{let}$-binding becomes a named record property, and
 each application is wrapped and projected via
 $.\mathrm{result}$.
 
 Let $\mathcal{T}$ denote the translation function.
 Each $\lambda$-abstraction introduces one scope level
-in the translated overlay tree.
+in the translated mixin tree.
 
 \medskip
 \begin{center}
@@ -742,14 +759,14 @@ structure (the $\mathrm{argument}$ and $\mathrm{result}$ labels
 of the callee) does not leak to the enclosing scope.
 
 The five rules above are a complete translation from the
-$\lambda$-calculus (via ANF) to overlay-calculus: every ANF
+$\lambda$-calculus (via ANF) to inheritance-calculus: every ANF
 term has an image, and the construction is compositional.
 Since the $\lambda$-calculus is Turing complete, so is
-overlay-calculus.
+inheritance-calculus.
 
 \paragraph{An elementary semantics of the $\lambda$-calculus}
 Composing the translation $\mathcal{T}$ with the semantic
-functions of Section~\ref{sec:overlay-trees} induces a semantics
+functions of Section~\ref{sec:mixin-trees} induces a semantics
 on the $\lambda$-calculus itself.
 Given a $\lambda$-term $M$, one translates it to
 $\mathcal{T}(M)$ and then determines convergence behavior by
@@ -794,7 +811,7 @@ encoded as record inheritance, and the resulting record is
 observed through path queries rather than applied as a function;
 no function spaces are required.
 Section~\ref{sec:bohm-tree} shows that the convergence behavior
-of the translated overlay tree corresponds exactly to the
+of the translated mixin tree corresponds exactly to the
 B\"ohm tree~\cite{barendregt1984lambda} of the original term:
 the translation is adequate, meaning a term converges iff it has a head
 normal form, and fully abstract with respect to
@@ -818,26 +835,26 @@ abstract~\cite{plotkin1975callbyname};
 Abramsky and McCusker's game semantics~\cite{abramsky1995games} achieves
 full abstraction but at the cost of even greater
 mathematical complexity.
-The overlay tree semantics achieves full abstraction with
+The mixin tree semantics achieves full abstraction with
 strictly simpler foundations than either.
 
 \subsection{B\"ohm Tree Correspondence}
 \label{sec:bohm-tree}
 
 The translation $\mathcal{T}$ induces a semantics on the $\lambda$-calculus
-via the overlay tree equations~(\ref{eq:properties})--(\ref{eq:this}).
+via the mixin tree equations~(\ref{eq:properties})--(\ref{eq:this}).
 We show that the induced semantics corresponds precisely to the
 B\"ohm tree~\cite{barendregt1984lambda} of the original $\lambda$-term.
 
-An overlay tree $T$ \emph{converges}, written $T{\Downarrow}$,
+A mixin tree $T$ \emph{converges}, written $T{\Downarrow}$,
 if following finitely many $\mathrm{result}$ projections from
 the root reaches a node with both $\mathrm{argument}$ and
 $\mathrm{result}$ among its properties, that is, the \emph{abstraction shape}
 produced by $\mathcal{T}(\lambda x.\, M)$.
 We write $T{\Uparrow}$ if no such depth exists.
 
-\begin{definition}[Overlay-convergence]\label{def:convergence}
-  An overlay tree $T$ \emph{converges}, written $T{\Downarrow}$,
+\begin{definition}[Inheritance-convergence]\label{def:convergence}
+  A mixin tree $T$ \emph{converges}, written $T{\Downarrow}$,
   if there exists $n \ge 0$ such that:
   \[
     \{\mathrm{argument},\, \mathrm{result}\}
@@ -848,7 +865,7 @@ We write $T{\Uparrow}$ if no such depth exists.
     \,\bigr)
   \]
   in the least fixed point of
-  Section~\ref{sec:overlay-trees}.
+  Section~\ref{sec:mixin-trees}.
 \end{definition}
 
 \begin{theorem}[Adequacy]\label{thm:adequacy}
@@ -873,11 +890,11 @@ We write $T{\Uparrow}$ if no such depth exists.
 
 \noindent
 Here $\approx_\lambda$ quantifies over $\lambda$-calculus
-contexts only; overlay contexts are strictly more
+contexts only; inheritance-calculus contexts are strictly more
 discriminating (Section~\ref{sec:asymmetry}).
 Together, Adequacy and Full Abstraction establish that
 the translation $\mathcal{T}$ is a fully faithful embedding of the
-lazy $\lambda$-calculus into overlay-calculus
+lazy $\lambda$-calculus into inheritance-calculus
 with respect to B\"ohm tree
 equivalence~\cite{barendregt1984lambda}, using only
 powerset lattices and the Knaster--Tarski fixed-point theorem,
@@ -892,12 +909,12 @@ Substitution Lemma, and Convergence Preservation, is given
 in Appendix~\ref{app:bohm-tree-proofs}.
 
 The relationship between $\approx_\lambda$ and full
-overlay-contextual equivalence is clarified by the expressive
+inheritance-contextual equivalence is clarified by the expressive
 asymmetry of the next section:
-overlay contexts can separate $\lambda$-terms that are
+inheritance-calculus contexts can separate $\lambda$-terms that are
 B\"ohm-tree equivalent, so
-${\approx_\lambda} \subsetneq {(\approx_{\mathrm{ov}}|_{\mathrm{im}(\mathcal{T})})}$.
-This gap is precisely the source of overlay-calculus's
+${\approx_\lambda} \subsetneq {(\approx_{\mathrm{inh}}|_{\mathrm{im}(\mathcal{T})})}$.
+This gap is precisely the source of inheritance-calculus's
 additional expressiveness
 (Theorem~\ref{thm:cartesian-non-expressibility}).
 
@@ -906,10 +923,10 @@ additional expressiveness
 \label{sec:formal-separation}
 Two $\lambda$-terms that are B\"ohm-tree equivalent---and
 therefore indistinguishable in the $\lambda$-calculus---can be
-separated in overlay-calculus by overlaying new observable
+separated in inheritance-calculus by inheriting new observable
 projections onto an existing definition via open extension.
 By Felleisen's expressiveness
-criterion~\cite{felleisen1991expressive}, overlay-calculus is
+criterion~\cite{felleisen1991expressive}, inheritance-calculus is
 strictly more expressive than the $\lambda$-calculus:
 the forward embedding is macro-expressible
 (Theorem~\ref{thm:forward-macro}), but the reverse is not
@@ -920,7 +937,7 @@ the separating construction is itself a miniature instance of
 the Expression Problem, adding a new observable projection to
 an existing definition without modifying it.
 
-The underlying mechanism is open extension: overlay
+The underlying mechanism is open extension: mixin
 definitions compose via open recursion, so existing
 definitions gain new observable properties without
 modification.  In the $\lambda$-calculus, a function's result
@@ -933,7 +950,7 @@ definition.
 \label{sec:expression-problem}
 
 We implemented boolean logic and natural number arithmetic, both unary
-and binary, as overlay
+and binary, as MIXINv2
 files\selfcite{~\cite{mixin2025}}{~(supplementary material)}.
 This section traces the unary Nat case in detail.
 The implementation follows a declarative object-oriented style:
@@ -968,7 +985,7 @@ The file name $\mathrm{NatData}$ is itself the top-level scope:
 \end{align*}
 
 \paragraph{NatPlus}
-Addition is a separate overlay file that inherits $\mathrm{NatData}$
+Addition is a separate MIXINv2 file that inherits $\mathrm{NatData}$
 and extends each constructor with a $\mathrm{Plus}$ operation
 exposing a $\mathrm{sum}$ field.
 The base case is $0 + m = m$; the recursive case reduces
@@ -1144,11 +1161,11 @@ dimensions of the Expression Problem~\cite{wadler1998expression}.
 
 \paragraph{Tree-level inheritance and return types}
 \label{sec:discussion-expression-problem}
-Each operation is an independent overlay that extends a factory's
+Each operation is an independent mixin that extends a factory's
 subtree.
 Inheritance recursively merges subtrees that share a label,
 so every entity in the factory acquires all operations from all
-inherited overlays.
+inherited mixins.
 Crucially, this applies to return types: $\mathrm{NatPlus}$ returns
 values from $\mathrm{NatFactory}$, and $\mathrm{NatEquality}$
 independently adds $\mathrm{Equal}$ to the same factory.
@@ -1235,7 +1252,7 @@ Cartesian product.
 The same $\mathrm{Plus}$ and $\mathrm{Equal}$ files that operate on
 single values thus produce, without modification, the relational
 semantics of logic programming:
-$\overlays$ and $\supers$ collect all inheritance paths, and
+$\overrides$ and $\supers$ collect all inheritance paths, and
 every operation distributes over them.
 
 \section{Discussion}
@@ -1244,14 +1261,14 @@ every operation distributes over them.
 \label{sec:reverse-translation}
 \label{sec:emergent-phenomena}
 
-Several features of overlay-calculus are primitive yet have no
+Several features of inheritance-calculus are primitive yet have no
 direct counterpart in the $\lambda$-calculus.  Encoding any one
 of them requires pervasive, non-local changes to program
 structure.
 
 \begin{description}
   \item[Self-referential records with lazy evaluation]
-    An overlay's properties can reference other properties and enclosing scopes
+    A mixin's properties can reference other properties and enclosing scopes
     through qualified this without explicit binding.
     In the $\lambda$-calculus, encoding such self-referential
     structures requires explicit allocation of mutable or lazy
@@ -1261,7 +1278,7 @@ structure.
 
   \item[Open recursion with symmetric inheritance]
     Inheritance merges definitions from independent sources,
-    all sharing the same inherited overlay tree.  Encoding this in
+    all sharing the same inherited mixin tree.  Encoding this in
     the $\lambda$-calculus requires maintaining an extensible dictionary
     of methods that can be merged from multiple directions.  Cook's
     denotational semantics of inheritance~\cite{cook1989denotational}
@@ -1269,7 +1286,7 @@ structure.
     functional setting.
 
   \item[Commutative, idempotent merge]
-    Inheritance in overlay-calculus is symmetric:
+    Inheritance in inheritance-calculus is symmetric:
     a record's elements form a set, so reordering them produces
     the same observable result.  In the $\lambda$-calculus, function composition
     $(f \circ g)$ is neither commutative nor idempotent, and simulating
@@ -1277,9 +1294,9 @@ structure.
     machinery~\cite{harper1991record,cardelli1992extensible}.
 
   \item[Relational semantics]
-    Every overlay-calculus operation is defined by recursion on
-    overlay trees, not on individual values.
-    When an overlay tree is viewed as a trie, the correspondence
+    Every inheritance-calculus operation is defined by recursion on
+    mixin trees, not on individual values.
+    When a mixin tree is viewed as a trie, the correspondence
     with relational algebra becomes precise:
     a path from the root to a leaf encodes a single value
     (e.g., $\mathrm{Successor} \to \mathrm{predecessor} \to
@@ -1300,13 +1317,13 @@ structure.
     structure of the computation is the same.
     In the Case Study (Section~\ref{sec:case-study}), the
     $\mathrm{Plus}$ and $\mathrm{Equal}$ operations are defined
-    on single Nat values.  When applied to set-valued overlays
+    on single Nat values.  When applied to set-valued mixins
     $\{1,2\}$ and $\{3,4\}$, the same definitions, without any
     modification, produce the set of all pairwise sums
     $\{4,5,6\}$.  This is relational
     semantics in action: each operation distributes over every
     combination of its inputs.  The behavior is native: the
-    semantic equations of Section~\ref{sec:overlay-trees}
+    semantic equations of Section~\ref{sec:mixin-trees}
     resolve every property to a set of paths, so single-valued
     and set-valued computation are the same mechanism.  No code
     change is needed to move from one to the other.
@@ -1317,13 +1334,13 @@ structure.
     application\selfcite{~\cite{mixin2025}}{~(supplementary material)}
     initially targeting Python's synchronous \texttt{sqlite3} and
     \texttt{http.server} modules,
-    the business logic overlay file contained no async-specific code.
+    the business logic MIXINv2 file contained no async-specific code.
     When the FFI layer was replaced with one built on
     \texttt{aiosqlite} and \texttt{starlette}, the business logic
-    overlay file did not change.
+    MIXINv2 file did not change.
     This is an instance of function color
     blindness~\cite{nystrom2015color}: async and sync functions are
-    distinct types in the host language, yet the overlay file is
+    distinct types in the host language, yet the MIXINv2 file is
     agnostic to the distinction because its empty property slots
     are filled at assembly time, with coroutine handlers under
     \texttt{asyncio}, or with direct implementations under
@@ -1345,9 +1362,9 @@ structure.
     wang2016trivially, leijen2017type, poulsen2023hefty},
     and code that uses nonextensible constructs
     cannot be extended unless rewritten in the framework.
-    In contrast, every construct of overlay-calculus
+    In contrast, every construct of inheritance-calculus
     (Section~\ref{sec:syntax}) is extensible
-    via deep merge (equation~\ref{eq:overlays}).
+    via deep merge (equation~\ref{eq:overrides}).
     There is no nonextensible construct, so it is
     impossible to write a nonextensible program.
     In the Case Study (Section~\ref{sec:case-study}),
@@ -1360,25 +1377,25 @@ structure.
     The Expressive Asymmetry
     (Section~\ref{sec:asymmetry};
     Theorem~\ref{thm:cartesian-non-expressibility}) provides the
-    formal counterpart: the overlay trees in its separating
+    formal counterpart: the mixin trees in its separating
     construction are mechanical translations of
     $\lambda$-terms via $\mathcal{T}$
     (Section~\ref{sec:forward-translation}), yet a new observable
     projection is added to them without modification.
     This is the extensibility that the Expression
     Problem~\cite{wadler1998expression} demands.%
-    \footnote{As an untyped calculus, overlay-calculus cannot violate
+    \footnote{As an untyped calculus, inheritance-calculus cannot violate
       the extensibility requirement of the Expression Problem but does
       not encounter its type-safety requirement.
       A typed language built on
-      overlay-calculus\selfcite{~\cite{mixin2025}}{~(supplementary
+      inheritance-calculus\selfcite{~\cite{mixin2025}}{~(supplementary
       material)} inherits the immunity to nonextensibility and need
       only ensure that its type system does not introduce
     nonextensible constructs.}
 \end{description}
 
 \noindent
-Each of these features is primitive in overlay-calculus.
+Each of these features is primitive in inheritance-calculus.
 In the $\lambda$-calculus, encoding them requires
 pervasive changes to program structure:
 every scope must thread a mutable store for lazy allocation,
@@ -1387,149 +1404,166 @@ dictionary for open recursion, and every composition must
 be wrapped in order-insensitive infrastructure for commutativity.
 These are global, cascading transformations, not local
 rewrites of individual terms.
-In common sense, overlay-calculus is strictly more expressive
+In common sense, inheritance-calculus is strictly more expressive
 than the $\lambda$-calculus.
 
 \subsection{Classification of Semantic Variants}
 \label{sec:semantic-variants}
 
-The goals of declarative programming rule out
-several properties of the model:
-separate primitives for methods, classes, types, and objects;
-mutable reference cells;
-domain-theoretic approximation;
-and asymmetric override.
-Ruling these out leaves a minimal syntax of three constructs:
-records, definitions, and inheritance.
-
-Two degrees of freedom remain.
-These dimensions are independent, and each combination yields a coherent semantics.
-They arise in any system whose definitions form a tree of named
-scopes, where each node is a path and references are
-path-dependent, even in systems ruled out above, such as Scala,
-which has separate primitives for methods, classes, objects, and types.
-
-Existing designs occupy several of the resulting cells:
+The preceding item established that inheritance-calculus is immune
+to nonextensibility.
+This section shows that immunity determines each semantic choice:
+every alternative design is vulnerable to nonextensibility
+in a specific way.
 
 \begin{center}
   \begin{tabular}{lll}
-    & \textbf{No deep merge} & \textbf{Deep merge} \\
+    \textbf{Variant} & \textbf{Vulnerability}
+    & \textbf{Representative systems} \\
     \hline
-    \textbf{Early binding}
-    & ---
+    Functions as unit of reuse
+    & same-label extensions conflict
+    & trait systems~\cite{scharli2003traits}, OOP languages \\
+    Early binding
+    & mixin cannot replace function
     & CUE~\cite{cue2019} \\
-    \textbf{Dynamic scope}
-    & ---
-    & union file systems, Jsonnet~\cite{jsonnet} \\
-    \textbf{Lexical scope}
-    & Scala~\cite{odersky2004overview}
+    Dynamic scope
+    & mixin cannot replace function
+    & Jsonnet~\cite{jsonnet}, union file systems \\
+    Single-target $\this$
+    & nested extensions rejected
     & NixOS modules~\cite{nixosmodules} \\
-    \textbf{Multi-target} $\this$
-    & ---
-    & overlay-calculus \\
   \end{tabular}
 \end{center}
 
 \begin{description}
+  \item[Functions as unit of reuse]
+    When the composition mechanism is function application,
+    the reuse unit is the closure.
+    A closure's internal structure is not visible to the
+    composition system: two closures that define the same label
+    cannot be merged.
+    Systems must reject the conflict
+    (trait systems~\cite{scharli2003traits} flag same-name methods),
+    linearize (MRO~\cite{c3linearization}), or shadow.
+    Extending an entity with a new operation requires modifying
+    the original definition or encoding extensibility via separate
+    machinery (visitor pattern,
+    object algebras~\cite{oliveira2012extensibility},
+    finally tagless interpreters~\cite{carette2009finally}).
+    In inheritance-calculus, the mixin is the unit of reuse.
+    A mixin's labels are visible to the composition system, and
+    deep merge (equation~\ref{eq:overrides}) combines same-label
+    definitions from independent sources.
+    This choice is what makes the framework of
+    Section~\ref{sec:mixin-trees} possible:
+    the six equations
+    (\ref{eq:properties})--(\ref{eq:this}) are set-theoretic
+    functions over a single meta-language object---the $\Path$ that
+    identifies a mixin---
+    with no function spaces, no reduction rules,
+    and no substitution
+    (Section~\ref{sec:forward-translation}).
+    A function-based semantics requires function spaces
+    (Scott domains satisfying $D \cong [D \to D]$),
+    reduction rules ($\beta$-reduction), and
+    capture-avoiding substitution---machinery that the
+    mixin-based framework avoids entirely.
+    Functions may exist at the periphery
+    (FFI, host-language interop);
+    core composition does not depend on closures, so their opacity
+    does not affect extensibility.
+    The $\lambda$-calculus embedding
+    (Section~\ref{sec:forward-translation}) translates
+    $\lambda$-functions into mixin records
+    $\{\mathrm{argument} \mapsto \{\},\;
+    \mathrm{result} \mapsto \ldots\}$,
+    retaining their computational semantics without their opacity.
+
   \item[Early binding]
     With early binding, references resolve at definition time to a
     fixed path, independently of how the record is later inherited.
     CUE~\cite{cue2019} exemplifies this: field references are
-    statically resolved, and a field in a nested record cannot refer
-    back to properties of its enclosing context contributed by later
+    statically resolved, and a nested field cannot refer to
+    properties of its enclosing context contributed by later
     composition.
-    Early binding combined with deep merge is coherent and
-    practically useful, but cross-overlay cooperation requires
-    explicit wiring rather than inheritance: a definition cannot
-    observe properties contributed by overlays composed after it.
+    This prevents the mixin from serving as a call stack for the
+    $\lambda$-calculus: $\beta$-reduction requires the callee to
+    observe the argument supplied at the call site, which is a
+    later composition.
+    With early binding, references are frozen before this
+    composition occurs.
+    In the equations,
+    $\resolve$~(\ref{eq:resolve}) calls
+    $\this$~(\ref{eq:this}), which walks the \emph{inherited}
+    tree structure; late binding is what allows
+    $\this$ to see properties contributed by later-composed
+    mixins.
+    Without a Turing-complete mixin, functions must be
+    reintroduced as the composition mechanism, re-exposing
+    the opacity problem above.
 
   \item[Dynamic scope]
-    With dynamic scope, references resolve against the context at
-    the point of use rather than the definition site.
-    Early Lisp implementations used dynamic scope~\cite{mccarthy1978history},
-    where variable references are resolved against the run-time call stack.
-    Union file systems exhibit the same property at the file-system
-    level: a symbolic link's relative path resolves against the mount
-    context at dereference time, not against the layer that defined
-    the link.
-    Jsonnet~\cite{jsonnet} follows this approach: \texttt{self} always
-    refers to the final merged object, not the object at the definition
-    site.
-    When the Scala multi-path example (Appendix~\ref{app:scala-multi-path})
-    is translated to Jsonnet, it does not error, but \texttt{outer}
-    resolves to the merged \texttt{MyObjectA} rather than to
-    \texttt{Object1} or \texttt{Object2} separately, silently discarding
-    the distinction between the two inheritance routes.
-    Dynamic scope is flexible but loses the ability to track
-    which inheritance route a reference came from.
+    With dynamic scope, references resolve at the point of use
+    rather than the definition site.
+    Jsonnet~\cite{jsonnet} follows this approach: \texttt{self}
+    always refers to the final merged object, not the object at
+    the definition site.
+    Union file systems exhibit the same property at the
+    file-system level: a symbolic link's relative path resolves
+    against the mount context at dereference time, not against the
+    layer that defined the link.
+    Dynamic scope does not preserve de~Bruijn index semantics:
+    the $\lambda$-calculus requires variable references to resolve
+    at the lexical definition site.
+    In the equations, $\resolve$~(\ref{eq:resolve}) starts from
+    the definition-site path $\init(p_{\mathrm{def}})$, and
+    $\this$~(\ref{eq:this}) uses the de~Bruijn index~$n$
+    determined at the definition site;
+    dynamic scope would replace both with a runtime context,
+    losing the lexical structure that the $\lambda$-calculus
+    embedding relies on.
+    When the multi-path example
+    (Appendix~\ref{app:scala-multi-path}) is translated to
+    Jsonnet, \texttt{outer} resolves to the merged
+    \texttt{MyObjectA} rather than to \texttt{Object1} or
+    \texttt{Object2} separately, collapsing the two inheritance
+    routes into one.
+    As with early binding, the mixin cannot serve as a complete
+    replacement for functions.
 
-  \item[Deep merge]
-    Without the second case of equation~(\ref{eq:overlays}),
-    $\overlays(p)$ would always return $\{p\}$, a single
-    element.
-    When two independently authored overlays both define a label
-    with the same name at the same scope level, only the
-    definition at the literal path~$p$ would contribute to
-    $\supers$ and hence to $\properties$; the other definitions
-    would be silently invisible.
-    This is the situation in most composition systems:
-    pytest permits at most one fixture per name per scope;
-    trait systems~\cite{scharli2003traits} flag same-name
-    methods as conflicts.
-    Under any of these rules, two independently authored overlays
-    that both extend an entity with the same name, which is the situation
-    that arises naturally when solving the Expression
-    Problem~\cite{wadler1998expression}, cannot be composed.
-    The non-trivial case of equation~(\ref{eq:overlays}) removes
-    this limitation: it collects all paths that share the same
-    label and merges their definitions rather than shadowing each other.
-    This is the record-level counterpart of method override in
-    object-oriented languages, and the mechanism by which the calculus
-    admits extensibility in both dimensions of the Expression
+  \item[Single-target $\this$]
+    When multiple inheritance routes reach the same scope,
+    single-target resolution must reject the situation or select
+    one route.
+    The NixOS module system~\cite{nixosmodules} raises a
+    duplicate-declaration error
+    (Appendix~\ref{app:scala-multi-path}).
+    This rejects nested extensions where two independently authored
+    modules define the same option---a composition that arises
+    when solving the Expression
     Problem~\cite{wadler1998expression}
     (Section~\ref{sec:expression-problem}).
+    In the equations, $\this$~(\ref{eq:this}) tracks a frontier
+    \emph{set}~$S$ rather than a single path;
+    $\resolve$~(\ref{eq:resolve}) inherits the multi-valued
+    result, and $\bases$~(\ref{eq:bases}) collects targets from
+    all resolved paths.
+    Restricting $S$ to a single element would require a
+    disambiguation rule absent from the equations.
+    Functions-as-reuse-unit and single-target $\this$ affect
+    extensibility at different levels: opaque functions prevent
+    same-level merging; single-target $\this$ prevents cross-level
+    (nested) extensions from coexisting.
 
-  \item[Multi-target qualified this]
-    The qualified this reference $\this$ answers the question:
-    ``in the fully inherited tree, where does
-    the definition-site scope $p_{\mathrm{def}}$ actually live?''
-    Scheme~\cite{sussman1975scheme} introduced lexical scope,
-    where a de~Bruijn index resolves in a single step by indexing
-    into the statically determined environment;
-    this is predictable but rigid.
-    Scala~\cite{odersky2004overview} and the NixOS module
-    system~\cite{nixosmodules} follow the lexical approach:
-    each \texttt{this} reference is bound to a single
-    statically known path.
-    When inheritance introduces multiple inheritance routes
-    to the same scope, Scala rejects the ambiguity at compile time
-    (Appendix~\ref{app:scala-multi-path})
-    and the NixOS module system rejects the duplicate option
-    declaration (Appendix~\ref{app:scala-multi-path}); neither
-    can express that all routes are equally valid.
-
-    Overlay-calculus combines the predictability of lexical scope
-    with the flexibility of dynamic scope.
-    The reference itself is lexically determined at the definition site
-    as a de~Bruijn index, so what $\this$ looks up is predictable.
-    But because inheritance interleaves scopes from
-    different overlays, the result depends on the inherited tree
-    structure: $\this$ walks upward one scope level at a time,
-    consulting $\supers$ at each level, and naturally tracks a
-    \emph{set} of inheritance-site paths rather than a single one.
-    All routes contribute equally to the inherited result, and since
-    inheritance is idempotent, duplicated contributions are harmless.
-    The only observable is property presence, making
-    multi-path resolution well-defined without disambiguation.
-
-    Our first three implementations of the Overlay language used
+    Our first three implementations of MIXINv2 used
     standard techniques for self-reference resolution: closure-based
     fixed points following Cook~\cite{cook1989denotational}, and
     stack-based environment lookup using de~Bruijn
     indices~\cite{debruijn1972lambda}.
     All three produced subtle bugs when inheritance introduced
     multiple routes to the same enclosing scope.
-    The difficulty was structural, not incidental:
+    The difficulty was structural:
     a closure captures a single environment, so a fixed-point
     combinator solves for a single self-reference; a stack-based
     environment is a linear chain where each scope level has one
@@ -1541,40 +1575,15 @@ Existing designs occupy several of the resulting cells:
     Equation~(\ref{eq:this}) emerged from abandoning this
     assumption: it tracks a \emph{frontier set}~$S$ rather than a
     single current scope.
-    If the equations were restricted to single-target resolution,
-    as in DOT's single-valued self
-    variable~\cite{amin2016dot}, they would need to reject
-    structurally legitimate cases, adding complexity rather than
-    removing it.
 \end{description}
 
-\paragraph{Consequences of the alternative choices}
-Choosing differently in any dimension requires
-introducing machinery that is absent from the equations
-of Section~\ref{sec:overlay-trees}.
-With early binding, the equations must freeze reference targets
-at definition time, so a definition cannot observe properties
-contributed by later-composed overlays.
-With dynamic scope, the equations must resolve references
-against a runtime context rather than the definition-site
-structure, losing the ability to distinguish inheritance routes.
-Restricting $\overlays(p)$ to $\{p\}$ means same-label
-definitions from different inheritance sources no longer
-share identity, requiring either a method resolution order
-(MRO)~\cite{c3linearization} to linearize them or a
-shadowing rule to select one and discard the rest, which is
-why systems without deep merge rarely support
-path-dependent multiple inheritance in practice.
-Restricting $\this$ to a single path requires a mechanism to
-select among inheritance routes (Scala rejects the ambiguity
-  at compile time; the NixOS module system raises a
-duplicate-declaration error), and loses contributions from
-all non-selected routes.
-These mechanisms, including early-binding freezing, runtime context
-threading, MRO, shadowing, route selection, and error
-reporting, are more artificial than their absence.
-The equations of Section~\ref{sec:overlay-trees} contain
-none of them.
+\noindent
+Inheritance-calculus is the design point where immunity to
+nonextensibility holds.
+The mechanisms present in the alternative designs---MRO,
+framework encodings, explicit wiring, runtime context threading,
+duplicate-declaration errors---are absent from the equations of
+Section~\ref{sec:mixin-trees}.
 
 \section{Related Work}
 \label{sec:related-work}
@@ -1842,7 +1851,7 @@ Whether these three roles could be unified under a single construct
 remains an open question in the DOT line of work.
 DOT includes the $\lambda$-calculus as a sub-language; removing it
 while retaining path-dependent types would yield a calculus closer
-to pure overlay inheritance
+to pure mixin inheritance
 (see Section~\ref{sec:future-work}).
 
 \paragraph{Configuration languages}
@@ -1868,9 +1877,9 @@ operator, not an inheritance mechanism.
 \paragraph{Module systems and deep merge}
 The NixOS module system~\cite{dolstra2010nixos,nixosmodules}
 composes modules by \emph{recursively merging nested attribute sets},
-not by linearization or method-level override, which is the same overlay
-semantics that distinguishes tree-level inheritance from mixin and
-trait composition.
+not by linearization or method-level override, which is the same deep-merge
+semantics that distinguishes tree-level inheritance from method-level
+composition in prior mixin and trait calculi.
 When two modules define the same nested path, their subtrees are
 merged rather than overridden.
 The NixOS module system incorporates deep merge,
@@ -1891,26 +1900,26 @@ with a static error (Appendix~\ref{app:scala-multi-path}).
 The module system cannot express that both routes contribute
 equally to the same option, that is, the multi-path situation that
 recursive merging naturally gives rise to, which motivated the
-coalgebraic semantics of Section~\ref{sec:overlay-trees}.
+coalgebraic semantics of Section~\ref{sec:mixin-trees}.
 
 \paragraph{Modular software architectures}
 \label{sec:practical-modular}
 Plugin systems, component frameworks, and dependency injection frameworks
 enable software extensibility through declarative inheritance. The
-symmetric, associative nature of inheritance (Section~\ref{sec:overlay-trees}) explains why such
+symmetric, associative nature of inheritance (Section~\ref{sec:mixin-trees}) explains why such
 systems work: components can be inherited in any order without changing
-behavior. These systems implement overlay-calculus patterns ad hoc.
+behavior. These systems implement inheritance-calculus patterns ad hoc.
 
 \paragraph{Union file systems}
 \label{sec:practical-union-fs}
 Union file systems (UnionFS, OverlayFS, AUFS) layer multiple directory
 hierarchies to present a unified view. Their semantics resembles
-overlay-calculus in that later layers override earlier layers and files from all
+inheritance-calculus in that later layers override earlier layers and files from all
 layers remain accessible, but without a formal foundation these systems
 resort to ad-hoc choices: asymmetric inheritance, non-commutative
 conflict resolution for scalar files, and no late-binding or dynamic
 dispatch across layers.
-We implemented overlay-calculus directly as a union file
+We implemented inheritance-calculus directly as a union file
 system\selfcite{~\cite{ratarmount2025}}{~(included as supplementary material)},
 obtaining late-binding semantics and dynamic dispatch for file lookups
 with no additional mechanism beyond the three primitives.
@@ -1924,38 +1933,38 @@ both the source program and the compilation target.
 \section{Future Work}
 \label{sec:future-work}
 
-\selfcite{The Overlay language~\cite{mixin2025}}{The supplementary
-implementation} is an executable implementation of overlay-calculus
+\selfcite{MIXINv2~\cite{mixin2025}}{The supplementary
+implementation} is an executable implementation of inheritance-calculus
 that already goes beyond the untyped calculus presented here:
 it includes compile-time checking that all references resolve to
-valid paths in the inheritance, and a foreign-function interface (FFI)
+valid paths in the mixin tree, and a foreign-function interface (FFI)
 that introduces scalar values from the host language.
 The future work described below concerns the distance between this
 implementation and a fully practical language, spanning both
 theoretical foundations and library-level encodings.
 
 \subsection{Type System}
-The Overlay language's existing compile-time checks verify that every
+MIXINv2's existing compile-time checks verify that every
 reference path resolves to a property that exists in the inherited
 result. Formalizing the soundness of these checks, that is, proving that
 well-typed programs do not produce dangling references at
 runtime, is one direction of future work.
 Such a formalization would relate to the DOT
 calculus~\cite{amin2016dot} in a manner analogous to how
-overlay-calculus relates to the $\lambda$-calculus: a Typed
-overlay-calculus can be viewed as DOT without $\lambda$, retaining
+inheritance-calculus relates to the $\lambda$-calculus: a Typed
+inheritance-calculus can be viewed as DOT without $\lambda$, retaining
 path-dependent types while replacing functions with
-overlay inheritance.
+mixin inheritance.
 A formal type system would be amenable to mechanization in proof
 assistants (Coq, Agda) for verifying type safety, progress, and
 preservation properties.
 
 Beyond soundness of the existing checks, additional type system
 features would strengthen the language.
-A key example is \emph{totality checking}: verifying that a
+A key example is \emph{totality checking}: verifying that an
 inheritance provides implementations for all required slots, not
 merely that references resolve.
-In untyped overlay-calculus, writing $\mathrm{magnitude} \mapsto \{\}$
+In untyped inheritance-calculus, writing $\mathrm{magnitude} \mapsto \{\}$
 is purely documentary: it defines a structural slot but imposes no
 constraint on what must fill it.
 Totality checking would enforce such declarations statically,
@@ -1966,8 +1975,8 @@ The remaining items concern the \emph{standard library}: they require
 no extensions to the calculus or type system, but involve nontrivial
 encodings within the existing framework.
 
-Overlay-calculus is \emph{open by default}: inheritance
-can freely merge any two overlays, and a value may simultaneously
+Inheritance-calculus is \emph{open by default}: inheritance
+can freely merge any two mixins, and a value may simultaneously
 inhabit multiple constructors (e.g.,
 $\{\mathrm{Zero},\; \mathrm{Odd},\; \mathrm{half} \mapsto \mathrm{Zero}\}$).
 This is not a defect; it is the natural trie semantics of the
@@ -2008,9 +2017,9 @@ dispatch.
 \section{Conclusion}
 
 The goals of declarative programming forced the semantics
-of overlay-calculus upon us.
+of inheritance-calculus upon us.
 The emergent phenomena exhibit an expressive asymmetry
-between overlay-calculus and the $\lambda$-calculus.
+between inheritance-calculus and the $\lambda$-calculus.
 Inheritance is not a mechanism for organizing functions;
 functions are syntactic sugar for inheritance.
 
@@ -2037,25 +2046,25 @@ unchanged.
 \label{thm:forward-macro}
 The translation $\mathcal{T}$
 (Section~\ref{sec:forward-translation}) is a macro-expressible
-embedding of the $\lambda$-calculus into overlay-calculus.
+embedding of the $\lambda$-calculus into inheritance-calculus.
 \end{theorem}
 
 \begin{proof}
 Each of the five rules of $\mathcal{T}$ replaces one
-$\lambda$-calculus construct with an overlay-calculus expression
+$\lambda$-calculus construct with an inheritance-calculus expression
 that depends only on the construct's immediate subexpressions.
 No rule inspects the surrounding context.
 \end{proof}
 
-\begin{theorem}[Non-expressibility of overlay]
+\begin{theorem}[Non-expressibility of inheritance-calculus]
 \label{thm:cartesian-non-expressibility}
 There is no macro-expressible translation from
-overlay-calculus to the $\lambda$-calculus.
+inheritance-calculus to the $\lambda$-calculus.
 \end{theorem}
 
 \begin{proof}
-Let $\mathscr{L}_1$ be the overlay-calculus and let
-$\mathscr{L}_0$ be the sublanguage consisting of overlay
+Let $\mathscr{L}_1$ be the inheritance-calculus and let
+$\mathscr{L}_0$ be the sublanguage consisting of mixin
 trees in the image of the translation $\mathcal{T}$
 (Section~\ref{sec:forward-translation}), so that
 $\mathscr{L}_0 \subset \mathscr{L}_1$.
@@ -2063,9 +2072,9 @@ Define the operational equivalence $\cong_0$ on
 $\mathscr{L}_0$ via B\"ohm trees:
 $\mathcal{T}(M) \cong_0 \mathcal{T}(N)$ iff
 $\mathrm{BT}(M) = \mathrm{BT}(N)$.
-Define $\cong_1$ on $\mathscr{L}_1$ as overlay-contextual
+Define $\cong_1$ on $\mathscr{L}_1$ as inheritance-contextual
 equivalence:
-$S \cong_1 S'$ iff for every overlay context $C[\cdot]$,
+$S \cong_1 S'$ iff for every inheritance-calculus context $C[\cdot]$,
 $C[S]{\Downarrow} \Leftrightarrow C[S']{\Downarrow}$.
 
 By the B\"ohm Tree Correspondence
@@ -2126,10 +2135,10 @@ Here $\dbi{1}.\mathrm{argument}$ in $x_3$ reaches the outer
 $\lambda a$ scope (one $\lambda$ up from $\lambda b$), and
 $\dbi{0}.\mathrm{argument}$ reaches $\lambda b$ itself.
 
-In overlay-calculus, applying a function record to an argument
+In inheritance-calculus, applying a function record to an argument
 is: inherit the function, override its $\mathrm{argument}$
 slot, and project $\mathrm{result}$.
-Define overlay trees $e_1$ and $e_2$ that apply
+Define mixin trees $e_1$ and $e_2$ that apply
 $\mathrm{eq}$ to its two arguments via this mechanism:
 \begin{align*}
   e_1 \;=\; \{&
@@ -2174,9 +2183,9 @@ so $e_1 \cong_0 e_2$.
 All the definitions above---$\mathrm{true}$,
 $\mathrm{false}$, $\mathrm{eq}$, $e_1$, $e_2$---are
 siblings in a common enclosing scope $S$.
-Now define an overlay $C$ on $S$ that extends $\mathrm{eq}$
+Now define a mixin $C$ on $S$ that extends $\mathrm{eq}$
 with a $\mathrm{repr}$ scope.
-The overlay targets the inner $\lambda b$ scope (the
+The mixin targets the inner $\lambda b$ scope (the
 $\mathrm{result}$ of $\mathrm{eq}$) and adds
 a sibling record $\mathrm{repr}$:
 \begin{align*}
@@ -2208,7 +2217,7 @@ inherit the newly added $\mathrm{repr}$:
 $e_1.\mathrm{repr}.\mathrm{firstOperand} = \mathrm{false}$
 and
 $e_2.\mathrm{repr}.\mathrm{firstOperand} = \mathrm{true}$.
-These produce structurally distinct overlay trees
+These produce structurally distinct mixin trees
 (one converges to an abstraction selecting its first argument,
 the other to an abstraction selecting its second),
 so $e_1 \not\cong_1 e_2$.
@@ -2217,12 +2226,12 @@ Since $e_1 \cong_0 e_2$ but $e_1 \not\cong_1 e_2$,
 we have ${\cong_0} \neq {(\cong_1|_{\mathscr{L}_0})}$.
 By Theorem~3.14(i) of
 Felleisen~\cite{felleisen1991expressive},
-$\mathscr{L}_0$ cannot macro-express the overlay facilities of $\mathscr{L}_1$.
+$\mathscr{L}_0$ cannot macro-express the inheritance facilities of $\mathscr{L}_1$.
 \end{proof}
 
 \begin{corollary}
 \label{cor:expressive-asymmetry}
-Overlay-calculus is strictly more expressive than the
+Inheritance-calculus is strictly more expressive than the
 $\lambda$-calculus in the sense of
 Felleisen~\cite{felleisen1991expressive}: the forward
 embedding is macro-expressible
@@ -2235,7 +2244,7 @@ embedding is macro-expressible
 
 This appendix demonstrates that two representative systems, Scala~3
 and the NixOS module system, reject the multi-path self-reference
-pattern that overlay-calculus handles naturally.
+pattern that inheritance-calculus handles naturally.
 
 \subsection*{Scala~3}
 
@@ -2275,7 +2284,7 @@ Their intersection requires \texttt{outer} to simultaneously
 return \texttt{Object1} and \texttt{Object2}, but DOT's self
 variable is single-valued, making this intersection unrealizable.
 
-The equivalent overlay-calculus definition is:
+The equivalent inheritance-calculus definition is:
 \begin{align*}
 \{ \quad \mathrm{MyOuter} &\mapsto \{
     \mathrm{MyInner} \mapsto \{
@@ -2287,7 +2296,7 @@ The equivalent overlay-calculus definition is:
   \mathrm{Object2}.\mathrm{MyInner}\}
 \quad \}
 \end{align*}
-This is well-defined in overlay-calculus.
+This is well-defined in inheritance-calculus.
 The reference
 $\qualifiedthis{\mathrm{MyOuter}}$ inside $\mathrm{outer}$
 has de~Bruijn index $n = 1$:
@@ -2299,7 +2308,7 @@ $\mathrm{Object1}.\mathrm{MyInner}$ and
 $\mathrm{Object2}.\mathrm{MyInner}$,
 the $\this$ function (equation~\ref{eq:this}) resolves
 $\qualifiedthis{\mathrm{MyOuter}}$ by searching through
-$\supers(\mathrm{MyObjectA})$ for overlay paths matching
+$\supers(\mathrm{MyObjectA})$ for override paths matching
 $\mathrm{MyInner}$'s definition site.
 It finds two inheritance-site paths, one through
 $\mathrm{Object1}$ and one through $\mathrm{Object2}$, and
@@ -2415,8 +2424,8 @@ error above: both systems assume that each option or type member
 has a single declaration site, and reject the multi-path situation
 where two inheritance routes introduce the same declaration
 independently.
-In overlay-calculus, the same pattern is well-defined because
-$\overlays$ (equation~\ref{eq:overlays}) recognizes that both
+In inheritance-calculus, the same pattern is well-defined because
+$\overrides$ (equation~\ref{eq:overrides}) recognizes that both
 routes lead to the same definition, and $\supers$
 (equation~\ref{eq:supers}) collects both inheritance-site
 contexts without duplication.
@@ -2427,7 +2436,7 @@ contexts without duplication.
 This appendix proves that the mutually recursive equations
 (\ref{eq:properties})--(\ref{eq:this}) have a unique least
 fixed point, and therefore the semantics of
-Section~\ref{sec:overlay-trees} is well-defined.
+Section~\ref{sec:mixin-trees} is well-defined.
 
 \subsection{The Product Lattice}
 
@@ -2440,8 +2449,8 @@ Define the following domains, one for each semantic function:
 D_{\properties} &= \mathcal{P} \to \mathcal{P}(\mathcal{L})
 & &\text{(sets of labels)} \\
 D_{\supers} &= \mathcal{P} \to \mathcal{P}(\mathcal{P} \times \mathcal{P})
-& &\text{(sets of site--overlay pairs)} \\
-D_{\overlays} &= \mathcal{P} \to \mathcal{P}(\mathcal{P})
+& &\text{(sets of site--override pairs)} \\
+D_{\overrides} &= \mathcal{P} \to \mathcal{P}(\mathcal{P})
 & &\text{(sets of paths)} \\
 D_{\bases} &= \mathcal{P} \to \mathcal{P}(\mathcal{P})
 & &\text{(sets of paths)} \\
@@ -2455,7 +2464,7 @@ D_{\this} &= (\mathcal{P}(\mathcal{P}) \times \mathcal{P} \times \mathbb{N})
 Each $D_i$ is a complete lattice under the pointwise subset
 ordering: $f \sqsubseteq g$ iff $f(x) \subseteq g(x)$ for all $x$.
 The product
-$D = D_{\properties} \times D_{\supers} \times D_{\overlays}
+$D = D_{\properties} \times D_{\supers} \times D_{\overrides}
 \times D_{\bases} \times D_{\resolve} \times D_{\this}$
 is a complete lattice under the componentwise ordering, with
 bottom element $\bot = (\lambda x.\,\varnothing, \ldots,
@@ -2467,7 +2476,7 @@ Equations~(\ref{eq:properties})--(\ref{eq:this}) define a
 function
 $F : D \to D$
 that takes a tuple of candidate interpretations
-$(\properties, \supers, \overlays, \bases, \resolve, \this)$
+$(\properties, \supers, \overrides, \bases, \resolve, \this)$
 and produces a new tuple by evaluating the right-hand side of
 each equation.
 The transitive closure $\bases^*$ appearing in
@@ -2512,8 +2521,8 @@ comprehension~\cite{aczel1977inductive}.
 \[
   \properties(p) =
   \bigl\{\, \ell \bigm|
-    (\_, p_{\mathrm{overlay}}) \in \supers(p),\;
-    \ell \in \defines(p_{\mathrm{overlay}})
+    (\_, p_{\mathrm{override}}) \in \supers(p),\;
+    \ell \in \defines(p_{\mathrm{override}})
   \,\bigr\}.
 \]
 The function $\supers$ appears as the set being iterated
@@ -2527,21 +2536,21 @@ labels to the result.
 
 \paragraph{Equation~(\ref{eq:supers}): $\supers$}
 $\supers(p) =
-\bigl\{\, (\init(p_{\mathrm{base}}), p_{\mathrm{overlay}}) \bigm|
+\bigl\{\, (\init(p_{\mathrm{base}}), p_{\mathrm{override}}) \bigm|
   p_{\mathrm{base}} \in \bases^*(p),\;
-  p_{\mathrm{overlay}} \in \overlays(p_{\mathrm{base}})
+  p_{\mathrm{override}} \in \overrides(p_{\mathrm{base}})
 \,\bigr\}$.
-Both $\bases^*$ and $\overlays$ appear as sets being iterated
+Both $\bases^*$ and $\overrides$ appear as sets being iterated
 over.
 As noted above, $\bases^*$ is monotone in $\bases$.
-Enlarging either $\bases$ or $\overlays$ can only add elements to the
+Enlarging either $\bases$ or $\overrides$ can only add elements to the
 result.
-\emph{Positive in $\bases$ and $\overlays$.}
+\emph{Positive in $\bases$ and $\overrides$.}
 
-\paragraph{Equation~(\ref{eq:overlays}): $\overlays$}
+\paragraph{Equation~(\ref{eq:overrides}): $\overrides$}
 For $p \neq ()$:
 \begin{multline*}
-  \overlays(p) = \{p\} \cup
+  \overrides(p) = \{p\} \cup
   \bigl\{\, p_{\mathrm{branch}} \snoc \last(p) \bigm| {} \\
     (\_, p_{\mathrm{branch}}) \in \supers(\init(p)),\;
     \last(p) \in \defines(p_{\mathrm{branch}})
@@ -2558,17 +2567,17 @@ to the result.
 \begin{multline*}
   \bases(p) =
   \bigl\{\, p_{\mathrm{target}} \bigm|
-    p_{\mathrm{overlay}} \in \overlays(p),\\
-    (n, \ell_{\mathrm{down},*}) \in \inherits(p_{\mathrm{overlay}}),\;
+    p_{\mathrm{override}} \in \overrides(p),\\
+    (n, \ell_{\mathrm{down},*}) \in \inherits(p_{\mathrm{override}}),\;
     p_{\mathrm{target}} \in \resolve(\ldots)
   \,\bigr\}.
 \end{multline*}
-Both $\overlays$ and $\resolve$ appear as sets being iterated
+Both $\overrides$ and $\resolve$ appear as sets being iterated
 over.
 The function $\inherits$ is an AST primitive.
-Enlarging either $\overlays$ or $\resolve$ can only add targets to
+Enlarging either $\overrides$ or $\resolve$ can only add targets to
 the result.
-\emph{Positive in $\overlays$ and $\resolve$.}
+\emph{Positive in $\overrides$ and $\resolve$.}
 
 \paragraph{Equation~(\ref{eq:resolve}): $\resolve$}
 \[
@@ -2591,12 +2600,12 @@ $\this(S, p_{\mathrm{def}}, n) =
 where
 $S' = \bigl\{\, p_{\mathrm{site}} \bigm|
   p_{\mathrm{current}} \in S,\;
-  (p_{\mathrm{site}}, p_{\mathrm{overlay}}) \in
+  (p_{\mathrm{site}}, p_{\mathrm{override}}) \in
   \supers(p_{\mathrm{current}}),\;
-  p_{\mathrm{overlay}} = p_{\mathrm{def}}
+  p_{\mathrm{override}} = p_{\mathrm{def}}
 \,\bigr\}$.
 The function $\supers$ appears as the set being iterated over.
-The filtering condition $p_{\mathrm{overlay}} = p_{\mathrm{def}}$
+The filtering condition $p_{\mathrm{override}} = p_{\mathrm{def}}$
 is an equality test on path data, not involving any mutually
 defined function.
 Enlarging $\supers$ can only enlarge $S'$, and by induction on~$n$
@@ -2618,7 +2627,7 @@ Therefore $F$ is a monotone operator on the complete lattice $D$.
 
 \begin{theorem}\label{thm:well-defined}
 The semantic functions
-$\properties$, $\supers$, $\overlays$, $\bases$, $\resolve$,
+$\properties$, $\supers$, $\overrides$, $\bases$, $\resolve$,
 $\this$ are well-defined as the least fixed point of~$F$.
 \end{theorem}
 
@@ -2629,7 +2638,7 @@ By the Knaster--Tarski theorem~\cite{tarski1955lattice}, $F$ has
 a least fixed point $\vec{d}^* = \bigsqcup_{n \ge 0} F^n(\bot)$,
 where $\bot$ assigns the empty set to every input.
 The components of $\vec{d}^*$ are the semantic functions of
-Section~\ref{sec:overlay-trees}.
+Section~\ref{sec:mixin-trees}.
 
 Concretely, the least fixed point is the union of the finite
 approximation chain:
@@ -2685,9 +2694,9 @@ $\lambda$-calculus~\cite{barendregt1984lambda,abramsky1993lazy}.
 \subsection{Path Encoding}
 
 We define a correspondence between positions in the B\"ohm tree
-and paths in the overlay tree.
+and paths in the mixin tree.
 When the translation $\mathcal{T}$ is applied to an ANF
-$\lambda$-term, the resulting overlay tree has a specific shape:
+$\lambda$-term, the resulting mixin tree has a specific shape:
 \begin{itemize}
 \item An abstraction $\lambda x.\, M$ translates to a record
   with own properties $\{\mathrm{argument}, \mathrm{result}\}$
@@ -2714,16 +2723,16 @@ In the B\"ohm tree, the possible steps at a node
 $\lambda x_1 \ldots x_m.\; y\; M_1 \cdots M_k$ are:
 entering the body (peeling off one abstraction layer) and
 entering the $i$-th argument $M_i$ of the head variable.
-In the overlay tree, these correspond to following the
+In the mixin tree, these correspond to following the
 $\mathrm{result}$ label (for entering the body) and the
 $\mathrm{argument}$ label after $\this$ resolution (for
 entering an argument position).
 
-Rather than comparing absolute paths across different overlay
+Rather than comparing absolute paths across different mixin
 trees (which would be sensitive to internal structure), we
 observe only the \emph{convergence} behavior accessible via
 the $\mathrm{result}$ projection.
-Recall the definition of overlay-convergence
+Recall the definition of inheritance-convergence
 (Definition~\ref{def:convergence}).
 Each $\mathrm{result}$-following step corresponds to one head
 reduction step in the $\lambda$-calculus: a tail call's
@@ -2736,7 +2745,7 @@ normal form has been reached.
 \subsection{Single-Path Lemma}
 
 The $\this$ function (equation~\ref{eq:this}) is designed for the
-general case of multi-path overlay inheritance.
+general case of multi-path mixin inheritance.
 For translated $\lambda$-terms, we show it degenerates to
 single-path resolution.
 
@@ -2756,7 +2765,7 @@ By induction on the structure of the ANF term.
 This is a record literal with
 $\defines = \{\mathrm{argument}, \mathrm{result}\}$ and
 no inheritance sources, so $\inherits = \varnothing$.
-At the root path $p$, we have $\overlays(p) = \{p\}$ (a single
+At the root path $p$, we have $\overrides(p) = \{p\}$ (a single
 path) since there are no inheritance sources to introduce
 additional branches.
 Inside $\mathcal{T}(M)$, any reference to $x$ is
@@ -2764,8 +2773,8 @@ $\dbi{n}.\mathrm{argument}$ where $n$ is the de~Bruijn index
 pointing to this scope level.
 Since $\mathcal{T}(\lambda x.\, M)$ introduces exactly one
 scope level, there is exactly one
-overlay at that level, hence $\this$ finds exactly one matching
-pair $(p_{\mathrm{site}},\; p_{\mathrm{overlay}})$ in $\supers$.
+mixin at that level, hence $\this$ finds exactly one matching
+pair $(p_{\mathrm{site}},\; p_{\mathrm{override}})$ in $\supers$.
 
 \paragraph{Case
   $\mathcal{T}(\mathbf{let}\; x = V_1\; V_2
@@ -2775,7 +2784,7 @@ pair $(p_{\mathrm{site}},\; p_{\mathrm{overlay}})$ in $\supers$.
 \mathrm{result} \mapsto \mathcal{T}(M)\}$}
 The outer record has own properties $\{x, \mathrm{result}\}$
 and no inheritance sources at the outer level
-($\inherits = \varnothing$), so $\overlays(\text{root})
+($\inherits = \varnothing$), so $\overrides(\text{root})
 = \{\text{root}\}$.
 Inside the $x$ subtree, the inheritance
 $\{\mathcal{T}(V_1),\; \mathrm{argument} \mapsto
@@ -2854,8 +2863,8 @@ In the inherited tree $C$, $\resolve$ and $\this$ resolve the reference by
 navigating from the reference's enclosing scope up $n$ steps
 to the binding $\lambda$, where the inheritance
 $\{\mathcal{T}(\lambda x.\, x),\;
-\mathrm{argument} \mapsto \mathcal{T}(V)\}$ overlays the
-$\mathrm{argument}$ slot with $\mathcal{T}(V)$.
+\mathrm{argument} \mapsto \mathcal{T}(V)\}$ inherits into the
+$\mathrm{argument}$ slot, providing $\mathcal{T}(V)$.
 Since $C$ is the $\_\mathrm{tail}$ subtree of
 $\mathcal{T}\bigl((\lambda x.\, M)\; V\bigr)$, which is a
 closed ANF term, Lemma~\ref{lem:single-path} applies and
@@ -2935,8 +2944,8 @@ Then for every path $p$ and label $\ell$:
   \text{ in } \mathcal{T}(M[V/x])
 \]
 That is, following one $\mathrm{result}$ projection in the
-tail call's overlay tree yields the same properties as the
-root of the reduct's overlay tree.
+tail call's mixin tree yields the same properties as the
+root of the reduct's mixin tree.
 \end{lemma}
 
 \begin{proof}
@@ -3109,7 +3118,7 @@ form, and since $M \to_h N$, so does $M$.
 \subsection{Full Abstraction}
 
 Adequacy relates a single term's head normal form to its
-overlay-convergence.
+inheritance-convergence.
 Full abstraction lifts this to an equivalence between terms:
 the translation $\mathcal{T}$ preserves and reflects
 observational equivalence.
@@ -3128,7 +3137,7 @@ closing $\lambda$-calculus context $C[\cdot]$:
 
 \noindent
 The subscript $\lambda$ emphasizes that the quantification ranges
-over $\lambda$-calculus contexts, not over all overlay contexts.
+over $\lambda$-calculus contexts, not over all inheritance-calculus contexts.
 This definition observes only convergence (a single bit), but
 quantifying over all $\lambda$-contexts makes it a fine-grained
 equivalence: different contexts can supply different arguments
@@ -3137,8 +3146,8 @@ term's behavior within the $\lambda$-definable fragment.
 
 \begin{proof}[Proof of Theorem~\ref{thm:full-abstraction}]
 The translation $\mathcal{T}$ is compositional: for every
-$\lambda$-calculus context $C[\cdot]$, the overlay tree
-$\mathcal{T}(C[M])$ is determined by the overlay tree
+$\lambda$-calculus context $C[\cdot]$, the mixin tree
+$\mathcal{T}(C[M])$ is determined by the mixin tree
 $\mathcal{T}(M)$ and the translation of the context.
 This means $\mathcal{T}$ preserves the context structure
 needed for the argument.
@@ -3175,8 +3184,8 @@ The proof rests on two pillars: Adequacy
 the classical result that B\"ohm tree equivalence equals
 observational equivalence for the lazy
 $\lambda$-calculus~\cite{barendregt1984lambda,abramsky1993lazy}.
-The overlay tree semantics inherits full abstraction from the
+The mixin tree semantics inherits full abstraction from the
 $\lambda$-calculus without needing to define or compare
-absolute paths inside overlay trees.
+absolute paths inside mixin trees.
 
 \end{document}

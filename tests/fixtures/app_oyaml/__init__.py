@@ -1,4 +1,4 @@
-"""app_oyaml: Overlay language web-app example.
+"""app_oyaml: MIXINv2 web-app example.
 
 Library.oyaml — business logic + abstract FFI declarations.
 stdlib_ffi/FFI/ — Python stdlib FFI adapters (one module per scope).

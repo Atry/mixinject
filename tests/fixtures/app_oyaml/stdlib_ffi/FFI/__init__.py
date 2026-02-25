@@ -1,4 +1,4 @@
-"""FFI: Atomic stdlib wrappers for the Overlay language web-app example.
+"""FFI: Atomic stdlib wrappers for the MIXINv2 web-app example.
 
 Each module wraps exactly ONE Python stdlib / built-in call.
 All business logic (SQL queries, string formatting, routing, composition)

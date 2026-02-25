@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Overlay Language'
+project = 'MIXINv2'
 copyright = '2025, Bo Yang'
 author = 'Bo Yang'
 

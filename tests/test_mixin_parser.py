@@ -1,4 +1,4 @@
-"""Tests for Overlay file parsing and evaluation."""
+"""Tests for MIXINv2 file parsing and evaluation."""
 
 from pathlib import Path
 
@@ -163,8 +163,66 @@ name = "test"
         """Unrecognized file format should raise ValueError."""
         invalid_file = tmp_path / "test.txt"
         invalid_file.write_text("{}")
-        with pytest.raises(ValueError, match="Unrecognized Overlay file format"):
+        with pytest.raises(ValueError, match="Unrecognized MIXINv2 file format"):
             parse_mixin_file(invalid_file)
+
+    def test_parse_mixin_yaml_file(self, tmp_path: Path) -> None:
+        """Parse a .mixin.yaml file."""
+        yaml_content = """
+bar:
+  baz: "qux"
+"""
+        yaml_file = tmp_path / "foo.mixin.yaml"
+        yaml_file.write_text(yaml_content)
+
+        result = parse_mixin_file(yaml_file)
+
+        assert "bar" in result
+        bar_defs = result["bar"]
+        assert len(bar_defs) == 1
+        assert isinstance(bar_defs[0], FileMixinDefinition)
+        assert "baz" in bar_defs[0].underlying
+
+    def test_parse_mixin_yml_file(self, tmp_path: Path) -> None:
+        """Parse a .mixin.yml file."""
+        yaml_content = """
+bar:
+  baz: "qux"
+"""
+        yaml_file = tmp_path / "foo.mixin.yml"
+        yaml_file.write_text(yaml_content)
+
+        result = parse_mixin_file(yaml_file)
+
+        assert "bar" in result
+
+    def test_parse_mixin_json_file(self, tmp_path: Path) -> None:
+        """Parse a .mixin.json file."""
+        json_content = '{"TestMixin": {"value": 42}}'
+        json_file = tmp_path / "test.mixin.json"
+        json_file.write_text(json_content)
+
+        result = parse_mixin_file(json_file)
+
+        assert "TestMixin" in result
+        assert len(result["TestMixin"]) == 1
+        assert isinstance(result["TestMixin"][0], FileMixinDefinition)
+
+    def test_parse_mixin_toml_file(self, tmp_path: Path) -> None:
+        """Parse a .mixin.toml file."""
+        toml_content = """
+[TestMixin]
+value = 42
+name = "test"
+"""
+        toml_file = tmp_path / "test.mixin.toml"
+        toml_file.write_text(toml_content)
+
+        result = parse_mixin_file(toml_file)
+
+        assert "TestMixin" in result
+        assert len(result["TestMixin"]) == 1
+        assert isinstance(result["TestMixin"][0], FileMixinDefinition)
 
     def test_multiple_origins(self, tmp_path: Path) -> None:
         """Mixin with multiple property definitions should have multiple origins."""
@@ -273,6 +331,52 @@ class TestDirectoryMixinDefinition:
         assert "yaml_test" in keys
         assert "json_test" in keys
         assert "toml_test" in keys
+
+
+    def test_discovers_mixin_extensions(self, tmp_path: Path) -> None:
+        """Should discover .mixin.yaml, .mixin.json, and .mixin.toml files."""
+        (tmp_path / "yaml_test.mixin.yaml").write_text("A: {}")
+        (tmp_path / "json_test.mixin.json").write_text('{"B": {}}')
+        (tmp_path / "toml_test.mixin.toml").write_text("[C]\n")
+
+        definition = DirectoryMixinDefinition(
+            inherits=(),
+            is_public=True,
+            underlying=tmp_path,
+        )
+
+        keys = list(definition)
+        assert "yaml_test" in keys
+        assert "json_test" in keys
+        assert "toml_test" in keys
+
+    def test_discovers_mixin_yml_extension(self, tmp_path: Path) -> None:
+        """Should discover .mixin.yml files."""
+        (tmp_path / "test.mixin.yml").write_text("A: {}")
+
+        definition = DirectoryMixinDefinition(
+            inherits=(),
+            is_public=True,
+            underlying=tmp_path,
+        )
+
+        keys = list(definition)
+        assert "test" in keys
+
+    def test_both_extensions_same_stem(self, tmp_path: Path) -> None:
+        """When both .mixin.yaml and .oyaml exist for the same stem, only one entry appears."""
+        (tmp_path / "test.mixin.yaml").write_text("A:\n  new: true\n")
+        (tmp_path / "test.oyaml").write_text("A:\n  old: true\n")
+
+        definition = DirectoryMixinDefinition(
+            inherits=(),
+            is_public=True,
+            underlying=tmp_path,
+        )
+
+        keys = list(definition)
+        assert "test" in keys
+        # First file discovered wins (filesystem ordering); only one entry per stem.
 
 
 class TestEvaluateMixinDirectory:

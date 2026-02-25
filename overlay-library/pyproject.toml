@@ -15,7 +15,7 @@ metadata = false
 [project]
 name = "overlay.library"
 dynamic = ["version", "dependencies"]
-description = "The Overlay language standard library — built-in definitions for the Overlay language"
+description = "The MIXINv2 standard library — built-in definitions for MIXINv2"
 license = "MIT"
 requires-python = ">=3.13"
 authors = [

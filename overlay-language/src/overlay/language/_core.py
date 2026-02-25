@@ -1,10 +1,10 @@
 """
-The Overlay language: A dependency injection framework with pytest-fixture-like semantics.
+MIXINv2: A dependency injection framework with pytest-fixture-like semantics.
 
 Design Philosophy
 =================
 
-Overlay language implements a dependency injection framework that combines pytest fixture-like semantics
+MIXINv2 implements a dependency injection framework that combines pytest fixture-like semantics
 with hierarchical resource structures and mixin composition patterns, inspired by
 https://github.com/atry/mixin and https://github.com/mxmlnkn/ratarmount/pull/163.
 
@@ -378,7 +378,7 @@ Merging and Composition
 Module and Package Merging
 ---------------------------
 
-When merging modules and packages, Overlay language uses an algorithm similar to
+When merging modules and packages, MIXINv2 uses an algorithm similar to
 https://github.com/atry/mixin and https://github.com/mxmlnkn/ratarmount/pull/163.
 
 Same-Named Callable Merging Rules
@@ -1184,7 +1184,7 @@ class MixinSymbol(HasDict, Mapping[Hashable, "MixinSymbol"], Symbol):
         symbol is expanded through its ``unions`` and their
         ``normalized_references``.
 
-        Corresponds to the ``this`` function in the overlay-calculus paper::
+        Corresponds to the ``this`` function in the inheritance-calculus paper::
 
             this(p, p_def) = { p_site | (p_site, p_overlay) in supers(p),
                                         s.t. p_overlay = p_def }
@@ -1681,13 +1681,17 @@ class PackageScopeDefinition(ObjectScopeDefinition):
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.oyaml/ojson/otoml files in the package directory."""
+        """Discover MIXINv2 files in the package directory."""
         result: dict[str, Path] = {}
         package_paths = getattr(self.underlying, "__path__", None)
         if package_paths is None:
             return result
 
-        overlay_extensions = (
+        mixin_extensions = (
+            ".mixin.yaml",
+            ".mixin.yml",
+            ".mixin.json",
+            ".mixin.toml",
             ".oyaml",
             ".oyml",
             ".ojson",
@@ -1701,9 +1705,9 @@ class PackageScopeDefinition(ObjectScopeDefinition):
                 if not file_path.is_file():
                     continue
                 name_lower = file_path.name.lower()
-                for extension in overlay_extensions:
+                for extension in mixin_extensions:
                     if name_lower.endswith(extension):
-                        # Extract stem: Foo.oyaml -> Foo
+                        # Extract stem: Foo.mixin.yaml -> Foo, Foo.oyaml -> Foo
                         stem = file_path.name[: -len(extension)]
                         if stem not in result:
                             result[stem] = file_path
@@ -2612,7 +2616,7 @@ class ResolvedReference:
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class LexicalReference:
     """
-    A lexical reference following the Overlay language spec resolution algorithm.
+    A lexical reference following the MIXINv2 spec resolution algorithm.
 
     This reference type implements **lexical scoping with late-binding** and
     **same-name skip semantics** (pytest fixture style).

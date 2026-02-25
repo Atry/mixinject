@@ -37,7 +37,7 @@ class TestResolvedBases:
 
 
 class TestLexicalReference:
-    """Test LexicalReference resolution following the Overlay language spec."""
+    """Test LexicalReference resolution following the MIXINv2 spec."""
 
     def test_property_found_returns_full_path(self) -> None:
         """LexicalReference finds property in outer scope, returns full path."""

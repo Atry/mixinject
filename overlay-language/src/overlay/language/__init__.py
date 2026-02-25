@@ -1,5 +1,5 @@
 """
-The Overlay language: A dependency injection framework with pytest-fixture-like semantics.
+MIXINv2: A dependency injection framework with pytest-fixture-like semantics.
 
 Public API
 ==========
@@ -67,7 +67,7 @@ if TYPE_CHECKING:
 
     @final
     class LexicalReference(Protocol):
-        """A lexical reference following the Overlay language spec resolution algorithm."""
+        """A lexical reference following the MIXINv2 spec resolution algorithm."""
 
         path: tuple[Hashable, ...]
 

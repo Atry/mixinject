@@ -1,5 +1,5 @@
-Getting Started with Overlay Language
-=====================================
+Getting Started with MIXINv2
+============================
 
 The Step 4 Python code works, but it has a structural problem: **business logic
 and I/O are tangled together**. Consider ``user_id`` in ``HttpHandlers``:
@@ -15,14 +15,13 @@ an integer (another business decision). The path separator, SQL queries, and
 format templates are all hardcoded in Python — changing any of them means
 changing Python code.
 
-The Overlay language solves this by separating the application into three layers:
+MIXINv2 solves this by separating the application into three layers:
 
 - **Python FFI** wraps individual stdlib calls in ``@scope`` adapters — one class
   per operation (``sqlite3.connect``, ``str.split``, ``wfile.write``). Each adapter
   declares its inputs as ``@extern`` and exposes a single ``@public @resource``
   output. The adapter contains **zero business logic**.
-- **``.oyaml`` files** contain all application logic, written in the Overlay
-  language. The Overlay language is not just a configuration format — it is a
+- **``.oyaml`` files** contain all application logic, written in MIXINv2. MIXINv2 is not just a configuration format — it is a
   complete language with lexical scoping, nested scopes, deep-merge composition,
   and lazy evaluation. These features make it more natural than Python for
   expressing business logic, which is inherently declarative ("the user ID is
@@ -238,8 +237,7 @@ single ``RequestScope``. After merging:
   ``HttpHandlers.RequestScope``, which uses it in ``_format``
 
 Neither scope imports or references the other — deep merge makes their fields
-mutual siblings automatically. This is the most powerful feature of the Overlay
-language: cross-cutting concerns compose without glue code.
+mutual siblings automatically. This is the most powerful feature of MIXINv2: cross-cutting concerns compose without glue code.
 
 **Config value scoping:** App-lifetime values (``database_path``, ``host``, ``port``)
 live directly in ``memory_app``. Request-lifetime values (``user_query_sql``,
@@ -274,8 +272,8 @@ Syntax quick reference
      - **Inheritance** — ``- [Parent]`` items are inherited scopes; the last item (a mapping) defines own fields
 
 
-Python vs Overlay language
---------------------------
+Python vs MIXINv2
+------------------
 
 .. list-table::
    :header-rows: 1
@@ -283,7 +281,7 @@ Python vs Overlay language
 
    * - Aspect
      - Python ``@scope``
-     - Overlay language (``.oyaml``)
+     - MIXINv2 (``.oyaml``)
    * - Composition
      - Manual ``@extend`` + ``RelativeReference``
      - Inheritance list: ``- [Parent]``
@@ -341,6 +339,6 @@ using the fixture package at
 
 The full language specification is in :doc:`specification`.
 
-The semantics of the Overlay language are grounded in the
-`overlay-calculus <https://arxiv.org/abs/2602.16291>`_, a formal calculus of
+The semantics of MIXINv2 are grounded in the
+`inheritance-calculus <https://arxiv.org/abs/2602.16291>`_, a formal calculus of
 overlays.

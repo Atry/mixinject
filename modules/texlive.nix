@@ -4,7 +4,7 @@
     ml-ops.devcontainer.devenvShellModule = {
       packages = [ pkgs.tex-fmt ];
       scripts.package-arxiv.exec = ''
-        cd overlay-calculus
+        cd inheritance-calculus
         ${lib.getExe pkgs.gnutar} -czvf arxiv-submission.tar.gz \
           -C . \
           *.tex \

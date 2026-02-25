@@ -2,7 +2,7 @@
 
 A dependency injection framework with pytest-fixture syntax, plus a
 configuration language for declarative programming, based on
-[overlay-calculus](https://arxiv.org/abs/2602.16291).
+[inheritance-calculus](https://arxiv.org/abs/2602.16291).
 
 ## Documentation
 

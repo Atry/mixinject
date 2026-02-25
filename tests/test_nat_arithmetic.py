@@ -1,6 +1,6 @@
 """Tests for Church-encoded natural number arithmetic and equality.
 
-Tests the Overlay language definitions in ArithmeticTest.oyaml which compose
+Tests the MIXINv2 definitions in ArithmeticTest.oyaml which compose
 NatPlus and NatEquality from Builtin.oyaml to verify:
 - Church numeral construction
 - Addition (Plus operation)

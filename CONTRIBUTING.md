@@ -693,11 +693,11 @@ def fetch(url: str, policy: CachePolicy) -> Response:
 - Only when the user explicitly requests it
 - Never use it autonomously
 
-## Overlay Language Coding Conventions
+## MIXINv2 Coding Conventions
 
-**Terminology note:** This project previously used the terms "mixin" and "union". These have been renamed to **overlay**. Legacy references to "mixin" or "union" in code, comments, or documentation should be read as "overlay".
+**Terminology note:** This project previously used the terms "mixin", "union", and "overlay". The language has been renamed to **MIXINv2**. Legacy references to "mixin", "union", or "overlay" in code, comments, or documentation refer to MIXINv2 concepts.
 
-The Overlay language adopts C#-like naming conventions. The UpperCamelCase/lowerCamelCase distinction is not merely stylistic — it carries semantic meaning for the totality checker: UpperCamelCase symbols are **scopes** (instantiable at runtime), while lowerCamelCase symbols are written as if they are **resources** (lazily evaluated values, no new UpperCamelCase children defined within them). This naming convention enables automatic totality verification without manual proofs (see `mixin_totality.tex`). Note that the scope/resource distinction is a design intent, not yet enforced by the compiler — currently all symbols compile to scopes regardless of casing.
+MIXINv2 adopts C#-like naming conventions. The UpperCamelCase/lowerCamelCase distinction is not merely stylistic — it carries semantic meaning for the totality checker: UpperCamelCase symbols are **scopes** (instantiable at runtime), while lowerCamelCase symbols are written as if they are **resources** (lazily evaluated values, no new UpperCamelCase children defined within them). This naming convention enables automatic totality verification without manual proofs (see `mixin_totality.tex`). Note that the scope/resource distinction is a design intent, not yet enforced by the compiler — currently all symbols compile to scopes regardless of casing.
 
 ### Naming Convention Summary
 
@@ -721,7 +721,7 @@ Example: `Builtin` is a namespace containing sorts (`Nat`, `Boolean`, `BinNat`),
 
 ### Sort / Entity (UpperCamelCase)
 
-A **sort** (mathematical term) is a carrier set — the Overlay language's equivalent of a C# class. Its data constructors are called **entities** (ECS term). These are two perspectives on the same concept: a sort is defined by its entities, and an entity belongs to a sort.
+A **sort** (mathematical term) is a carrier set — MIXINv2's equivalent of a C# class. Its data constructors are called **entities** (ECS term). These are two perspectives on the same concept: a sort is defined by its entities, and an entity belongs to a sort.
 
 Sorts are defined using a `*Factory` + `Product` pattern: the factory contains `Product` (the abstract element type) and all entity constructors, while the sort name is aliased to `[*Factory, Product]`:
 
@@ -846,11 +846,11 @@ Key points:
 - Operations are defined within the input sort's factory (`NatFactory:`)
 - Cross-sort references use qualified this: `[NatEquality, ~, Boolean]` navigates to the Boolean sort within the composed scope
 
-Each `.oyaml` file is a **category** (multi-sorted algebra) that can be composed with other categories — a file may involve multiple sorts and multiple algebraic structures. This is how the Overlay language natively solves the **expression problem**: composing `NatEquality` with `BooleanNegation` (by inheriting both) automatically gives the returned booleans a `not` field — without modifying either category.
+Each `.oyaml` file is a **category** (multi-sorted algebra) that can be composed with other categories — a file may involve multiple sorts and multiple algebraic structures. This is how MIXINv2 natively solves the **expression problem**: composing `NatEquality` with `BooleanNegation` (by inheriting both) automatically gives the returned booleans a `not` field — without modifying either category.
 
 ### Abstract Factory Pattern with Declarations
 
-The Overlay language supports **abstract factories** through declarations. This pattern enables writing polymorphic code that works across multiple concrete factory types.
+MIXINv2 supports **abstract factories** through declarations. This pattern enables writing polymorphic code that works across multiple concrete factory types.
 
 #### Declaring Abstract Projections (Slots)
 
@@ -952,7 +952,7 @@ Once the abstract base exists, you can write operations that work for **any** fa
 
 ### Nested Class / Method (UpperCamelCase)
 
-Prefer **nouns and adjectives** over verbs to reflect the Overlay language's declarative nature:
+Prefer **nouns and adjectives** over verbs to reflect MIXINv2's declarative nature:
 
 ```yaml
 # ✓ GOOD - nouns and adjectives (declarative)
@@ -1070,7 +1070,7 @@ The distinction: `_increasedAddend` is lowerCamelCase because it only **contains
 
 ### References: Lexical vs Qualified This
 
-Overlay Language provides two kinds of references for navigating the scope hierarchy:
+MIXINv2 provides two kinds of references for navigating the scope hierarchy:
 
 #### 1. Lexical Reference `[Symbol]`
 
@@ -1560,7 +1560,7 @@ def test_compute(snapshot: SnapshotAssertion):
 ```
 
 
-## LaTeX Style (overlay-calculus paper)
+## LaTeX Style (inheritance-calculus paper)
 
 ### Heading capitalization
 
@@ -1581,13 +1581,13 @@ def test_compute(snapshot: SnapshotAssertion):
 
 ### Building the paper
 
-The paper entry points are `preprint.tex` and `submission.tex`, which `\input` the shared body `overlay-calculus.tex`. Build via:
+The paper entry points are `preprint.tex` and `submission.tex`, which `\input` the shared body `inheritance-calculus.tex`. Build via:
 
 ```bash
-cd overlay-calculus && direnv exec . latexmk -pdf preprint.tex
+cd inheritance-calculus && direnv exec . latexmk -pdf preprint.tex
 ```
 
-Do **not** run `latexmk` directly on `overlay-calculus.tex` — it is a fragment without a `\documentclass`.
+Do **not** run `latexmk` directly on `inheritance-calculus.tex` — it is a fragment without a `\documentclass`.
 
 ## Adding TeXLive Packages
 

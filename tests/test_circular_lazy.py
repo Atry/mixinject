@@ -1,6 +1,6 @@
 """Test circular references with lazy evaluation.
 
-This test demonstrates that with lazy evaluation, the Overlay language can support circular
+This test demonstrates that with lazy evaluation, MIXINv2 can support circular
 references while remaining total. Each finite access terminates, even though
 the conceptual structure is infinite.
 
@@ -18,7 +18,7 @@ from overlay.language._runtime import evaluate
 
 
 def test_circular_reference_parsing():
-    """Test that circular reference Overlay file can be parsed."""
+    """Test that circular reference MIXINv2 file can be parsed."""
     fixture_path = Path(__file__).parent / "fixtures" / "CircularLazy.oyaml"
     parsed = parse_mixin_file(fixture_path)
 

@@ -1,7 +1,7 @@
 """
-Parser for the Overlay language specification files (YAML/JSON/TOML).
+Parser for MIXINv2 specification files (YAML/JSON/TOML).
 
-This module provides parsing of Overlay files into Definition objects that can be
+This module provides parsing of MIXINv2 files into Definition objects that can be
 evaluated by the overlay runtime.
 
 .. todo::
@@ -30,7 +30,7 @@ evaluated by the overlay runtime.
    - **Structural recursion**: Tree structure + naming convention enforce that
      recursive calls are made only on structurally smaller values.
 
-   This combination enables the Overlay language to support both finite structures (via
+   This combination enables MIXINv2 to support both finite structures (via
    recursion/termination) and infinite structures (via corecursion/productivity),
    similar to Haskell's lazy evaluation or Coq's coinductive types.
 """
@@ -66,7 +66,7 @@ JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class FileMixinDefinition(ScopeDefinition):
     """
-    Definition for a mixin parsed from an Overlay file.
+    Definition for a mixin parsed from a MIXINv2 file.
 
     This holds the parsed properties from the file. The `underlying` field
     stores the raw parsed data, and properties are resolved lazily via
@@ -119,13 +119,13 @@ class ParsedMixinValue:
 
 def parse_reference(array: list[JsonValue]) -> ResourceReference:
     """
-    Parse an Overlay array reference into a ResourceReference.
+    Parse a MIXINv2 array reference into a ResourceReference.
 
     Distinguishes between:
     - Regular inheritance: [str, str, ...] → LexicalReference
     - Qualified this: [str, null, str, ...] → QualifiedThisReference
 
-    :param array: The array from the Overlay file.
+    :param array: The array from the MIXINv2 file.
     :return: A ResourceReference.
     :raises ValueError: If the array is empty or has invalid format.
     """
@@ -163,11 +163,11 @@ def _is_reference_array(value: JsonValue) -> bool:
     """
     Check if a value is a reference array (inheritance or qualified this).
 
-    In the Overlay language, arrays are ONLY used for references:
+    In MIXINv2, arrays are ONLY used for references:
     - Inheritance: [str, str, ...] - all strings
     - Qualified this: [str, null, str, ...] - string, null, then strings
 
-    the Overlay language does not have first-class list/array type.
+    MIXINv2 does not have first-class list/array type.
     """
     if not isinstance(value, list) or len(value) == 0:
         return False
@@ -280,10 +280,10 @@ def parse_mixin_value(
     source_file: Path,  # noqa: ARG001 - reserved for future error messages
 ) -> ParsedMixinValue:
     """
-    Parse an Overlay value into inheritances, properties, and scalar values.
+    Parse a MIXINv2 value into inheritances, properties, and scalar values.
 
-    In the Overlay language, arrays are ONLY used for references (inheritance or qualified this).
-    There is no first-class list type in the Overlay language.
+    In MIXINv2, arrays are ONLY used for references (inheritance or qualified this).
+    There is no first-class list type in MIXINv2.
 
     A mixin value can be:
     - A reference array: [str, str, ...] or [str, null, str, ...] → inheritance
@@ -347,31 +347,36 @@ def _parse_top_level_mixin(
 
 def load_overlay_file(file_path: Path) -> JsonValue:
     """
-    Load and parse an Overlay file (YAML/JSON/TOML) into raw JSON data.
+    Load and parse a MIXINv2 file (YAML/JSON/TOML) into raw JSON data.
 
-    :param file_path: Path to the Overlay file.
+    :param file_path: Path to the MIXINv2 file.
     :return: The parsed JSON-compatible data (dict, list, or scalar).
     :raises ValueError: If the file format is not recognized.
     """
     content = file_path.read_text(encoding="utf-8")
 
     name = file_path.name.lower()
-    if name.endswith(".oyaml") or name.endswith(".oyml"):
+    if (
+        name.endswith(".oyaml")
+        or name.endswith(".oyml")
+        or name.endswith(".mixin.yaml")
+        or name.endswith(".mixin.yml")
+    ):
         return yaml.load(content, Loader=yaml.CSafeLoader)  # noqa: S506
-    elif name.endswith(".ojson"):
+    elif name.endswith(".ojson") or name.endswith(".mixin.json"):
         return json.loads(content)
-    elif name.endswith(".otoml"):
+    elif name.endswith(".otoml") or name.endswith(".mixin.toml"):
         return tomllib.loads(content)
     else:
         raise ValueError(
-            f"Unrecognized Overlay file format: {file_path.name}. "
-            f"Expected .oyaml, .ojson, or .otoml"
+            f"Unrecognized MIXINv2 file format: {file_path.name}. "
+            f"Expected .mixin.yaml, .mixin.json, .mixin.toml, .oyaml, .ojson, or .otoml"
         )
 
 
 def parse_mixin_file(file_path: Path) -> Mapping[str, Sequence[Definition]]:
     """
-    Parse an Overlay file (YAML/JSON/TOML) containing named top-level mixins.
+    Parse a MIXINv2 file (YAML/JSON/TOML) containing named top-level mixins.
 
     The file must contain a mapping at the top level, where each key is a mixin
     name. For files where the top level is a mixin definition itself (list or

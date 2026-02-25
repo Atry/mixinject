@@ -1,7 +1,7 @@
 """
-Directory-based Overlay file discovery and evaluation.
+Directory-based MIXINv2 file discovery and evaluation.
 
-This module provides support for evaluating Overlay files from filesystem
+This module provides support for evaluating MIXINv2 files from filesystem
 directories (not Python packages).
 """
 
@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, kw_only=True, slots=True, weakref_slot=True)
 class DirectoryMixinDefinition(ScopeDefinition):
     """
-    Scope definition for a directory of Overlay files.
+    Scope definition for a directory of MIXINv2 files.
 
-    Recursively discovers *.oyaml/ojson/otoml files and subdirectories.
+    Recursively discovers MIXINv2 files (.mixin.yaml/.oyaml/etc.) and subdirectories.
     """
 
     underlying: Path
@@ -41,19 +41,28 @@ class DirectoryMixinDefinition(ScopeDefinition):
 
     @cached_property
     def _mixin_files(self) -> Mapping[str, Path]:
-        """Discover *.oyaml/ojson/otoml files in the directory."""
+        """Discover MIXINv2 files in the directory."""
         result: dict[str, Path] = {}
         if not self.underlying.is_dir():
             return result
 
-        overlay_extensions = (".oyaml", ".oyml", ".ojson", ".otoml")
+        mixin_extensions = (
+            ".mixin.yaml",
+            ".mixin.yml",
+            ".mixin.json",
+            ".mixin.toml",
+            ".oyaml",
+            ".oyml",
+            ".ojson",
+            ".otoml",
+        )
         for file_path in self.underlying.iterdir():
             if not file_path.is_file():
                 continue
             name_lower = file_path.name.lower()
-            for extension in overlay_extensions:
+            for extension in mixin_extensions:
                 if name_lower.endswith(extension):
-                    # Extract stem: Foo.oyaml -> Foo
+                    # Extract stem: Foo.mixin.yaml -> Foo, Foo.oyaml -> Foo
                     stem = file_path.name[: -len(extension)]
                     if stem not in result:
                         result[stem] = file_path
