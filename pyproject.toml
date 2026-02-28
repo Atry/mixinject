@@ -1,6 +1,6 @@
 [project]
 name = "mixinv2-workspace"
-version = "0.1.0"
+version = "0.0.0.dev0"
 description = "A dependency injection framework with pytest-fixture syntax, plus a configuration language for declarative programming"
 readme = "README.md"
 license = "MIT"

@@ -1,6 +1,6 @@
 [project]
 name = "mixinv2-examples"
-version = "0.1.0"
+version = "0.0.0.dev0"
 description = "Example case studies for MIXINv2"
 license = "MIT"
 requires-python = ">=3.13"
