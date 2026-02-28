@@ -43,4 +43,4 @@ only-include = ["src/mixinv2"]
 sources = ["src"]
 
 [project.urls]
-Repository = "https://github.com/Atry/overlay"
+Repository = "https://github.com/Atry/MIXINv2"

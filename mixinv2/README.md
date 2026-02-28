@@ -10,7 +10,7 @@ Full documentation is available at [mixinv2.readthedocs.io](https://mixinv2.read
 
 ## Source Code
 
-The source code is hosted on [GitHub](https://github.com/Atry/overlay).
+The source code is hosted on [GitHub](https://github.com/Atry/MIXINv2).
 
 ## License
 

@@ -53,7 +53,7 @@ html_theme_options = {
     'logo': 'logo.svg',
     'fixed_sidebar': True,
     'github_user': 'Atry',
-    'github_repo': 'overlay',
+    'github_repo': 'MIXINv2',
     'github_banner': True,
     'github_button': True,
     'github_type': 'watch',
@@ -68,7 +68,7 @@ _git_commit = subprocess.check_output(
 
 extlinks = {
     'github': (
-        f'https://github.com/Atry/overlay/tree/{_git_commit}/%s',
+        f'https://github.com/Atry/MIXINv2/tree/{_git_commit}/%s',
         '%s',
     ),
 }

@@ -21,4 +21,4 @@ help:
 
 .PHONY: api-docs
 api-docs:
-	sphinx-apidoc --implicit-namespaces -o api ../src/overlay
+	sphinx-apidoc --implicit-namespaces -o api ../src/mixinv2

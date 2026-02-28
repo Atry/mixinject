@@ -10,7 +10,7 @@ Full documentation is available at [overlaylanguage.readthedocs.io](https://over
 
 ## Source Code
 
-The source code is hosted on [GitHub](https://github.com/Atry/overlay).
+The source code is hosted on [GitHub](https://github.com/Atry/MIXINv2).
 
 ## License
 

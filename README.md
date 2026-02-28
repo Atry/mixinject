@@ -1,7 +1,7 @@
 # MIXINv2
 
 [![PyPI](https://img.shields.io/pypi/v/mixinv2)](https://pypi.org/project/mixinv2/)
-[![CI](https://github.com/Atry/overlay/actions/workflows/ci.yml/badge.svg)](https://github.com/Atry/overlay/actions/workflows/ci.yml)
+[![CI](https://github.com/Atry/MIXINv2/actions/workflows/ci.yml/badge.svg)](https://github.com/Atry/MIXINv2/actions/workflows/ci.yml)
 [![Documentation Status](https://readthedocs.org/projects/mixinv2/badge/?version=latest)](https://mixinv2.readthedocs.io/en/latest/?badge=latest)
 
 A dependency injection framework with pytest-fixture syntax, plus a

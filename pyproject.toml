@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Atry/overlay"
+Repository = "https://github.com/Atry/MIXINv2"
 
 [tool.uv]
 sources = {mixinv2 = {workspace = true}, mixinv2-library = {workspace = true}, overlay-language = {workspace = true}, overlay-library = {workspace = true}}
