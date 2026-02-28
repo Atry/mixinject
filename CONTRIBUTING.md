@@ -1076,7 +1076,7 @@ MIXINv2 provides two kinds of references for navigating the scope hierarchy:
 
 A **lexical reference** searches for a symbol in the current lexical scope (the file's static structure).
 
-**Critical constraint:** Lexical references can **only** access **own properties** — symbols defined in the current file. Lexical references **cannot** access inherited properties (symbols introduced through composition/inheritance from other files).
+**Critical constraint:** Lexical references **cannot** access inherited properties (symbols introduced through inheritance).
 
 ```yaml
 # ✓ GOOD - lexical reference to own property
@@ -1091,9 +1091,8 @@ NumberFactory:
 ```
 
 **When lexical references work:**
-- Referencing symbols defined in the same file
 - Accessing sibling entities or nested scopes defined locally
-- Simple, direct lookups within the file's own definitions
+- Simple, direct lookups within the mixin's own definitions, not inherited ones
 
 #### 2. Qualified This Reference `[ScopeName, ~, path...]`
 
