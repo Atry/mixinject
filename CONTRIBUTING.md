@@ -89,6 +89,16 @@ The project creates a development environment via Nix flake, and `direnv` is res
 
 > **Warning:** After updating dependencies (including changes to `flake.nix` or Python packages), you must use `direnv exec .` to access the new virtual environment. Without it, you will get the old/stale environment and the changes will not be available.
 
+### Refreshing the Nix Development Environment
+
+When `uv.lock` or `flake.nix` changes, `direnv` may still use a cached (stale) Nix development shell. Run `direnv reload` to force `nix-direnv` to re-evaluate the flake and rebuild the virtual environment:
+
+```bash
+direnv reload
+```
+
+This is necessary when you see errors caused by stale packages (e.g., plugin conflicts from outdated dependency versions).
+
 ## Python Coding Conventions
 
 ### Use `@dataclass` for Structured Data
