@@ -1,8 +1,8 @@
 """Package/module-based equivalents of all code examples shown in README.md.
 
 Each test mirrors a corresponding test in test_readme_examples.py, but uses
-Python module files instead of @scope-decorated classes. The fixture package
-lives in tests/fixtures/app_di/.
+Python module files instead of @scope-decorated classes. The example packages
+live in mixinv2_examples.app_di and mixinv2_examples.app_oyaml.
 
 The DI semantics are identical — only the declaration style differs:
   @scope class SQLiteDatabase: ...   →   sqlite_database.py module
@@ -18,17 +18,16 @@ from types import ModuleType
 
 import pytest
 
-import tests.fixtures.app_di as app_di
-import tests.fixtures.app_di.eager_database as eager_database
-import tests.fixtures.app_di.pragmas.base as pragma_base
-import tests.fixtures.app_di.pragmas.foreign_keys as foreign_keys
-import tests.fixtures.app_di.pragmas.user_version as user_version
-import tests.fixtures.app_di.pragmas.wal_mode as wal_mode
-import tests.fixtures.app_oyaml as app_oyaml
+import mixinv2_examples.app_di as app_di
+import mixinv2_examples.app_di.eager_database as eager_database
+import mixinv2_examples.app_di.pragmas.base as pragma_base
+import mixinv2_examples.app_di.pragmas.foreign_keys as foreign_keys
+import mixinv2_examples.app_di.pragmas.user_version as user_version
+import mixinv2_examples.app_di.pragmas.wal_mode as wal_mode
+import mixinv2_examples.app_oyaml as app_oyaml
 
 from mixinv2 import extern, public, resource, scope
 from mixinv2._mixin_directory import DirectoryMixinDefinition
-from mixinv2._mixin_parser import OverlayFileScopeDefinition
 from mixinv2._runtime import evaluate
 
 

@@ -6,25 +6,18 @@ Verifies that both the direct double-recursion version and the
 pair-accumulator version produce identical results.
 """
 
-from pathlib import Path
-
 import pytest
 
+import fixtures
+import mixinv2_examples
 import mixinv2_library
-from mixinv2._mixin_directory import DirectoryMixinDefinition
 from mixinv2._runtime import Scope, evaluate
-
-
-TESTS_PATH = Path(__file__).parent
 
 
 @pytest.fixture
 def fibonacci_scope() -> Scope:
     """Load and evaluate the Fibonacci test fixture."""
-    tests_definition = DirectoryMixinDefinition(
-        inherits=(), is_public=True, underlying=TESTS_PATH
-    )
-    root = evaluate(mixinv2_library, tests_definition, modules_public=True)
+    root = evaluate(mixinv2_library, mixinv2_examples, fixtures, modules_public=True)
     result = root.FibonacciTest
     assert isinstance(result, Scope)
     return result

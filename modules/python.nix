@@ -72,6 +72,7 @@
           members = [
             "mixinv2"
             "mixinv2-library"
+            "mixinv2-examples"
             "overlay-language"
             "overlay-library"
           ];
@@ -164,6 +165,9 @@
               ../packages/mixinv2/docs
               ../packages/mixinv2-library/src
               ../packages/mixinv2-library/pyproject.toml
+              ../packages/mixinv2-examples/src
+              ../packages/mixinv2-examples/pyproject.toml
+              ../packages/mixinv2-examples/tests
               ../mixinv2.schema.json
               ../tests
               ../pyproject.toml
@@ -197,8 +201,8 @@
             | Case Study: BinNat arithmetic | `packages/mixinv2-library/.../BinNat*.oyaml`, `tests/BinNatArithmeticTest.oyaml` | `tests/test_bin_nat_arithmetic.py` |
             | Case Study: Cartesian product (relational semantics) | `tests/CartesianProductTest.oyaml` | `tests/test_cartesian_product.py` |
             | Boolean logic | `packages/mixinv2-library/.../Boolean*.oyaml`, `tests/ChurchBooleanTest.oyaml` | `tests/test_church_boolean.py` |
-            | Fibonacci | `tests/FibonacciTest.oyaml`, `tests/FibonacciLibrary.oyaml` | `tests/test_fibonacci.py` |
-            | Function color blindness | `tests/fixtures/app_oyaml/` | `tests/test_stdlib_python_port.py` |
+            | Fibonacci | `packages/mixinv2-examples/tests/fixtures/FibonacciTest.oyaml`, `packages/mixinv2-examples/src/mixinv2_examples/FibonacciLibrary.oyaml` | `packages/mixinv2-examples/tests/test_fibonacci.py` |
+            | Function color blindness | `packages/mixinv2-examples/src/mixinv2_examples/app_oyaml/` | `tests/test_stdlib_python_port.py` |
             | Expression Problem | Composition of separate `.oyaml` files without modification | `tests/test_nat_arithmetic.py`, `tests/test_bin_nat_arithmetic.py` |
 
             ## Running Tests

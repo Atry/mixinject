@@ -5,21 +5,19 @@ description = "A dependency injection framework with pytest-fixture syntax, plus
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.13"
-authors = [
-    {name = "Yang, Bo", email = "yang-bo@yang-bo.com"},
-]
+authors = [{ name = "Yang, Bo", email = "yang-bo@yang-bo.com" }]
 keywords = ["mixinv2", "mixin", "composition", "dependency-injection"]
-dependencies = [
-    "mixinv2",
-    "mixinv2-library",
-]
+dependencies = ["mixinv2", "mixinv2-library"]
 
 [project.urls]
 Repository = "https://github.com/Atry/MIXINv2"
 
 [tool.uv]
-sources = {mixinv2 = {workspace = true}, mixinv2-library = {workspace = true}, overlay-language = {workspace = true}, overlay-library = {workspace = true}}
-cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+sources = { mixinv2 = { workspace = true }, mixinv2-library = { workspace = true }, mixinv2-examples = { workspace = true }, overlay-language = { workspace = true }, overlay-library = { workspace = true } }
+cache-keys = [
+    { file = "pyproject.toml" },
+    { git = { commit = true, tags = true } },
+]
 # Note: uv source keys use normalized names (dashes) even when project names use dots
 
 [tool.uv.workspace]
@@ -43,8 +41,7 @@ dev = [
     "pyright>=1.1.407",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
-    "pytest-dotenv>=0.5.2",
-    "pytest-env>=1.2.0",
+    "pytest-env>=1.5.0",
     "pytest-freezegun>=0.4.2",
     "pytest-frozen-uuids>=0.3.5",
     "pytest-randomly>=4.0.1",
@@ -57,4 +54,10 @@ dev = [
 ]
 
 [tool.pyright]
-include = ["packages/mixinv2/src", "packages/mixinv2-library/src", "tests"]
+include = [
+    "packages/mixinv2/src",
+    "packages/mixinv2-library/src",
+    "packages/mixinv2-examples/src",
+    "packages/mixinv2-examples/tests",
+    "tests",
+]
